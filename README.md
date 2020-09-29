@@ -3,7 +3,11 @@
 ### Perl
 Perl 5: https://www.perl.org/
 ### Aligners and alignment analysis tools
-PRANK multiple sequence aligner (http://wasabiapp.org/software/prank/) - v.140603
+##### PRANK
+multiple sequence aligner (http://wasabiapp.org/software/prank/) - v.170427
+For launch scripts without significant changes add path to prank location in your environment variable PATH like
+export PATH="$PATH:/path/to/dir/prank/bin/"
+
 GUIDANCE (http://guidance.tau.ac.il/) - v1.5
 Note that a bug fix is required for GUIDANCE (version 1.5 - 2014, August 7) to work with PRANK, see GUIDANCE_source_code_fix_for_running_PRANK
 PAML software package, which includes codeml (http://abacus.gene.ucl.ac.uk/software/paml.html) - v4.8a
