@@ -38,3 +38,5 @@ if __name__ == '__main__':
         pool.starmap(launch_guidance, zip(parse_dir(args.infolder), args.outfolder, threads))
     except:
         logging.exception("Unexpected error")
+
+    logging.info("The work has been completed")

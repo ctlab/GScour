@@ -25,3 +25,5 @@ if __name__ == "__main__":
         main(args.project, args.species)
     except:
         logging.exception("Unexpected error")
+
+    logging.info("The orthologs table was recorded")

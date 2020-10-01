@@ -76,3 +76,5 @@ if __name__ == '__main__':
         main(args.initfna, args.annotation, args.ortho, args.species, args.out)
     except:
         logging.exception("Unexpected error")
+
+    logging.info("The work has been completed")
