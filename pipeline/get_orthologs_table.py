@@ -11,7 +11,7 @@ def main(project_name, species):
     species = int(species)
     result = proteinortho_data.loc[(proteinortho_data['# Species'] == species)
                                    & (proteinortho_data['Genes'] == species)]
-    with open('single_copy_orthologs.tsv','w') as write_tsv:
+    with open('../single_copy_orthologs.tsv', 'w') as write_tsv:
         write_tsv.write(result.to_csv(sep='\t', index=False))
 
 

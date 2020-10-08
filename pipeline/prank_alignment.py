@@ -11,20 +11,17 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 
 def parse_dir(infolder):
     for infile in os.listdir(infolder):
-        yield os.path.join(infolder, infile)
+        if infile.split('.')[-1] == 'fna':
+            yield os.path.join(infolder, infile)
 
 
 def launch_prank(infile, outfolder, tree):
-    outfile = os.path.join(outfolder, re.search(r'\/(\d+)\.', infile).group(1))
-    output_file = os.path.join("{}.{}".format(os.path.abspath(outfile), 'best.fas'))
-    if os.path.isfile(output_file):
-        logging.info("Output file {} is already exist, skip to the next".format(output_file))
-        return
-    log_file = os.path.join("{}.{}".format(os.path.abspath(outfile), 'txt'))
+    outfile_path_without_extension = os.path.join(outfolder, re.search(r'\/(\d+)\.', infile).group(1))
+    log_file = os.path.join("{}.{}".format(os.path.abspath(outfile_path_without_extension), 'log'))
     if tree:
-        launch = 'prank -d={0} -o={1} -t={2} > {3}'.format(infile, outfile, tree, log_file)
+        launch = 'prank -d={0} -o={1} -t={2} > {3}'.format(infile, outfile_path_without_extension, tree, log_file)
     else:
-        launch = 'prank -d={0} -o={1} > {3}'.format(infile, outfile, tree, log_file)
+        launch = 'prank -d={0} -o={1} -showtree > {2}'.format(infile, outfile_path_without_extension, log_file)
     os.system(launch)
 
 

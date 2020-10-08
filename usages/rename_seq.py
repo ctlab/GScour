@@ -7,23 +7,23 @@ import os
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import re
-
+""" Rename sequences in fasta file: change name to number"""
 
 def parse_dir(infolder):
     for infile in os.listdir(infolder):
         yield os.path.join(infolder, infile)
 
 
-def rename_seq(infile, outfolder_fas, outfolder_txt):
+def rename_seq(infile, outfolder_fas, outfolder_log):
     if not os.path.isdir(outfolder_fas):
         os.makedirs(outfolder_fas)
-    if not os.path.isdir(outfolder_txt):
-        os.makedirs(outfolder_txt)
+    if not os.path.isdir(outfolder_log):
+        os.makedirs(outfolder_log)
 
     with open(infile, "r+") as handle:
         for index, record in enumerate(SeqIO.parse(handle, "fasta")):
             file_identifier = re.search(r'\/(\d+)\.', infile).group(1)
-            with open(os.path.join(outfolder_txt, file_identifier + ".txt"), "a") as ofile:
+            with open(os.path.join(outfolder_log, file_identifier + ".log"), "a") as ofile:
                 logging.info("writing file with gene id {}".format(ofile.name))
                 ofile.write("{}\n".format(record.id))
             seq = SeqRecord(record.seq, id=str(index+1), description="")
