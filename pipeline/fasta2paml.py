@@ -31,9 +31,14 @@ def fasta2phylip(infile, outfolder):
 
 
 def phylip2paml(source_file_path):
-    corrected_file_path = os.path.join(os.path.split(source_file_path)[0], '{}.{}'.format(re.search(r'\/(\d+)\.',
-                                                                                 source_file_path).group(1), "phy"))
-    with open(corrected_file_path, 'w') as target_file:
+    file_number = re.search(r'(\d+)\.', source_file_path).group(1)
+    personal_folder = os.path.join(os.path.split(source_file_path)[0], '{}'.format(file_number))
+
+    target_file_path = os.path.join(personal_folder, '{}.{}'.format(file_number, "phy"))
+    if not os.path.isdir(personal_folder):
+        os.makedirs(personal_folder)
+
+    with open(target_file_path, 'w') as target_file:
         with open(source_file_path, 'r') as source_file:
             for line in source_file:
                 if re.search(r"\d\s{9}", line):
@@ -47,7 +52,7 @@ def phylip2paml(source_file_path):
                     repl = str(int(repl) - 3)
                     line_edited = re.sub(r"\d+$", repl+"\n", line)
                     target_file.write(line_edited)
-    logging.info('phy format file {} has been recorded'.format(corrected_file_path))
+    logging.info('phy format file {} has been recorded'.format(target_file_path))
 
 
 def main(infolder, outfolder):
