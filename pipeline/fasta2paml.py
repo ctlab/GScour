@@ -2,8 +2,7 @@
 import logging
 import os
 import argparse
-from Bio import AlignIO
-import sys
+from Bio import SeqIO
 import re
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -25,15 +24,23 @@ def fasta2phylip(infile, outfolder):
     outfile = os.path.join(outfolder, "{}.{}".format(re.search(r'\/(\d+)\.', infile).group(1), "phylip"))
     with open(infile, 'r') as input:
         with open(outfile, 'w') as output:
-            alignments = AlignIO.parse(input, "fasta")
-            AlignIO.write(alignments, output, "phylip-sequential")
-    logging.info('phylip format file {} has been recorded'.format(outfile))
+            alignments = SeqIO.parse(input, "fasta")
+            SeqIO.write(alignments, output, "phylip-sequential")
+    logging.info('phylip-sequential format file {} has been recorded'.format(outfile))
+
+
+def chunks(s, n):
+    """Produce `n`-character chunks from `s`."""
+    for start in range(0, len(s), n):
+        if start == n - 1:
+            yield s[start:start + n]
+        else:
+            yield s[start:start+n]
 
 
 def phylip2paml(source_file_path):
     file_number = re.search(r'(\d+)\.', source_file_path).group(1)
     personal_folder = os.path.join(os.path.split(source_file_path)[0], '{}'.format(file_number))
-
     target_file_path = os.path.join(personal_folder, '{}.{}'.format(file_number, "phy"))
     if not os.path.isdir(personal_folder):
         os.makedirs(personal_folder)
@@ -42,17 +49,27 @@ def phylip2paml(source_file_path):
         with open(source_file_path, 'r') as source_file:
             for line in source_file:
                 if re.search(r"\d\s{9}", line):
-                    line_edited_end = re.sub(r"T\s?G\s?A$", "\n", line)
+                    """
+                    - remove stop codon
+                    - insert two spaces and \n instead of 9 after name of sequence
+                    - split string on lines by 60 character per line
+                    """
+                    line_edited_end = re.sub(r"T\s?G\s?A$", "", line)
                     repl_9_spaces = (re.search(r"(\d)\s{9}", line)).group()
-                    repl_2_spaces = (re.search(r"(\d)\s{2}", line)).group()
-                    line_edited = re.sub(repl_9_spaces, repl_2_spaces, line_edited_end)
-                    target_file.write(line_edited)
+                    repl_2_spaces = (re.search(r"(\d)", line)).group()
+                    target_file.write(repl_2_spaces + '\n')
+                    line_edited = re.sub(repl_9_spaces, "", line_edited_end)
+                    for chunk in chunks(line_edited, 60):
+                        target_file.write(chunk)
                 else:
+                    """
+                    decreasing the number of characters because of removing stop codon
+                    """
                     repl = (re.search(r"\d\s(\d+)", line)).group(1)
                     repl = str(int(repl) - 3)
-                    line_edited = re.sub(r"\d+$", repl+"\n", line)
+                    line_edited = re.sub(r"\d+$", repl+"", line)
                     target_file.write(line_edited)
-    logging.info('phy format file {} has been recorded'.format(target_file_path))
+    logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
 def main(infolder, outfolder):

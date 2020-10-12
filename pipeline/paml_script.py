@@ -1,5 +1,5 @@
+#!/usr/bin/env python
 import argparse
-import re
 import sys
 from Bio.Phylo.PAML import codeml
 import logging
@@ -20,9 +20,6 @@ def parse_dir(infolder):
 def run_paml(infile, tree):
     file_out_path = infile.replace('phy', 'out')
     personal_dir = os.path.split(file_out_path)[0]
-    branchcodes = '/home/alina_grf/progprojects/search_for_positive_selection/branchcodes.txt'
-    threshold = 10
-    windowsize = 3
 
     cml = codeml.Codeml(
         alignment=infile,
@@ -56,12 +53,16 @@ def run_paml(infile, tree):
     cml.set_options(method=0)
     # cml.print_options()
     try:
-        #cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True)
-        #logging.info("paml one ratio model analysis has been done for file {}".format(infile))
+        cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True)
+        logging.info("paml one ratio model analysis has been done for file {}".format(infile))
+        """
+        launching of SWAMP masker in separate file due to the need of change python env from 3 to python2
+        
         launch_swamp = '/home/alina_grf/BIOTOOLS/SWAMP-master/SWAMP.py' \
                        ' -i {} -b {} -t {} -w {}'.format(personal_dir, branchcodes, threshold, windowsize)
         os.system(launch_swamp)
         logging.info("SWAMP analysis has been done for file {}".format(infile))
+        """
     except:
         logging.exception("sys.exc_info() {0}, outfile {1}".format(sys.exc_info(), file_out_path))
 
