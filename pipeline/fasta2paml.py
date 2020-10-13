@@ -32,10 +32,10 @@ def fasta2phylip(infile, outfolder):
 def chunks(s, n):
     """Produce `n`-character chunks from `s`."""
     for start in range(0, len(s), n):
-        if start == n - 1:
+        if start >= len(s) - n:
             yield s[start:start + n]
         else:
-            yield s[start:start+n]
+            yield s[start:start + n]+"\n"
 
 
 def phylip2paml(source_file_path):
@@ -60,6 +60,7 @@ def phylip2paml(source_file_path):
                     target_file.write(repl_2_spaces + '\n')
                     line_edited = re.sub(repl_9_spaces, "", line_edited_end)
                     for chunk in chunks(line_edited, 60):
+                        #print("chunk")
                         target_file.write(chunk)
                 else:
                     """
