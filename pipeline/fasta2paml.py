@@ -44,7 +44,7 @@ def phylip2paml(source_file_path):
     target_file_path = os.path.join(personal_folder, '{}.{}'.format(file_number, "phy"))
     if not os.path.isdir(personal_folder):
         os.makedirs(personal_folder)
-
+    lengths = list()
     with open(target_file_path, 'w') as target_file:
         with open(source_file_path, 'r') as source_file:
             for line in source_file:
@@ -54,13 +54,15 @@ def phylip2paml(source_file_path):
                     - insert two spaces and \n instead of 9 after name of sequence
                     - split string on lines by 60 character per line
                     """
+                    lengths.append(len(line))
                     line_edited_end = re.sub(r"T\s?G\s?A$", "", line)
+                    line_edited_end = re.sub(r"T\s?A\s?G$", "", line)
+                    line_edited_end = re.sub(r"T\s?A\s?A$", "", line)
                     repl_9_spaces = (re.search(r"(\d)\s{9}", line)).group()
                     repl_2_spaces = (re.search(r"(\d)", line)).group()
                     target_file.write(repl_2_spaces + '\n')
                     line_edited = re.sub(repl_9_spaces, "", line_edited_end)
                     for chunk in chunks(line_edited, 60):
-                        #print("chunk")
                         target_file.write(chunk)
                 else:
                     """
@@ -70,6 +72,10 @@ def phylip2paml(source_file_path):
                     repl = str(int(repl) - 3)
                     line_edited = re.sub(r"\d+$", repl+"", line)
                     target_file.write(line_edited)
+    if all(x == lengths[0] for x in lengths):
+        logging.info("all seq lengths are equal")
+    else:
+        logging.warning("seq lengths are not equal")
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
