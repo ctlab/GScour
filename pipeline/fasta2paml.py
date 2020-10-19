@@ -5,7 +5,9 @@ import argparse
 from Bio import SeqIO
 import re
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+BROKEN_FILES = list()
+LOG_FILE = "fasta2paml.log"
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
 def parse_dir_out_gblocks(infolder):
@@ -38,7 +40,7 @@ def chunks(s, n):
             yield s[start:start + n]+"\n"
 
 
-def phylip2paml(source_file_path):
+def phylip2paml(source_file_path, species):
     file_number = re.search(r'(\d+)\.', source_file_path).group(1)
     personal_folder = os.path.join(os.path.split(source_file_path)[0], '{}'.format(file_number))
     target_file_path = os.path.join(personal_folder, '{}.{}'.format(file_number, "phy"))
@@ -64,7 +66,7 @@ def phylip2paml(source_file_path):
                     line_edited = re.sub(repl_9_spaces, "", line_edited_end)
                     for chunk in chunks(line_edited, 60):
                         target_file.write(chunk)
-                else:
+                if re.search(r"\d\s(\d+)", line):
                     """
                     decreasing the number of characters because of removing stop codon
                     """
@@ -72,29 +74,33 @@ def phylip2paml(source_file_path):
                     repl = str(int(repl) - 3)
                     line_edited = re.sub(r"\d+$", repl+"", line)
                     target_file.write(line_edited)
-    if all(x == lengths[0] for x in lengths):
-        logging.info("all seq lengths are equal")
+    if all(x == lengths[0] for x in lengths) and len(lengths) == species:
+        logging.info("all seq lengths are equal, confirm of number of species")
     else:
-        logging.warning("seq lengths are not equal")
+        logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
+        BROKEN_FILES.append(file_number)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
-def main(infolder, outfolder):
+def main(infolder, outfolder, species):
     if not os.path.isdir(outfolder):
         os.makedirs(outfolder)
     for infile in parse_dir_out_gblocks(infolder):
         fasta2phylip(infile, outfolder)
     for phylip_file in parse_phylip_dir(outfolder):
-        phylip2paml(phylip_file)
+        phylip2paml(phylip_file, species)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--infolder', help='Path to the folder with input files for prank', nargs='?')
     parser.add_argument('--outfolder', help='Path to the folder with output files of prank', nargs='?')
+    parser.add_argument('--species', help='Number of species', nargs='?')
     args = parser.parse_args()
     try:
-        main(args.infolder, args.outfolder)
+        main(args.infolder, args.outfolder, int(args.species))
+        if BROKEN_FILES:
+            logging.warning("BROKEN_FILES:{}".format(BROKEN_FILES))
     except:
         logging.exception("Unexpected error")
 
