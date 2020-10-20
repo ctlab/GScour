@@ -4,8 +4,9 @@ import sys
 from Bio.Phylo.PAML import codeml
 import logging
 import os
-import logging
+import re
 
+BROCKEN_FILES = list()
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 
@@ -65,6 +66,9 @@ def run_paml(infile, tree):
         """
     except:
         logging.exception("sys.exc_info() {0}, outfile {1}".format(sys.exc_info(), file_out_path))
+        file_number = (re.search(r"(\d+).phy", infile)).group(1)
+        if file_number not in BROCKEN_FILES:
+            BROCKEN_FILES.append(file_number)
 
 
 def main(infolder, tree):
@@ -79,6 +83,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.infolder, args.tree)
+        if BROCKEN_FILES:
+            logging.warning("BROCKEN_FILES: {}".format(BROCKEN_FILES))
     except:
         logging.exception("Unexpected error")
 

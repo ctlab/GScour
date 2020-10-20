@@ -15,7 +15,9 @@ LOG_FILE = "analyse_paml_out.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 BROKEN_PAML_OUTS = list()
 NO_SIGNIFICANCE = 0
-POSITIVE_SITES = 0
+POSITIVE_SITES_NUMBER = 0
+POSITIVE_SITES_DICT = dict()
+POSITIVE_GENES = list()
 
 
 def get_ln_np(infile):
@@ -47,7 +49,7 @@ def calc_p_value(np0, ln0, np1, ln1):
 
 def main(infolder):
     global NO_SIGNIFICANCE
-    global POSITIVE_SITES
+    global POSITIVE_SITES_NUMBER
     for personal_folder in os.scandir(infolder):
         if os.path.isdir(personal_folder):
             folder_name = personal_folder.name
@@ -62,13 +64,17 @@ def main(infolder):
                 if p_val and p_val < 0.05:
                     number_pos = len(pos_sites)
                     logging.info("{} number of positive sites {}".format(folder_name, number_pos))
-                    POSITIVE_SITES += number_pos
+                    POSITIVE_SITES_NUMBER += number_pos
                     for sites in pos_sites:
                         pos, acid, probability = [sites[i] for i in range(3)]
                         logging.info("{} positive sites : position, acid, probability : {}, {}, {}".format(folder_name,
                                                                                                            pos,
                                                                                                            acid,
                                                                                                            probability))
+                        if folder_name not in POSITIVE_GENES:
+                            POSITIVE_GENES.append(folder_name)
+                        if not POSITIVE_SITES_DICT.get(folder_name):
+                            POSITIVE_SITES_DICT[folder_name] = pos_sites
                 else:
                     logging.info("{} no significance, p-value {}".format(folder_name, p_val))
                     NO_SIGNIFICANCE += 1
@@ -78,17 +84,38 @@ def main(infolder):
                 BROKEN_PAML_OUTS.append(folder_name)
 
 
+def get_genes_under_positive(POSITIVE_GENES, log_folder):
+    gene_names_dict = dict()
+    for infile in os.listdir(log_folder):
+        file_number = infile.split('.')[0]
+        if file_number in POSITIVE_GENES and infile.endswith("log"):
+            with open(os.path.join(log_folder, infile), "r") as f:
+                for line in f:
+                    if re.search(r"-\s5$", line):
+                        pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
+                        gene_name = (re.search(pattern, line)).group(1)
+                        protein_name = (re.search(pattern, line)).group(2)
+                        if not gene_names_dict.get(infile):
+                            gene_names_dict[file_number] = [gene_name, protein_name]
+    return gene_names_dict
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--infolder', help='Path to the folder with input files for paml', nargs='?')
+    parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
     args = parser.parse_args()
     try:
         main(args.infolder)
         if BROKEN_PAML_OUTS:
             logging.warning("BROKEN_PAML_OUTS : {} : {}".format(len(BROKEN_PAML_OUTS), BROKEN_PAML_OUTS))
         logging.info("Number of no significance files {}".format(NO_SIGNIFICANCE))
-        logging.info("Number of positive sites {}".format(POSITIVE_SITES))
+        logging.info("Number of positive sites {}".format(POSITIVE_SITES_NUMBER))
+        logging.info("Number of positive genes {} : {}".format(len(POSITIVE_GENES), POSITIVE_GENES))
+        logging.info("Positive sites : file : position, acid, probability\n{}".format(repr(POSITIVE_SITES_DICT)))
+        gene_names_dict = get_genes_under_positive(POSITIVE_GENES, args.log)
+        if gene_names_dict:
+            logging.info("Genes under positive selection: file: gene, protein:\n{}".format(repr(gene_names_dict)))
     except:
         logging.exception("Unexpected error")
-
     logging.info("The work has been completed")

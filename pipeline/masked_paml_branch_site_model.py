@@ -10,7 +10,7 @@ import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 WRITTEN_FILES = 0
 EXCEPTION_NUMBER = 0
-FILES_NUMBER = 0
+FILES_NUMBER_MASKED = 0
 BROCKEN_FILES_NULL = list()
 BROCKEN_FILES_ALTER = list()
 """There are two hypothesis:
@@ -30,17 +30,22 @@ For analysis performs: ln0, np0 from H0; ln1, np1 from H1;
                        ΔLRT = 2×(lnL1 - lnL0)
                        n = np1 - np0
                        p_val = 1 - stats.chi2.cdf(ΔLRT, n)
+                       
+Launch this script for files masked with SWAMP:
+1. paml, one-ratio model
+2. SWAMP
+3. paml, branch-site model
 
 """
 
 
 def parse_dir(infolder):
-    global FILES_NUMBER
+    global FILES_NUMBER_MASKED
     for personal_folder in os.scandir(infolder):
         if os.path.isdir(personal_folder):
             for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'phy':
-                    FILES_NUMBER += 1
+                if infile.endswith("_masked.phy"):
+                    FILES_NUMBER_MASKED += 1
                     yield os.path.join(infolder, personal_folder, infile)
 
 
@@ -108,7 +113,7 @@ def set_null_hypothesis(infile, tree, personal_dir):
 
 def run_paml(infile, tree):
     global WRITTEN_FILES, EXCEPTION_NUMBER
-    file_number = (re.search(r"(\d+).phy", infile)).group(1)
+    file_number = (re.search(r"(\d+)_masked\.phy", infile)).group(1)
     personal_dir = os.path.split(infile)[0]
     cml, file_out_path = set_null_hypothesis(infile, tree, personal_dir)
     try:
@@ -145,7 +150,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.infolder, args.tree)
-        logging.info("Number of files have been analyzed: {}".format(FILES_NUMBER))
+        logging.info("Number of files have been analyzed: {}".format(FILES_NUMBER_MASKED))
         logging.info("Number of written files: {}".format(WRITTEN_FILES))
         logging.info("Number of exceptions: {}".format(EXCEPTION_NUMBER))
     except:

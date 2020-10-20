@@ -5,7 +5,9 @@ import argparse
 from Bio import SeqIO
 import re
 
-BROKEN_FILES = list()
+LENGTH_BROKEN_FILES = list()
+STOP_CODON_BROKEN_FILES = list()
+
 LOG_FILE = "fasta2paml.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
@@ -34,10 +36,13 @@ def fasta2phylip(infile, outfolder):
 def chunks(s, n):
     """Produce `n`-character chunks from `s`."""
     for start in range(0, len(s), n):
+        yield s[start:start + n]
+        """
         if start >= len(s) - n:
             yield s[start:start + n]
         else:
             yield s[start:start + n]+"\n"
+        """
 
 
 def phylip2paml(source_file_path, species):
@@ -57,15 +62,23 @@ def phylip2paml(source_file_path, species):
                     - split string on lines by 60 character per line
                     """
                     lengths.append(len(line))
-                    line_edited_end = re.sub(r"T\s?G\s?A$", "", line)
-                    line_edited_end = re.sub(r"T\s?A\s?G$", "", line)
-                    line_edited_end = re.sub(r"T\s?A\s?A$", "", line)
+                    if re.search(r"T\s?G\s?A$", line):
+                        line_edited_end = re.sub(r"T\s?G\s?A$", "", line)
+                    if re.search(r"T\s?A\s?G$", line):
+                        line_edited_end = re.sub(r"T\s?A\s?G$", "", line)
+                    if re.search(r"T\s?A\s?A$", line):
+                        line_edited_end = re.sub(r"T\s?A\s?A$", "", line)
                     repl_9_spaces = (re.search(r"(\d)\s{9}", line)).group()
                     repl_2_spaces = (re.search(r"(\d)", line)).group()
                     target_file.write(repl_2_spaces + '\n')
-                    line_edited = re.sub(repl_9_spaces, "", line_edited_end)
-                    for chunk in chunks(line_edited, 60):
-                        target_file.write(chunk)
+                    try:
+                        line_edited = re.sub(repl_9_spaces, "", line_edited_end)
+                        for chunk in chunks(line_edited, 60):
+                            target_file.write(chunk)
+                    except UnboundLocalError:
+                        logging.warning("no stop codon in file {}".format(source_file))
+                        if file_number not in STOP_CODON_BROKEN_FILES:
+                            STOP_CODON_BROKEN_FILES.append(file_number)
                 if re.search(r"\d\s(\d+)", line):
                     """
                     decreasing the number of characters because of removing stop codon
@@ -76,9 +89,10 @@ def phylip2paml(source_file_path, species):
                     target_file.write(line_edited)
     if all(x == lengths[0] for x in lengths) and len(lengths) == species:
         logging.info("all seq lengths are equal, confirm of number of species")
+
     else:
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
-        BROKEN_FILES.append(file_number)
+        LENGTH_BROKEN_FILES.append(file_number)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
@@ -99,8 +113,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.infolder, args.outfolder, int(args.species))
-        if BROKEN_FILES:
-            logging.warning("BROKEN_FILES:{}".format(BROKEN_FILES))
+        if LENGTH_BROKEN_FILES:
+            logging.warning("BROKEN_FILES:{}".format(LENGTH_BROKEN_FILES))
+        if STOP_CODON_BROKEN_FILES:
+            logging.warning("STOP_CODON_BROKEN_FILES:{}".format(STOP_CODON_BROKEN_FILES))
     except:
         logging.exception("Unexpected error")
 
