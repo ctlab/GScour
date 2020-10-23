@@ -7,7 +7,9 @@ import os
 import re
 
 BROCKEN_FILES = list()
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+PROCESSED_FILES = list()
+LOG_FILE = "paml_one_ratio.log"
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
 def parse_dir(infolder):
@@ -21,6 +23,7 @@ def parse_dir(infolder):
 def run_paml(infile, tree):
     file_out_path = infile.replace('phy', 'out')
     personal_dir = os.path.split(file_out_path)[0]
+    file_number = re.search(r'\/(\d+)\.', infile).group(1)
 
     cml = codeml.Codeml(
         alignment=infile,
@@ -54,8 +57,13 @@ def run_paml(infile, tree):
     cml.set_options(method=0)
     # cml.print_options()
     try:
-        cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True)
-        logging.info("paml one ratio model analysis has been done for file {}".format(infile))
+        global PROCESSED_FILES
+        if cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True):
+            logging.info("paml one ratio model analysis has been done for file {}".format(infile))
+            if file_number not in PROCESSED_FILES:
+                PROCESSED_FILES.append(file_number)
+        else:
+            raise Exception
         """
         launching of SWAMP masker in separate file due to the need of change python env from 3 to python2
         
@@ -65,6 +73,7 @@ def run_paml(infile, tree):
         logging.info("SWAMP analysis has been done for file {}".format(infile))
         """
     except:
+        global BROCKEN_FILES
         logging.exception("sys.exc_info() {0}, outfile {1}".format(sys.exc_info(), file_out_path))
         file_number = (re.search(r"(\d+).phy", infile)).group(1)
         if file_number not in BROCKEN_FILES:
@@ -83,9 +92,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.infolder, args.tree)
-        if BROCKEN_FILES:
-            logging.warning("BROCKEN_FILES: {}".format(BROCKEN_FILES))
     except:
         logging.exception("Unexpected error")
+        logging.warning("BROCKEN_FILES: {}".format(BROCKEN_FILES))
+        logging.info("NUMBER OF PROCESSED FILES {}:{}".format(len(PROCESSED_FILES), PROCESSED_FILES))
 
+    logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROCKEN_FILES), BROCKEN_FILES))
+    logging.info("NUMBER OF PROCESSED FILES {}:{}".format(len(PROCESSED_FILES), PROCESSED_FILES))
     logging.info("The work has been completed")

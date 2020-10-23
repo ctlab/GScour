@@ -4,17 +4,18 @@ import argparse
 import multiprocessing
 import os
 import logging
-import time
-import datetime
+import re
+import sys
+
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-list_of_files_numbers = list()
+ALIGNED_FILES = list()
+EXCEPTION_NUMBER = 0
 
 
 def parse_dir(infolder):
     for infile in os.listdir(infolder):
         if infile.split('.')[-1] == 'fas':
-            list_of_files_numbers.append(int(infile.split('.')[0]))
             yield os.path.join(infolder, infile)
 
 
@@ -29,9 +30,21 @@ def launch_gblocks(infile):
                      '-p=Yes'.format(infile)
             os.system(launch)
             """
-    launch = '/home/alina_grf/BIOTOOLS/Gblocks_0.91b/Gblocks {0} -t=d -b1=3 -b2=3 -b3=7 -b4=3 -b5=h ' \
+
+    try:
+        global ALIGNED_FILES
+        file_number = re.search(r'\/(\d+)\.', infile).group(1)
+        launch = '/home/alina_grf/BIOTOOLS/Gblocks_0.91b/Gblocks {0} -t=d -b1=3 -b2=3 -b3=7 -b4=3 -b5=h ' \
              '-p=Yes'.format(infile)
-    os.system(launch)
+        if os.system(launch):
+            logging.info("gblocks completed task for file {}".format(file_number))
+            if file_number not in ALIGNED_FILES:
+                ALIGNED_FILES.append(file_number)
+    except:
+        global EXCEPTION_NUMBER
+        logging.exception("sys.exc_info() {0}, outfile number {1}".format(sys.exc_info(),
+                                                                          file_number))
+        EXCEPTION_NUMBER += 1
 
 
 if __name__ == '__main__':
@@ -46,9 +59,12 @@ if __name__ == '__main__':
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(threads)
         inputs = list(parse_dir(args.infolder))
-        lack = list(set(list(range(1, 3561))) - set(list_of_files_numbers))
-        logging.info("lack list: {}".format(lack))
         pool.map(launch_gblocks, inputs)
     except:
+        logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
+        logging.info("Number of gblocks exceptions = {}".format(EXCEPTION_NUMBER))
         logging.exception("Unexpected error")
+
+    logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
+    logging.info("Number of gblocks exceptions = {}".format(EXCEPTION_NUMBER))
     logging.info("The work has been completed")

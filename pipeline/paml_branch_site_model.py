@@ -7,12 +7,14 @@ import logging
 import os
 import logging
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
 WRITTEN_FILES = 0
 EXCEPTION_NUMBER = 0
 FILES_NUMBER = 0
 BROCKEN_FILES_NULL = list()
 BROCKEN_FILES_ALTER = list()
+LOG_FILE = "paml_branch_site.log"
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """There are two hypothesis:
 H0: model = 2, NSsites = 2 (branch-site model),
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
@@ -112,7 +114,7 @@ def run_paml(infile, tree):
     personal_dir = os.path.split(infile)[0]
     cml, file_out_path = set_null_hypothesis(infile, tree, personal_dir)
     try:
-        cml.run(command="codeml", verbose=True) #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
+        cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True) #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
         logging.info("paml out file {} has been written".format(file_out_path))
         WRITTEN_FILES += 1
     except:
@@ -123,7 +125,8 @@ def run_paml(infile, tree):
 
     cml, file_out_path = set_alternative_hypothesis(infile, tree, personal_dir)
     try:
-        cml.run(command="codeml", verbose=True) #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
+        cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True)
+        #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
         logging.info("paml out file {} has been written".format(file_out_path))
         WRITTEN_FILES += 1
     except:

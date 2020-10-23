@@ -5,7 +5,10 @@ import argparse
 from Bio import SeqIO
 import re
 
-LENGTH_BROKEN_FILES = list()
+NOT_EQUAL_LENGTH = list()
+NOT_NEEDED_SPECIES = list()
+NOT_MULTIPLE_OF_THREE = list()
+BROKEN_FILES = list()
 STOP_CODON_BROKEN_FILES = list()
 
 LOG_FILE = "fasta2paml.log"
@@ -87,18 +90,31 @@ def phylip2paml(source_file_path, species):
                     repl = str(int(repl) - 3)
                     line_edited = re.sub(r"\d+$", repl+"", line)
                     target_file.write(line_edited)
-    if all(x == lengths[0] for x in lengths) and len(lengths) == species:
+    if all(x == lengths[0] for x in lengths) and len(lengths) == species and lengths[0] % 3 == 0:
         logging.info("all seq lengths are equal, confirm of number of species")
-
+    elif not all(x == lengths[0] for x in lengths):
+        global NOT_EQUAL_LENGTH
+        NOT_EQUAL_LENGTH.append(file_number)
+    elif not len(lengths) == species:
+        global NOT_NEEDED_SPECIES
+        NOT_NEEDED_SPECIES.append(file_number)
+    elif lengths[0] % 3 != 0:
+        global NOT_MULTIPLE_OF_THREE
+        NOT_MULTIPLE_OF_THREE.append(file_number)
     else:
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
-        LENGTH_BROKEN_FILES.append(file_number)
+        BROKEN_FILES.append(file_number)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
+def replace_broken_files(directory_out):
+    broken_folder = "broken_length_files(fasta2paml)"
+    os.makedirs(broken_folder)
+    for folder in BROKEN_FILES:
+        os.replace(os.path.join(directory_out, folder), os.path.join(broken_folder, folder))
+
+
 def main(infolder, outfolder, species):
-    if not os.path.isdir(outfolder):
-        os.makedirs(outfolder)
     for infile in parse_dir_out_gblocks(infolder):
         fasta2phylip(infile, outfolder)
     for phylip_file in parse_phylip_dir(outfolder):
@@ -111,12 +127,19 @@ if __name__ == '__main__':
     parser.add_argument('--outfolder', help='Path to the folder with output files of prank', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
     args = parser.parse_args()
+    outfolder = args.outfolder
+    if not os.path.isdir(outfolder):
+        os.makedirs(outfolder)
     try:
-        main(args.infolder, args.outfolder, int(args.species))
-        if LENGTH_BROKEN_FILES:
-            logging.warning("BROKEN_FILES:{}".format(LENGTH_BROKEN_FILES))
+        main(args.infolder, outfolder, int(args.species))
+        if BROKEN_FILES:
+            logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
+            replace_broken_files(outfolder)
         if STOP_CODON_BROKEN_FILES:
             logging.warning("STOP_CODON_BROKEN_FILES:{}".format(STOP_CODON_BROKEN_FILES))
+        logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
+        logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
+        logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
     except:
         logging.exception("Unexpected error")
 
