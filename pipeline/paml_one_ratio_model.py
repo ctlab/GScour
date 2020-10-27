@@ -9,7 +9,7 @@ import os
 import re
 
 
-BROCKEN_FILES = list()
+BROKEN_FILES = list()
 PROCESSED_FILES = list()
 WRITE_CTL_FILE = 0
 LOG_FILE = "paml_one_ratio.log"
@@ -84,8 +84,8 @@ def run_codeml(infile):
     except TimeoutExpired as e:
         p.kill()
         logging.info("Killed {}".format(file_number))
-        if file_number not in BROCKEN_FILES:
-            BROCKEN_FILES.append(file_number)
+        if file_number not in BROKEN_FILES:
+            BROKEN_FILES.append(file_number)
 
 
 def main(infolder, tree):
@@ -104,10 +104,10 @@ if __name__ == '__main__':
         main(args.infolder, args.tree)
     except:
         logging.exception("Unexpected error")
-        logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROCKEN_FILES), BROCKEN_FILES))
+        logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
         logging.info("NUMBER OF PROCESSED FILES {}:{}".format(len(PROCESSED_FILES), PROCESSED_FILES))
 
-    logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROCKEN_FILES), BROCKEN_FILES))
+    logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     logging.info("NUMBER OF PROCESSED FILES {}:{}".format(len(PROCESSED_FILES), PROCESSED_FILES))
     logging.info("WRITE_CTL_FILE {}".format(WRITE_CTL_FILE))
     logging.info("The work has been completed")

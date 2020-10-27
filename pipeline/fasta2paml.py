@@ -10,7 +10,7 @@ NOT_NEEDED_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 BROKEN_FILES = list()
 STOP_CODON_BROKEN_FILES = list()
-
+BROKEN_FOLDER = "broken_length_files(fasta2paml)"
 LOG_FILE = "fasta2paml.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
@@ -48,6 +48,59 @@ def chunks(s, n):
         """
 
 
+def check_lengths(lengths, file_number, species):
+    if all(x == lengths[0] for x in lengths) and len(lengths) == species and lengths[0] % 3 == 0:
+        logging.info("all seq lengths are equal, confirm of number of species")
+        return True
+    elif not all(x == lengths[0] for x in lengths):
+        global NOT_EQUAL_LENGTH
+        NOT_EQUAL_LENGTH.append(file_number)
+    elif not len(lengths) == species:
+        global NOT_NEEDED_SPECIES
+        NOT_NEEDED_SPECIES.append(file_number)
+    elif lengths[0] % 3 != 0:
+        global NOT_MULTIPLE_OF_THREE
+        NOT_MULTIPLE_OF_THREE.append(file_number)
+    else:
+        logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
+        BROKEN_FILES.append(file_number)
+
+
+def delete_stop_codon(line):
+    if re.search(r"T-*G-*A-*$", line):
+        line_edited_end = re.sub(r"T-*G-*A-*$", "", line)
+    #elif re.search(r"T-*G-*A-+$", line):
+    #    line_edited_end = re.sub(r"T-*G-*A-+$", "", line)
+    elif re.search(r"T-*A-*G-*$", line):
+        line_edited_end = re.sub(r"T-*A-*G-*$", "", line)
+    #elif re.search(r"T-*A-*G-+$", line):
+    #    line_edited_end = re.sub(r"T-*A-*G-+$", "", line)
+    elif re.search(r"T-*A-*A-*$", line):
+        line_edited_end = re.sub(r"T-*A-*A-*$", "", line)
+    #elif re.search(r"T-*G-*A-+$", line):
+    #    line_edited_end = re.sub(r"T-*A-*A-+$", "", line)
+    else:
+        line_edited_end = None
+    return line_edited_end
+
+
+def write_target_phy_file(line_edited, target_file):
+    for chunk in chunks(line_edited, 60):
+        target_file.write(chunk)
+
+
+def check_change_headers(line):
+    if not re.search(r"\d\s(\d+)", line):
+        return None
+    """
+    decreasing the number of characters because of removing stop codon
+    """
+    number_of_char = (re.search(r"\d\s(\d+)", line)).group(1)
+    number_of_char = str(int(number_of_char) - 3)
+    changed_header = re.sub(r"\d+$", number_of_char + "", line)
+    return changed_header
+
+
 def phylip2paml(source_file_path, species):
     file_number = re.search(r'(\d+)\.', source_file_path).group(1)
     personal_folder = os.path.join(os.path.split(source_file_path)[0], '{}'.format(file_number))
@@ -65,53 +118,31 @@ def phylip2paml(source_file_path, species):
                     - split string on lines by 60 character per line
                     """
                     lengths.append(len(line))
-                    if re.search(r"T\s?G\s?A$", line):
-                        line_edited_end = re.sub(r"T\s?G\s?A$", "", line)
-                    if re.search(r"T\s?A\s?G$", line):
-                        line_edited_end = re.sub(r"T\s?A\s?G$", "", line)
-                    if re.search(r"T\s?A\s?A$", line):
-                        line_edited_end = re.sub(r"T\s?A\s?A$", "", line)
-                    repl_9_spaces = (re.search(r"(\d)\s{9}", line)).group()
-                    repl_2_spaces = (re.search(r"(\d)", line)).group()
-                    target_file.write(repl_2_spaces + '\n')
-                    try:
-                        line_edited = re.sub(repl_9_spaces, "", line_edited_end)
-                        for chunk in chunks(line_edited, 60):
-                            target_file.write(chunk)
-                    except UnboundLocalError:
+                    line_edited_end = delete_stop_codon(line)
+                    name_of_seq_9spaces = (re.search(r"(\d)\s{9}", line)).group()
+                    name_of_seq = (re.search(r"(\d)", line)).group()
+                    target_file.write(name_of_seq + '\n')
+                    if line_edited_end:
+                        line_edited = re.sub(name_of_seq_9spaces, "", line_edited_end)
+                        write_target_phy_file(line_edited, target_file)
+                    else:
                         logging.warning("no stop codon in file {}".format(source_file))
                         if file_number not in STOP_CODON_BROKEN_FILES:
                             STOP_CODON_BROKEN_FILES.append(file_number)
-                if re.search(r"\d\s(\d+)", line):
-                    """
-                    decreasing the number of characters because of removing stop codon
-                    """
-                    repl = (re.search(r"\d\s(\d+)", line)).group(1)
-                    repl = str(int(repl) - 3)
-                    line_edited = re.sub(r"\d+$", repl+"", line)
-                    target_file.write(line_edited)
-    if all(x == lengths[0] for x in lengths) and len(lengths) == species and lengths[0] % 3 == 0:
-        logging.info("all seq lengths are equal, confirm of number of species")
-    elif not all(x == lengths[0] for x in lengths):
-        global NOT_EQUAL_LENGTH
-        NOT_EQUAL_LENGTH.append(file_number)
-    elif not len(lengths) == species:
-        global NOT_NEEDED_SPECIES
-        NOT_NEEDED_SPECIES.append(file_number)
-    elif lengths[0] % 3 != 0:
-        global NOT_MULTIPLE_OF_THREE
-        NOT_MULTIPLE_OF_THREE.append(file_number)
-    else:
-        logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
-        BROKEN_FILES.append(file_number)
-    logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
+
+                if check_change_headers(line):
+                    changed_header = check_change_headers(line)
+                    target_file.write(changed_header)
+
+    if check_lengths(lengths, file_number, species):
+        logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
 def replace_broken_files(directory_out):
-    broken_folder = "broken_length_files(fasta2paml)"
-    os.makedirs(broken_folder)
+    global BROKEN_FOLDER
+    os.makedirs(BROKEN_FOLDER)
     for folder in BROKEN_FILES:
-        os.replace(os.path.join(directory_out, folder), os.path.join(broken_folder, folder))
+        os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_FOLDER, folder))
 
 
 def main(infolder, outfolder, species):
@@ -132,11 +163,10 @@ if __name__ == '__main__':
         os.makedirs(outfolder)
     try:
         main(args.infolder, outfolder, int(args.species))
+        logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES:
-            logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
             replace_broken_files(outfolder)
-        if STOP_CODON_BROKEN_FILES:
-            logging.warning("STOP_CODON_BROKEN_FILES:{}".format(STOP_CODON_BROKEN_FILES))
+        logging.warning("STOP_CODON_BROKEN_FILES {}:{}".format(len(STOP_CODON_BROKEN_FILES), STOP_CODON_BROKEN_FILES))
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
