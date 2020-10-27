@@ -3,9 +3,9 @@ import argparse
 import re
 import sys
 from Bio.Phylo.PAML import codeml
-import logging
 import os
 import logging
+from subprocess import STDOUT, check_output
 
 
 WRITTEN_FILES = 0
@@ -114,7 +114,10 @@ def run_paml(infile, tree):
     personal_dir = os.path.split(infile)[0]
     cml, file_out_path = set_null_hypothesis(infile, tree, personal_dir)
     try:
-        cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True) #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
+        output = check_output(cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True),
+                              stderr=STDOUT, timeout=120)
+         #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
+
         logging.info("paml out file {} has been written".format(file_out_path))
         WRITTEN_FILES += 1
     except:
@@ -125,7 +128,9 @@ def run_paml(infile, tree):
 
     cml, file_out_path = set_alternative_hypothesis(infile, tree, personal_dir)
     try:
-        cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True)
+        output = check_output(cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True),
+                              stderr=STDOUT, timeout=120)
+
         #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
         logging.info("paml out file {} has been written".format(file_out_path))
         WRITTEN_FILES += 1

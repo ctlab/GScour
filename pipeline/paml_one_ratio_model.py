@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 import argparse
-import sys
+import subprocess
+from subprocess import check_output, STDOUT, TimeoutExpired
+from subprocess import Popen, PIPE
 from Bio.Phylo.PAML import codeml
 import logging
 import os
 import re
 
+
 BROCKEN_FILES = list()
 PROCESSED_FILES = list()
+WRITE_CTL_FILE = 0
 LOG_FILE = "paml_one_ratio.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
@@ -20,17 +24,14 @@ def parse_dir(infolder):
                     yield os.path.join(infolder, personal_folder, infile)
 
 
-def run_paml(infile, tree):
-    file_out_path = infile.replace('phy', 'out')
-    personal_dir = os.path.split(file_out_path)[0]
-    file_number = re.search(r'\/(\d+)\.', infile).group(1)
-
+def set_one_ratio_model(infile, tree, personal_dir):
+    file_out_path = infile.replace('.phy', '_one_ratio.out')
     cml = codeml.Codeml(
         alignment=infile,
         tree=tree,
         out_file=file_out_path,
         working_dir=personal_dir,
-    )
+        )
     cml.set_options(noisy=9)
     cml.set_options(verbose=1)
     cml.set_options(runmode=0)
@@ -55,34 +56,43 @@ def run_paml(infile, tree):
     cml.set_options(Small_Diff=.5e-6)
     cml.set_options(cleandata=0)
     cml.set_options(method=0)
-    # cml.print_options()
+    #cml.write_ctl_file()
+    return cml, file_out_path
+
+
+def write_ctl_file(infile, tree):
+    global PROCESSED_FILES
+    global WRITE_CTL_FILE
+    personal_dir = os.path.split(infile)[0]
+    cml, file_out_path = set_one_ratio_model(infile, tree, personal_dir)
+    os.chdir(personal_dir)
+    cml.write_ctl_file()
+    WRITE_CTL_FILE += 1
+
+
+def run_codeml(infile):
+    personal_dir = os.path.split(infile)[0]
+    file_number = (re.search(r"(\d+).phy", infile)).group(1)
+    os.chdir(personal_dir)
+    logging.info("working with {}".format(file_number))
+    p = subprocess.Popen('/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml', stdin=PIPE, stdout=PIPE)
     try:
-        global PROCESSED_FILES
-        if cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True):
-            logging.info("paml one ratio model analysis has been done for file {}".format(infile))
-            if file_number not in PROCESSED_FILES:
-                PROCESSED_FILES.append(file_number)
-        else:
-            raise Exception
-        """
-        launching of SWAMP masker in separate file due to the need of change python env from 3 to python2
-        
-        launch_swamp = '/home/alina_grf/BIOTOOLS/SWAMP-master/SWAMP.py' \
-                       ' -i {} -b {} -t {} -w {}'.format(personal_dir, branchcodes, threshold, windowsize)
-        os.system(launch_swamp)
-        logging.info("SWAMP analysis has been done for file {}".format(infile))
-        """
-    except:
-        global BROCKEN_FILES
-        logging.exception("sys.exc_info() {0}, outfile {1}".format(sys.exc_info(), file_out_path))
-        file_number = (re.search(r"(\d+).phy", infile)).group(1)
+        p.wait(timeout=20)
+        logging.info("The work has been done for file {}".format(file_number))
+        if file_number not in PROCESSED_FILES:
+            PROCESSED_FILES.append(file_number)
+    except TimeoutExpired as e:
+        p.kill()
+        logging.info("Killed {}".format(file_number))
         if file_number not in BROCKEN_FILES:
             BROCKEN_FILES.append(file_number)
 
 
 def main(infolder, tree):
     for infile in parse_dir(infolder):
-        run_paml(infile, tree)
+        write_ctl_file(infile, tree)
+    for infile in parse_dir(infolder):
+        run_codeml(infile)
 
 
 if __name__ == '__main__':
@@ -94,9 +104,10 @@ if __name__ == '__main__':
         main(args.infolder, args.tree)
     except:
         logging.exception("Unexpected error")
-        logging.warning("BROCKEN_FILES: {}".format(BROCKEN_FILES))
+        logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROCKEN_FILES), BROCKEN_FILES))
         logging.info("NUMBER OF PROCESSED FILES {}:{}".format(len(PROCESSED_FILES), PROCESSED_FILES))
 
     logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROCKEN_FILES), BROCKEN_FILES))
     logging.info("NUMBER OF PROCESSED FILES {}:{}".format(len(PROCESSED_FILES), PROCESSED_FILES))
+    logging.info("WRITE_CTL_FILE {}".format(WRITE_CTL_FILE))
     logging.info("The work has been completed")
