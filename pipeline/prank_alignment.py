@@ -11,6 +11,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 ALIGNED_FILES = list()
 EXCEPTION_NUMBER = 0
 
+
 def parse_dir(infolder):
     for infile in os.listdir(infolder):
         if infile.split('.')[-1] == 'fna':
