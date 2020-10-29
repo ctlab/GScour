@@ -15,6 +15,7 @@ BROKEN_SPECIES = list()
 BROKEN_WITH_PROTEIN = list()
 BROKEN_MULTIPLE_THREE = list()
 BROKEN_STOP_CODON = list()
+BROKEN_START_CODON = list()
 NUMBER_OF_NEED_TO_BE_WRITTEN = 0
 NOT_PROCESSED_FILES = list()
 LOG_FILE = "get_ortho_nuc.log"
@@ -31,6 +32,18 @@ def remove_stop_codons(seq, file_out_number, stop_codons=("TAG", "TGA", "TAA")):
     return seq
 
 
+def check_start_codon(seq, file_out_number, start_codons="ATG"):
+    codon = seq[0:3]
+    if codon in start_codons:
+        logging.info("ok start codon for file {}".format(file_out_number))
+        return True
+    global BROKEN_START_CODON
+    if file_out_number not in BROKEN_START_CODON:
+        logging.info("broken start codon for file {}".format(file_out_number))
+        BROKEN_START_CODON.append(file_out_number)
+    return False
+
+
 def check_accordance_with_protein_length(nucleotide_seq, seq_length, protein_length, protein_id, file_out_number):
     global BROKEN_WITH_PROTEIN
     n = seq_length - 3 * protein_length
@@ -41,8 +54,11 @@ def check_accordance_with_protein_length(nucleotide_seq, seq_length, protein_len
         if file_out_number not in BROKEN_WITH_PROTEIN:
             BROKEN_WITH_PROTEIN.append(file_out_number)
         if n > 0:
+            logging.info("n = difference seq_length - 3 * protein_length = {}, corrected the tail".format(n))
             return nucleotide_seq[0:-n]
         else:
+            logging.info("n = difference seq_length - 3 * protein_length = {}, corrected the tail with add "
+                         "n*'-'".format(n))
             return nucleotide_seq + '-' * abs(n)
     return None
 
@@ -108,6 +124,7 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, csv_columns, direct
                     index_count = np.where(ortho_protein_ids == protein_id)[0][0]
                     file_out_number = str(index_count + 1)
                     nucleotide_seq = remove_stop_codons(nucleotide_seq, file_out_number)
+                    check_start_codon(nucleotide_seq, file_out_number)
                     seq_length = len(nucleotide_seq)
 
                     """check if length of nucleotide sequence equal 3*number of proteins"""
@@ -121,7 +138,6 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, csv_columns, direct
 
                         if isinstance(res_check, Bio.Seq.Seq):
                             nucleotide_seq = res_check
-                            # correct_seq_length(nucleotide_seq, seq_length, protein_length)
                     else:
                         logging.warning("No inspections for protein length were carried out")
 

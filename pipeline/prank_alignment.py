@@ -35,6 +35,7 @@ def launch_prank(infile, outfolder, tree):
             logging.info("prank completed task for file {}".format(file_number))
             if file_number not in ALIGNED_FILES:
                 ALIGNED_FILES.append(file_number)
+                logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
     except:
         global EXCEPTION_NUMBER
         logging.exception("sys.exc_info() {0}, outfile number {1}".format(sys.exc_info(),

@@ -9,7 +9,6 @@ NOT_EQUAL_LENGTH = list()
 NOT_NEEDED_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 BROKEN_FILES = list()
-STOP_CODON_BROKEN_FILES = list()
 BROKEN_FOLDER = "broken_length_files(fasta2paml)"
 LOG_FILE = "fasta2paml.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -66,22 +65,19 @@ def check_lengths(lengths, file_number, species):
         BROKEN_FILES.append(file_number)
 
 
+"""
+replace removing stop codon to get_ortho_nucleotides.py
 def delete_stop_codon(line):
     if re.search(r"T-*G-*A-*$", line):
         line_edited_end = re.sub(r"T-*G-*A-*$", "", line)
-    #elif re.search(r"T-*G-*A-+$", line):
-    #    line_edited_end = re.sub(r"T-*G-*A-+$", "", line)
     elif re.search(r"T-*A-*G-*$", line):
         line_edited_end = re.sub(r"T-*A-*G-*$", "", line)
-    #elif re.search(r"T-*A-*G-+$", line):
-    #    line_edited_end = re.sub(r"T-*A-*G-+$", "", line)
     elif re.search(r"T-*A-*A-*$", line):
         line_edited_end = re.sub(r"T-*A-*A-*$", "", line)
-    #elif re.search(r"T-*G-*A-+$", line):
-    #    line_edited_end = re.sub(r"T-*A-*A-+$", "", line)
     else:
         line_edited_end = None
     return line_edited_end
+"""
 
 
 def write_target_phy_file(line_edited, target_file):
@@ -118,17 +114,13 @@ def phylip2paml(source_file_path, species):
                     - split string on lines by 60 character per line
                     """
                     lengths.append(len(line))
-                    line_edited_end = delete_stop_codon(line)
+
                     name_of_seq_9spaces = (re.search(r"(\d)\s{9}", line)).group()
                     name_of_seq = (re.search(r"(\d)", line)).group()
                     target_file.write(name_of_seq + '\n')
-                    if line_edited_end:
-                        line_edited = re.sub(name_of_seq_9spaces, "", line_edited_end)
-                        write_target_phy_file(line_edited, target_file)
-                    else:
-                        logging.warning("no stop codon in file {}".format(source_file))
-                        if file_number not in STOP_CODON_BROKEN_FILES:
-                            STOP_CODON_BROKEN_FILES.append(file_number)
+
+                    line_edited = re.sub(name_of_seq_9spaces, "", line)
+                    write_target_phy_file(line_edited, target_file)
 
                 if check_change_headers(line):
                     changed_header = check_change_headers(line)
@@ -166,7 +158,6 @@ if __name__ == '__main__':
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES:
             replace_broken_files(outfolder)
-        logging.warning("STOP_CODON_BROKEN_FILES {}:{}".format(len(STOP_CODON_BROKEN_FILES), STOP_CODON_BROKEN_FILES))
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
