@@ -33,17 +33,17 @@ def launch_gblocks(infile):
 
     global ALIGNED_FILES
     file_number = re.search(r'\/(\d+)\.', infile).group(1) #/home/alina_grf/BIOTOOLS/Gblocks_0.91b/Gblocks
-    launch = '/home/alina_grf/BIOTOOLS/Gblocks_0.91b/Gblocks {0} -t=d -b1=3 -b2=0 -b3=7 -b4=6 -b5=h ' \
+    launch = '/scratch/afedorova/Gblocks_0.91b/Gblocks {0} -t=d -b1=3 -b2=4 -b3=7 -b4=6 -b5=h ' \
              '-p=Yes'.format(infile)
-    if not os.system(launch):
+    if os.system(launch):
         logging.info("gblocks completed task for file {}".format(file_number))
         if file_number not in ALIGNED_FILES:
             ALIGNED_FILES.append(file_number)
-            print(ALIGNED_FILES)
+            print("ALIGNED_FILES", len(ALIGNED_FILES))
     else:
         global EXCEPTION_NUMBER
         EXCEPTION_NUMBER += 1
-        print(EXCEPTION_NUMBER)
+        print("EXCEPTION_NUMBER", EXCEPTION_NUMBER)
         logging.exception("gblocks error for file number {}".format(file_number))
 
 
@@ -60,14 +60,13 @@ if __name__ == '__main__':
         pool = multiprocessing.Pool(threads)
         inputs = list(parse_dir(args.infolder))
         pool.map(launch_gblocks, inputs)
+        print("al", ALIGNED_FILES)  # DOESNT WORK
+        print("excep", EXCEPTION_NUMBER)
+        logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
+        logging.info("Number of gblocks exceptions = {}".format(EXCEPTION_NUMBER))
+        logging.info("The work has been completed")
     except:
         logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
         logging.info("Number of gblocks exceptions = {}".format(EXCEPTION_NUMBER))
         logging.exception("Unexpected error")
-    global ALIGNED_FILES
-    global EXCEPTION_NUMBER
-    print("al", ALIGNED_FILES)
-    print("excep", EXCEPTION_NUMBER)
-    logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
-    logging.info("Number of gblocks exceptions = {}".format(EXCEPTION_NUMBER))
-    logging.info("The work has been completed")
+

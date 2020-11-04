@@ -28,14 +28,16 @@ def launch_prank(infile, outfolder, tree):
         if os.path.isfile(final_file_path):
             raise Exception('final_file_path {} already exists'.format(final_file_path))
         if tree:
-            launch = 'prank -d={0} -o={1} -t={2} > {3}'.format(infile, outfile_path_without_extension, tree, log_file)
+            launch = 'prank -d={0} -o={1} -t={2} -codon -f=paml > {3}'.format(infile, outfile_path_without_extension,
+                                                                              tree, log_file)
         else:
-            launch = 'prank -d={0} -o={1} -showtree > {2}'.format(infile, outfile_path_without_extension, log_file)
+            launch = 'prank -d={0} -o={1} -showtree -codon -f=paml > {2}'.format(infile,
+                                                                                 outfile_path_without_extension, log_file)
         if not os.system(launch):
             logging.info("prank completed task for file {}".format(file_number))
             if file_number not in ALIGNED_FILES:
                 ALIGNED_FILES.append(file_number)
-                logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
+                logging.info("Number of ALIGNED_FILES = {}".format(len(ALIGNED_FILES)))
     except:
         global EXCEPTION_NUMBER
         logging.exception("sys.exc_info() {0}, outfile number {1}".format(sys.exc_info(),

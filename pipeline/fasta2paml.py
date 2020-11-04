@@ -8,6 +8,7 @@ import re
 NOT_EQUAL_LENGTH = list()
 NOT_NEEDED_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
+EDITED_MULT_OF_THREE = list()
 BROKEN_FILES = list()
 BROKEN_FOLDER = "broken_length_files(fasta2paml)"
 LOG_FILE = "fasta2paml.log"
@@ -50,7 +51,6 @@ def chunks(s, n):
 def check_lengths(lengths, file_number, species):
     if all(x == lengths[0] for x in lengths) and len(lengths) == species and lengths[0] % 3 == 0:
         logging.info("all seq lengths are equal, confirm of number of species")
-        return True
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append(file_number)
@@ -64,6 +64,19 @@ def check_lengths(lengths, file_number, species):
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
         BROKEN_FILES.append(file_number)
 
+
+def check_multiple_of_three(line, file_number):
+    global EDITED_MULT_OF_THREE
+    n = len(line) % 3
+    if n == 1:
+        line = line + '-' * 2
+        if file_number not in EDITED_MULT_OF_THREE:
+            EDITED_MULT_OF_THREE.append(file_number)
+    elif n == 2:
+        line = line + '-' * 2
+        if file_number not in EDITED_MULT_OF_THREE:
+            EDITED_MULT_OF_THREE.append(file_number)
+    return line
 
 """
 replace removing stop codon to get_ortho_nucleotides.py
@@ -108,26 +121,25 @@ def phylip2paml(source_file_path, species):
         with open(source_file_path, 'r') as source_file:
             for line in source_file:
                 if re.search(r"\d\s{9}", line):
-                    """
-                    - remove stop codon
+                    """                
                     - insert two spaces and \n instead of 9 after name of sequence
                     - split string on lines by 60 character per line
                     """
-                    lengths.append(len(line))
-
                     name_of_seq_9spaces = (re.search(r"(\d)\s{9}", line)).group()
                     name_of_seq = (re.search(r"(\d)", line)).group()
                     target_file.write(name_of_seq + '\n')
 
                     line_edited = re.sub(name_of_seq_9spaces, "", line)
+                    line_edited = check_multiple_of_three(line_edited, file_number)
+                    lengths.append(len(line_edited))
                     write_target_phy_file(line_edited, target_file)
 
                 if check_change_headers(line):
                     changed_header = check_change_headers(line)
                     target_file.write(changed_header)
 
-    if check_lengths(lengths, file_number, species):
-        logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
+    check_lengths(lengths, file_number, species)
+    logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
 def replace_broken_files(directory_out):
@@ -161,6 +173,7 @@ if __name__ == '__main__':
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
+        logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except:
         logging.exception("Unexpected error")
 
