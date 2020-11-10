@@ -296,6 +296,7 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, csv_columns, direct
                             delete_from_broken(file_out_number, protein_id)
                         except Exception:
                             pass
+
                     else:
                         nucleotide_seq = check_translate(nucleotide_seq, protein_translation,
                                                          initfna_filepath, feature, record.id, species_numerating,
@@ -335,6 +336,8 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, csv_columns, direct
                     # check duplicates
                     if not anti_repeat_check(anti_repeat_store, protein_id, nucleotide_seq, file_out_number):
                         continue
+                    if check_stop:
+                        nucleotide_seq = nucleotide_seq[:-3]
                     seq_record = SeqRecord(nucleotide_seq, id=species_numerating, description="")
                     logging.info("detected gene {} corresponding protein_id {} with protein_length {} nucleotide seq "
                                  "of length {}\nseq\n{}"
@@ -370,11 +373,15 @@ def conv_string(val):
 
 
 def replace_broken_files(directory_out):
-    broken_folder = "broken_species_files"
-    os.makedirs(broken_folder)
+    broken_species_folder = "broken_species_files"
+    broken_multiple_folder = "broken_multiple_files"
+    os.makedirs(broken_species_folder)
     for file_number in BROKEN_SPECIES:
-        os.replace(os.path.join(directory_out, file_number + ".fna"), os.path.join(broken_folder, file_number + ".fna"))
-        os.replace(os.path.join(directory_out, file_number + ".log"), os.path.join(broken_folder, file_number + ".log"))
+        os.replace(os.path.join(directory_out, file_number + ".fna"), os.path.join(broken_species_folder, file_number + ".fna"))
+        os.replace(os.path.join(directory_out, file_number + ".log"), os.path.join(broken_species_folder, file_number + ".log"))
+    for file_number in BROKEN_MULTIPLE_THREE:
+        os.replace(os.path.join(directory_out, file_number + ".fna"), os.path.join(broken_multiple_folder, file_number + ".fna"))
+        os.replace(os.path.join(directory_out, file_number + ".log"), os.path.join(broken_multiple_folder, file_number + ".log"))
 
 
 def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, species, directory_out):
