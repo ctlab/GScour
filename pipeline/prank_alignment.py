@@ -110,8 +110,8 @@ if __name__ == '__main__':
         # pool.starmap(launch_prank, zip(inputs, len_inputs * [outfolder], len_inputs * [args.tree]))
     except:
         logging.exception("Unexpected error")
-        logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
+        logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
         logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
-    logging.info("Number of ALIGNED_FILES = {}".format(ALIGNED_FILES))
+    logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
     logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
     logging.info("The work has been completed")

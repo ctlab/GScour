@@ -14,6 +14,7 @@ BROKEN_ACCORDANCE = dict()  # broken accordance with protein length (nuc = prote
 BROKEN_MULTIPLE_THREE = dict()
 BROKEN_STOP_CODON = dict()
 BROKEN_START_CODON = dict()
+PREVIOUS_BROKEN = list()
 NUMBER_OF_NEED_TO_BE_WRITTEN = 0
 LOG_FILE = "get_ortho_nuc_seqs.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -312,6 +313,8 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
                     protein_translation_length = len(protein_translation)  # int
                     nucleotide_seq = feature.location.extract(record.seq)
                     index_count = np.where(ortho_protein_ids == protein_id)[0][0]
+                    if index_count - 1 not in PREVIOUS_BROKEN:
+                        return
                     file_out_number = str(index_count + 1)
                     nucleotide_seq_length = len(nucleotide_seq)
                     gene = feature.qualifiers.get('gene')[0]
@@ -397,6 +400,13 @@ def replace_broken_files(directory_out):
                    os.path.join(broken_multiple_folder, file_number + ".log"))
 
 
+def parse_dir(infolder):
+    global PREVIOUS_BROKEN
+    for infile in os.listdir(infolder):
+        if infile.split('.')[-1] == 'fna':
+            PREVIOUS_BROKEN.append(int(infile.split('.')[0]))
+
+
 def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, species, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
     if not os.path.isdir(directory_out):
@@ -435,9 +445,11 @@ if __name__ == '__main__':
                                          'in FASTA format', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--out', help='Path to the folder for result write out', nargs='?')
+    parser.add_argument('--broken', help='Path to the folder with broken files of previous launch', nargs='?')
     args = parser.parse_args()
 
     try:
+        parse_dir(args.broken)
         main(args.ortho, args.gbff, args.csv, args.genome, int(args.species), args.out)
         written_files_number = len(WRITTEN_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
