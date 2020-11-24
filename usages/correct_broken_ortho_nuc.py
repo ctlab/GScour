@@ -16,7 +16,7 @@ BROKEN_STOP_CODON = dict()
 BROKEN_START_CODON = dict()
 PREVIOUS_BROKEN = list()
 NUMBER_OF_NEED_TO_BE_WRITTEN = 0
-LOG_FILE = "get_ortho_nuc_seqs.log"
+LOG_FILE = "get_ortho_nuc_from_broken.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
@@ -304,6 +304,7 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
     global BROKEN_STOP_CODON
     global BROKEN_MULTIPLE_THREE
     global BROKEN_ACCORDANCE
+    global PREVIOUS_BROKEN
     for record in SeqIO.parse(gb_file, "genbank"):
         for feature in record.features:
             if feature.type == "CDS":
@@ -313,8 +314,8 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
                     protein_translation_length = len(protein_translation)  # int
                     nucleotide_seq = feature.location.extract(record.seq)
                     index_count = np.where(ortho_protein_ids == protein_id)[0][0]
-                    if index_count - 1 not in PREVIOUS_BROKEN:
-                        return
+                    if int(index_count - 1) not in PREVIOUS_BROKEN:
+                        continue
                     file_out_number = str(index_count + 1)
                     nucleotide_seq_length = len(nucleotide_seq)
                     gene = feature.qualifiers.get('gene')[0]
@@ -354,11 +355,10 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
                                                        nucleotide_seq_length, file_out_number, species_numerating)
 
                     logging.info("Extracted and analysis has ended: detected gene {} corresponding protein_id {} with "
-                                 "protein_length {} "
-                                 "nucleotide seq "
-                                 "of length {}\nseq\n{}"
-                                 "length".format(gene, protein_id, protein_translation_length, nucleotide_seq_length,
-                                                 nucleotide_seq))
+                                 "protein_length={}\n"
+                                 "length of nucleotide seq={}\n"
+                                 "seq:\n{}".format(gene, protein_id, protein_translation_length, nucleotide_seq_length,
+                                                   nucleotide_seq))
     write_files(anti_repeat_store, directory_out)
 
 
@@ -385,9 +385,10 @@ def conv_string(val):
 
 
 def replace_broken_files(directory_out):
-    broken_species_folder = "broken_species_files"
-    broken_multiple_folder = "broken_multiple_files"
+    broken_species_folder = "new_broken_species_files"
+    broken_multiple_folder = "new_broken_multiple_files"
     os.makedirs(broken_species_folder)
+    os.makedirs(broken_multiple_folder)
     for file_number in BROKEN_SPECIES:
         os.replace(os.path.join(directory_out, file_number + ".fna"),
                    os.path.join(broken_species_folder, file_number + ".fna"))
@@ -409,6 +410,7 @@ def parse_dir(infolder):
 
 def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, species, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
+    global PREVIOUS_BROKEN
     if not os.path.isdir(directory_out):
         os.makedirs(directory_out)
     ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
@@ -422,7 +424,7 @@ def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, 
                          converters={'Protein product': conv_string, 'Length': conv_int}, low_memory=False)
         ortho_protein_ids = ortho_data.iloc[:, column_number].values
 
-        NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
+        NUMBER_OF_NEED_TO_BE_WRITTEN = len(PREVIOUS_BROKEN)
         get_and_write_nucleotide_seq(annotation_gbff_path, ortho_protein_ids, directory_out,
                                      species_numerating, initfna_filepath)
 
@@ -445,11 +447,14 @@ if __name__ == '__main__':
                                          'in FASTA format', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--out', help='Path to the folder for result write out', nargs='?')
-    parser.add_argument('--broken', help='Path to the folder with broken files of previous launch', nargs='?')
+    parser.add_argument('--broken', help='Path to the folder with broken files of previous launch', nargs='?',
+                        default=PREVIOUS_BROKEN)
     args = parser.parse_args()
 
     try:
-        parse_dir(args.broken)
+        if type(args.broken) != list:
+            parse_dir(args.broken)
+        logging.info("previous_broken list of length {}:\n{}".format(len(PREVIOUS_BROKEN), PREVIOUS_BROKEN))
         main(args.ortho, args.gbff, args.csv, args.genome, int(args.species), args.out)
         written_files_number = len(WRITTEN_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
@@ -459,10 +464,11 @@ if __name__ == '__main__':
         logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN = {},  WRITTEN_FILES = {}, where {} in BROKEN_SPECIES list: {}"
                      .format(NUMBER_OF_NEED_TO_BE_WRITTEN, written_files_number, len(BROKEN_SPECIES),
                              repr(BROKEN_SPECIES)))
-        if BROKEN_SPECIES:
+        if BROKEN_SPECIES or BROKEN_MULTIPLE_THREE:
             replace_broken_files(args.out)
-            residue = written_files_number - len(BROKEN_SPECIES)
-            logging.info("removed broken species files into folder 'broken_species_files' in cwd,"
+            residue = written_files_number - len(BROKEN_SPECIES) - len(BROKEN_MULTIPLE_THREE)
+            logging.info("removed broken species, broken multiple files into folders 'broken_species_files'"
+                         "'broken_multiple_files' in cwd,"
                          "please check out folder for .fna files number: {}".format(residue))
     except:
         logging.exception("Unexpected error")

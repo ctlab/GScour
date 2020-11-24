@@ -108,16 +108,14 @@ def set_null_hypothesis(infile, tree, personal_dir):
     return cml, file_out_path
 
 
-def run_paml(infile, tree):
+def run_paml(infile, tree, executable_path):
     global WRITTEN_FILES, EXCEPTION_NUMBER
     file_number = (re.search(r"(\d+).phy", infile)).group(1)
     personal_dir = os.path.split(infile)[0]
     cml, file_out_path = set_null_hypothesis(infile, tree, personal_dir)
     try:
-        output = check_output(cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True),
+        output = check_output(cml.run(command=executable_path, verbose=True),
                               stderr=STDOUT, timeout=120)
-         #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
-
         logging.info("paml out file {} has been written".format(file_out_path))
         WRITTEN_FILES += 1
     except:
@@ -130,8 +128,6 @@ def run_paml(infile, tree):
     try:
         output = check_output(cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True),
                               stderr=STDOUT, timeout=120)
-
-        #/home/alina_grf/BIOTOOLS/paml4.9j/bin/
         logging.info("paml out file {} has been written".format(file_out_path))
         WRITTEN_FILES += 1
     except:
@@ -141,18 +137,24 @@ def run_paml(infile, tree):
             BROCKEN_FILES_ALTER.append(file_number)
 
 
-def main(infolder, tree):
+def main(infolder, tree, executable_path):
     for infile in parse_dir(infolder):
-        run_paml(infile, tree)
+        run_paml(infile, tree, executable_path)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--exec', help='Path to the codeml executable', nargs='?', default="codeml")
     parser.add_argument('--infolder', help='The full path to the folder with input files for paml', nargs='?')
     parser.add_argument('--tree', help='Path to the tree for paml', nargs='?')
     args = parser.parse_args()
+    infolder = args.infolder
+    executable_path = args.exec
+    tree = args.tree
+    logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}".
+                 format(infolder, tree, executable_path))
     try:
-        main(args.infolder, args.tree)
+        main(infolder, tree, executable_path)
         logging.info("Number of files have been analyzed: {}".format(FILES_NUMBER))
         logging.info("Number of written files: {}".format(WRITTEN_FILES))
         logging.info("Number of exceptions: {}".format(EXCEPTION_NUMBER))

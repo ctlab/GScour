@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import subprocess
-from subprocess import check_output, STDOUT, TimeoutExpired
+from subprocess import TimeoutExpired
 from subprocess import Popen, PIPE
 from Bio.Phylo.PAML import codeml
 import logging
 import os
 import re
-
 
 BROKEN_FILES = list()
 PROCESSED_FILES = list()
@@ -70,12 +69,12 @@ def write_ctl_file(infile, tree):
     WRITE_CTL_FILE += 1
 
 
-def run_codeml(infile):
+def run_codeml(infile, executable_path):
     personal_dir = os.path.split(infile)[0]
     file_number = (re.search(r"(\d+).phy", infile)).group(1)
     os.chdir(personal_dir)
     logging.info("working with {}".format(file_number))
-    p = subprocess.Popen('/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml', stdin=PIPE, stdout=PIPE)
+    p = subprocess.Popen(executable_path, stdin=PIPE, stdout=PIPE) # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
     try:
         p.wait(timeout=20)
         logging.info("The work has been done for file {}".format(file_number))
@@ -83,25 +82,31 @@ def run_codeml(infile):
             PROCESSED_FILES.append(file_number)
     except TimeoutExpired as e:
         p.kill()
-        logging.info("Killed {}".format(file_number))
+        logging.info("Killed {}, {}".format(file_number, e))
         if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)
 
 
-def main(infolder, tree):
+def main(infolder, tree, exec_path):
     for infile in parse_dir(infolder):
         write_ctl_file(infile, tree)
     for infile in parse_dir(infolder):
-        run_codeml(infile)
+        run_codeml(infile, exec_path)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--exec', help='Path to the codeml executable', nargs='?', default="codeml")
     parser.add_argument('--infolder', help='Path to the folder with input files for paml', nargs='?')
     parser.add_argument('--tree', help='Path to the tree for paml', nargs='?')
     args = parser.parse_args()
+    infolder = args.infolder
+    executable_path = args.exec
+    tree = args.tree
+    logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}".
+                 format(infolder, tree, executable_path))
     try:
-        main(args.infolder, args.tree)
+        main(infolder, tree, executable_path)
     except:
         logging.exception("Unexpected error")
         logging.warning("NUMBER OF BROCKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))

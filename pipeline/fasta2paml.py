@@ -27,25 +27,27 @@ def parse_phylip_dir(infolder):
             yield os.path.join(infolder, infile)
 
 
-def fasta2phylip(infile, outfolder):
-    outfile = os.path.join(outfolder, "{}.{}".format(re.search(r'\/(\d+)\.', infile).group(1), "phylip"))
-    with open(infile, 'r') as input:
-        with open(outfile, 'w') as output:
-            alignments = SeqIO.parse(input, "fasta")
-            SeqIO.write(alignments, output, "phylip-sequential")
-    logging.info('phylip-sequential format file {} has been recorded'.format(outfile))
+def fasta2phylip(infile, folder_out):
+    outfile = os.path.join(folder_out, "{}.{}".format(re.search(r'\/(\d+)\.', infile).group(1), "phylip"))
+    try:
+        with open(infile, 'r') as input:
+            with open(outfile, 'w') as output:
+                alignments = SeqIO.parse(input, "fasta")
+                SeqIO.write(alignments, output, "phylip-sequential")
+        logging.info('phylip-sequential format file {} has been recorded'.format(outfile))
+    except BaseException as e:
+        logging.error("BaseException: {} for file {}".format(e, infile))
 
 
 def chunks(s, n):
     """Produce `n`-character chunks from `s`."""
     for start in range(0, len(s), n):
-        yield s[start:start + n]
-        """
+        #yield s[start:start + n]+'\n'
+
         if start >= len(s) - n:
             yield s[start:start + n]
         else:
             yield s[start:start + n]+"\n"
-        """
 
 
 def check_lengths(lengths, file_number, species):
@@ -65,49 +67,23 @@ def check_lengths(lengths, file_number, species):
         BROKEN_FILES.append(file_number)
 
 
-def check_multiple_of_three(line, file_number):
-    global EDITED_MULT_OF_THREE
-    n = len(line) % 3
-    if n == 1:
-        line = line + '-' * 2
-        if file_number not in EDITED_MULT_OF_THREE:
-            EDITED_MULT_OF_THREE.append(file_number)
-    elif n == 2:
-        line = line + '-' * 2
-        if file_number not in EDITED_MULT_OF_THREE:
-            EDITED_MULT_OF_THREE.append(file_number)
-    return line
-
-"""
-replace removing stop codon to get_ortho_nucleotides.py
-def delete_stop_codon(line):
-    if re.search(r"T-*G-*A-*$", line):
-        line_edited_end = re.sub(r"T-*G-*A-*$", "", line)
-    elif re.search(r"T-*A-*G-*$", line):
-        line_edited_end = re.sub(r"T-*A-*G-*$", "", line)
-    elif re.search(r"T-*A-*A-*$", line):
-        line_edited_end = re.sub(r"T-*A-*A-*$", "", line)
-    else:
-        line_edited_end = None
-    return line_edited_end
-"""
-
-
 def write_target_phy_file(line_edited, target_file):
     for chunk in chunks(line_edited, 60):
         target_file.write(chunk)
 
 
+"""
 def check_change_headers(line):
     if not re.search(r"\d\s(\d+)", line):
         return None
-    """
-    decreasing the number of characters because of removing stop codon
-    """
+    
+    # decreasing the number of characters because of removing stop codon
+    
     number_of_char = (re.search(r"\d\s(\d+)", line)).group(1)
     number_of_char = str(int(number_of_char) - 3)
     changed_header = re.sub(r"\d+$", number_of_char + "", line)
     return changed_header
+"""
 
 
 def phylip2paml(source_file_path, species):
@@ -120,7 +96,9 @@ def phylip2paml(source_file_path, species):
     with open(target_file_path, 'w') as target_file:
         with open(source_file_path, 'r') as source_file:
             for line in source_file:
-                if re.search(r"\d\s{9}", line):
+                if re.search(r"\d\s(\d+)", line):
+                    target_file.write(line)
+                elif re.search(r"\d\s{9}", line):
                     """                
                     - insert two spaces and \n instead of 9 after name of sequence
                     - split string on lines by 60 character per line
@@ -130,13 +108,8 @@ def phylip2paml(source_file_path, species):
                     target_file.write(name_of_seq + '\n')
 
                     line_edited = re.sub(name_of_seq_9spaces, "", line)
-                    line_edited = check_multiple_of_three(line_edited, file_number)
-                    lengths.append(len(line_edited))
+                    lengths.append(len(line_edited[:-1]))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
-
-                if check_change_headers(line):
-                    changed_header = check_change_headers(line)
-                    target_file.write(changed_header)
 
     check_lengths(lengths, file_number, species)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
@@ -149,10 +122,10 @@ def replace_broken_files(directory_out):
         os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_FOLDER, folder))
 
 
-def main(infolder, outfolder, species):
-    for infile in parse_dir_out_gblocks(infolder):
-        fasta2phylip(infile, outfolder)
-    for phylip_file in parse_phylip_dir(outfolder):
+def main(folder_in, folder_out, species):
+    for infile in parse_dir_out_gblocks(folder_in):
+        fasta2phylip(infile, folder_out)
+    for phylip_file in parse_phylip_dir(folder_out):
         phylip2paml(phylip_file, species)
 
 
@@ -176,5 +149,4 @@ if __name__ == '__main__':
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except:
         logging.exception("Unexpected error")
-
     logging.info("The work has been completed")

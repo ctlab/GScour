@@ -7,10 +7,11 @@ import logging
 import re
 import sys
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 ALIGNED_FILES = list()
 EXCEPTION_NUMBER = 0
 counter = None
+LOG_FILE = "prank_alignment.log"
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
 def init_counter(args):
@@ -25,27 +26,27 @@ def parse_dir(infolder):
             yield os.path.join(infolder, infile)
 
 
-def get_final_file_path(outfile_path_without_extension, output_format):
-    if output_format in ["phylipi", "phylips", "paml"]:
+def get_final_file_path(outfile_path_without_extension, format_out):
+    if format_out in ["phylipi", "phylips", "paml"]:
         final_file_path = '{}.best.phy'.format(outfile_path_without_extension)
-    elif output_format in ["fasta", ""]:
+    elif format_out in ["fasta", ""]:
         final_file_path = '{}.best.fas'.format(outfile_path_without_extension)
     else:
         final_file_path = '{}.best.nex'.format(outfile_path_without_extension)
     return final_file_path
 
 
-def get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, output_format):
+def get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out):
     log_file = os.path.join("{}.{}".format(os.path.abspath(outfile_path_without_extension), 'log'))
     if os.path.isfile(final_file_path):
         raise Exception('final_file_path {} already exists'.format(final_file_path))
-    if tree and output_format:
+    if tree and format_out:
         launch = 'prank -d={0} -o={1} -t={2} -codon -f={3} > {4}'.format(infile, outfile_path_without_extension,
-                                                                         tree, output_format, log_file)
+                                                                         tree, format_out, log_file)
     elif tree:
         launch = 'prank -d={0} -o={1} -t={2} -codon > {3}'.format(infile, outfile_path_without_extension,
                                                                   tree, log_file)
-    elif output_format and not tree:
+    elif format_out and not tree:
         launch = 'prank -d={0} -o={1} -showtree -codon -f=paml > {2}'.format(infile,
                                                                              outfile_path_without_extension,
                                                                              log_file)
@@ -56,14 +57,14 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
     return launch
 
 
-def launch_prank(infile, outfolder, tree, output_format):
+def launch_prank(infile, folder_out, tree, format_out):
     global counter
-    outfile_path_without_extension = os.path.join(outfolder, re.search(r'\/(\d+)\.', infile).group(1))
+    outfile_path_without_extension = os.path.join(folder_out, re.search(r'\/(\d+)\.', infile).group(1))
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
-    final_file_path = get_final_file_path(outfile_path_without_extension, output_format)
+    final_file_path = get_final_file_path(outfile_path_without_extension, format_out)
     try:
         global ALIGNED_FILES
-        launch_command = get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, output_format)
+        launch_command = get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out)
         if not os.system(launch_command):
             logging.info("prank completed task for file {}".format(file_number))
             if file_number not in ALIGNED_FILES:
@@ -95,9 +96,12 @@ if __name__ == '__main__':
         logger = multiprocessing.get_logger()
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter,))
+        infolder = args.infolder
         inputs = list(parse_dir(args.infolder))
         len_inputs = len(inputs)
         outfolder = args.outfolder
+        logging.info("Path to the folder with input files for prank: {}".format(infolder))
+        logging.info("Path to the folder with output files of prank: {}".format(outfolder))
         if not os.path.isdir(outfolder):
             os.makedirs(outfolder)
         output_format = args.f
@@ -106,7 +110,7 @@ if __name__ == '__main__':
         i = pool.starmap_async(launch_prank, zip(inputs, len_inputs * [outfolder], len_inputs * [args.tree],
                                                  len_inputs * [output_format]))
         i.wait()
-        print(i.get())
+        i.get()
         # pool.starmap(launch_prank, zip(inputs, len_inputs * [outfolder], len_inputs * [args.tree]))
     except:
         logging.exception("Unexpected error")
