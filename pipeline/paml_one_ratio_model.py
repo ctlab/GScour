@@ -15,6 +15,7 @@ LOG_FILE = "paml_one_ratio.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
+
 def parse_dir(infolder):
     for personal_folder in os.scandir(infolder):
         if os.path.isdir(personal_folder):
@@ -23,11 +24,11 @@ def parse_dir(infolder):
                     yield os.path.join(infolder, personal_folder, infile)
 
 
-def set_one_ratio_model(infile, tree, personal_dir):
+def set_one_ratio_model(infile, phylo_tree, personal_dir):
     file_out_path = infile.replace('.phy', '_one_ratio.out')
     cml = codeml.Codeml(
         alignment=infile,
-        tree=tree,
+        tree=phylo_tree,
         out_file=file_out_path,
         working_dir=personal_dir,
         )
@@ -59,22 +60,22 @@ def set_one_ratio_model(infile, tree, personal_dir):
     return cml, file_out_path
 
 
-def write_ctl_file(infile, tree):
+def write_ctl_file(infile, phylo_tree):
     global PROCESSED_FILES
     global WRITE_CTL_FILE
     personal_dir = os.path.split(infile)[0]
-    cml, file_out_path = set_one_ratio_model(infile, tree, personal_dir)
+    cml, file_out_path = set_one_ratio_model(infile, phylo_tree, personal_dir)
     os.chdir(personal_dir)
     cml.write_ctl_file()
     WRITE_CTL_FILE += 1
 
 
-def run_codeml(infile, executable_path):
+def run_codeml(infile, exec_path):
     personal_dir = os.path.split(infile)[0]
     file_number = (re.search(r"(\d+).phy", infile)).group(1)
     os.chdir(personal_dir)
     logging.info("working with {}".format(file_number))
-    p = subprocess.Popen(executable_path, stdin=PIPE, stdout=PIPE) # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
+    p = subprocess.Popen(exec_path, stdin=PIPE, stdout=PIPE)  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
     try:
         p.wait(timeout=20)
         logging.info("The work has been done for file {}".format(file_number))
@@ -87,10 +88,10 @@ def run_codeml(infile, executable_path):
             BROKEN_FILES.append(file_number)
 
 
-def main(infolder, tree, exec_path):
-    for infile in parse_dir(infolder):
-        write_ctl_file(infile, tree)
-    for infile in parse_dir(infolder):
+def main(folder_in, phylogeny_tree, exec_path):
+    for infile in parse_dir(folder_in):
+        write_ctl_file(infile, phylogeny_tree)
+    for infile in parse_dir(folder_in):
         run_codeml(infile, exec_path)
 
 

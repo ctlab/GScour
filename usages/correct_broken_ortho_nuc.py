@@ -8,7 +8,7 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import numpy as np
 
-WRITTEN_FILES = dict()
+PROCESSED_FILES = dict()
 BROKEN_SPECIES = list()
 BROKEN_ACCORDANCE = dict()  # broken accordance with protein length (nuc = protein length * 3)
 BROKEN_MULTIPLE_THREE = dict()
@@ -260,7 +260,7 @@ def anti_repeat_check(anti_repeat_store, protein_id, nucleotide_seq, file_out_nu
 
 
 def write_fasta_file(directory_out, file_out_number, seq):
-    global WRITTEN_FILES
+    global PROCESSED_FILES
     with open(os.path.join(directory_out, file_out_number + ".fna"), "a") as ofile:
         SeqIO.write(seq, ofile, "fasta")
         if not WRITTEN_FILES.get(file_out_number):
@@ -430,7 +430,7 @@ def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, 
 
     logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN: {}".format(NUMBER_OF_NEED_TO_BE_WRITTEN))
 
-    for file, written_species in WRITTEN_FILES.items():
+    for file, written_species in PROCESSED_FILES.items():
         if written_species != species:
             if file not in BROKEN_SPECIES:
                 BROKEN_SPECIES.append(file)
@@ -456,7 +456,7 @@ if __name__ == '__main__':
             parse_dir(args.broken)
         logging.info("previous_broken list of length {}:\n{}".format(len(PREVIOUS_BROKEN), PREVIOUS_BROKEN))
         main(args.ortho, args.gbff, args.csv, args.genome, int(args.species), args.out)
-        written_files_number = len(WRITTEN_FILES)
+        written_files_number = len(PROCESSED_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
         if delta == 0:
             logging.info("All files are written")
@@ -478,5 +478,5 @@ if __name__ == '__main__':
     logging.warning("BROKEN_START_CODON {} : {}".format(len(BROKEN_START_CODON), BROKEN_START_CODON))
     logging.warning("BROKEN_ACCORDANCE {} : {}".format(len(BROKEN_ACCORDANCE), BROKEN_ACCORDANCE))
     logging.warning("BROKEN_MULTIPLE_THREE {} : {}".format(len(BROKEN_MULTIPLE_THREE), BROKEN_MULTIPLE_THREE))
-    logging.info("WRITTEN_FILES {}:\n{}".format(len(WRITTEN_FILES), repr(WRITTEN_FILES)))
+    logging.info("WRITTEN_FILES {}:\n{}".format(len(PROCESSED_FILES), repr(PROCESSED_FILES)))
     logging.info("The work has been completed")

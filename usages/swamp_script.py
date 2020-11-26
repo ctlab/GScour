@@ -19,11 +19,11 @@ def parse_dir(infolder):
                     yield os.path.join(infolder, personal_folder)
 
 
-def run_swamp(personal_folder, branchcodes, threshold, windowsize):
+def run_swamp(personal_folder, exec_path, branchcodes, threshold, windowsize):
     global BROKEN_FILES
     try:
-        launch_swamp = 'python2 /home/alina_grf/BIOTOOLS/SWAMP-master/SWAMP.py' \
-                       ' -i {} -b {} -t {} -w {} >> {}'.format(personal_folder, branchcodes,
+        launch_swamp = '{}' \
+                       ' -i {} -b {} -t {} -w {} >> {}'.format(exec_path, personal_folder, branchcodes,
                                                                threshold, windowsize, LOG_FILE)
         if os.system(launch_swamp):
             raise ValueError
@@ -36,6 +36,7 @@ def run_swamp(personal_folder, branchcodes, threshold, windowsize):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('-exec', help='Path to the SWAMP executable', nargs='?')
     parser.add_argument('-i', help='INFOLDER', nargs='?')
     parser.add_argument('-b', help='BRANCHNAMESFILE', nargs='?')
     parser.add_argument('-t', help='THRESHOLD', nargs='?', default="")
@@ -43,8 +44,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         for folder in parse_dir(args.i):
-            run_swamp(folder, args.b, args.t, args.w)
+            run_swamp(folder, args.exec, args.b, args.t, args.w)
     except:
         logging.exception("Unexpected error")
-    print("BROKEN_FILES", len(BROKEN_FILES), BROKEN_FILES)
+    logging.info("BROKEN_FILES", len(BROKEN_FILES), BROKEN_FILES)
     logging.info("The work has been completed")

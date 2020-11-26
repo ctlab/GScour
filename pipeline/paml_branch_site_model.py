@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 import argparse
 import re
+import subprocess
 import sys
 from Bio.Phylo.PAML import codeml
 import os
 import logging
-from subprocess import STDOUT, check_output
+from subprocess import STDOUT, check_output, CalledProcessError
 
-
-WRITTEN_FILES = 0
+PROCESSED_FILES = list()
 EXCEPTION_NUMBER = 0
-FILES_NUMBER = 0
+NUMBER_OF_FILES = 0
 BROCKEN_FILES_NULL = list()
 BROCKEN_FILES_ALTER = list()
 LOG_FILE = "paml_branch_site.log"
@@ -36,21 +36,21 @@ For analysis performs: ln0, np0 from H0; ln1, np1 from H1;
 """
 
 
-def parse_dir(infolder):
-    global FILES_NUMBER
-    for personal_folder in os.scandir(infolder):
+def parse_dir(folder_in):
+    global NUMBER_OF_FILES
+    for personal_folder in os.scandir(folder_in):
         if os.path.isdir(personal_folder):
             for infile in os.listdir(personal_folder):
                 if infile.split('.')[-1] == 'phy':
-                    FILES_NUMBER += 1
-                    yield os.path.join(infolder, personal_folder, infile)
+                    NUMBER_OF_FILES += 1
+                    yield os.path.join(folder_in, personal_folder, infile)
 
 
-def set_alternative_hypothesis(infile, tree, personal_dir):
+def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
     file_out_path = infile.replace('.phy', '_alter1.out')
     cml = codeml.Codeml(
         alignment=infile,
-        tree=tree,
+        tree=phylo_tree,
         out_file=file_out_path,
         working_dir=personal_dir,
         )
@@ -74,14 +74,15 @@ def set_alternative_hypothesis(infile, tree, personal_dir):
     cml.set_options(Small_Diff=.45e-6)
     cml.set_options(cleandata=1)
     cml.set_options(fix_blength=1)
+    cml.write_ctl_file()
     return cml, file_out_path
 
 
-def set_null_hypothesis(infile, tree, personal_dir):
+def set_null_hypothesis(infile, phylo_tree, personal_dir):
     file_out_path = infile.replace('.phy', '_null1.out')
     cml = codeml.Codeml(
         alignment=infile,
-        tree=tree,
+        tree=phylo_tree,
         out_file=file_out_path,
         working_dir=personal_dir,
         )
@@ -105,41 +106,48 @@ def set_null_hypothesis(infile, tree, personal_dir):
     cml.set_options(Small_Diff=.45e-6)
     cml.set_options(cleandata=1)
     cml.set_options(fix_blength=1)
+    cml.write_ctl_file()
     return cml, file_out_path
 
 
-def run_paml(infile, tree, executable_path):
-    global WRITTEN_FILES, EXCEPTION_NUMBER
-    file_number = (re.search(r"(\d+).phy", infile)).group(1)
+def run_paml(infile, phylo_tree, exec_path):
+    global PROCESSED_FILES, EXCEPTION_NUMBER
     personal_dir = os.path.split(infile)[0]
-    cml, file_out_path = set_null_hypothesis(infile, tree, personal_dir)
+    file_number = (re.search(r"(\d+).phy", infile)).group(1)
+    os.chdir(personal_dir)
+    logging.info("working with {}".format(file_number))  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
+    cml, file_out_path = set_null_hypothesis(infile, phylo_tree, personal_dir)
+    p = subprocess.Popen(exec_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     try:
-        output = check_output(cml.run(command=executable_path, verbose=True),
-                              stderr=STDOUT, timeout=120)
+        p.wait(timeout=2000)
         logging.info("paml out file {} has been written".format(file_out_path))
-        WRITTEN_FILES += 1
-    except:
-        logging.exception("null, infile {}, sys.exc_info() {}".format(infile, sys.exc_info()))
+        if file_number not in PROCESSED_FILES:
+            PROCESSED_FILES.append(file_number)
+    except subprocess.TimeoutExpired as e:
+        p.kill()
         EXCEPTION_NUMBER += 1
+        logging.info("Null hypothesis, Killed {}, {}".format(file_number, e))
         if file_number not in BROCKEN_FILES_NULL:
             BROCKEN_FILES_NULL.append(file_number)
 
-    cml, file_out_path = set_alternative_hypothesis(infile, tree, personal_dir)
+    cml, file_out_path = set_alternative_hypothesis(infile, phylo_tree, personal_dir)
+    p = subprocess.Popen(exec_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     try:
-        output = check_output(cml.run(command="/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml", verbose=True),
-                              stderr=STDOUT, timeout=120)
+        p.wait(timeout=2000)
         logging.info("paml out file {} has been written".format(file_out_path))
-        WRITTEN_FILES += 1
-    except:
-        logging.exception("alter, infile {},  sys.exc_info() {}".format(infile, sys.exc_info()))
+        if file_number not in PROCESSED_FILES:
+            PROCESSED_FILES.append(file_number)
+    except subprocess.TimeoutExpired as e:
+        p.kill()
         EXCEPTION_NUMBER += 1
+        logging.exception("Alternative hypothesis, Killed {}, {}".format(file_number, e))
         if file_number not in BROCKEN_FILES_ALTER:
             BROCKEN_FILES_ALTER.append(file_number)
 
 
-def main(infolder, tree, executable_path):
-    for infile in parse_dir(infolder):
-        run_paml(infile, tree, executable_path)
+def main(folder_in, phylogeny_tree, exec_path):
+    for infile in parse_dir(folder_in):
+        run_paml(infile, phylogeny_tree, exec_path)
 
 
 if __name__ == '__main__':
@@ -155,8 +163,8 @@ if __name__ == '__main__':
                  format(infolder, tree, executable_path))
     try:
         main(infolder, tree, executable_path)
-        logging.info("Number of files have been analyzed: {}".format(FILES_NUMBER))
-        logging.info("Number of written files: {}".format(WRITTEN_FILES))
+        logging.info("Number of files should be analyzed: {}".format(NUMBER_OF_FILES))
+        logging.info("Number of processed files: {}".format(PROCESSED_FILES))
         logging.info("Number of exceptions: {}".format(EXCEPTION_NUMBER))
     except:
         logging.exception("Unexpected error")
