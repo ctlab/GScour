@@ -47,5 +47,5 @@ if __name__ == '__main__':
             run_swamp(folder, args.exec, args.b, args.t, args.w)
     except:
         logging.exception("Unexpected error")
-    logging.info("BROKEN_FILES", len(BROKEN_FILES), BROKEN_FILES)
+    logging.info("BROKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     logging.info("The work has been completed")
