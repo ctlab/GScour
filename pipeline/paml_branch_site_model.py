@@ -32,7 +32,7 @@ H1: model = 2, NSsites = 2 (branch-site model),
     fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
     
-in analyse_pamlout.py:
+in paml_out_analysis.py:
 For analysis performs: ln0, np0 from H0; ln1, np1 from H1; 
                        ΔLRT = 2×(lnL1 - lnL0)
                        n = np1 - np0
@@ -131,19 +131,22 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
     if hypothesis_type == "null":
         global BROCKEN_FILES_NULL, PROCESSED_FILES_NULL
         global excep_null_counter, processed_null_counter
-        BROKEN_FILES = BROCKEN_FILES_NULL
-        PROCESSED_FILES = PROCESSED_FILES_NULL
+        broken_files = BROCKEN_FILES_NULL
+        processed_files = PROCESSED_FILES_NULL
         excep_counter = excep_null_counter
         processed_counter = processed_null_counter
         cml, file_out_path = set_null_hypothesis(infile, phylo_tree, personal_dir)
     elif hypothesis_type == "alter":
         global BROCKEN_FILES_ALTER, PROCESSED_FILES_ALTER
         global excep_alter_counter, processed_alter_counter
-        BROKEN_FILES = BROCKEN_FILES_ALTER
-        PROCESSED_FILES = PROCESSED_FILES_ALTER
+        broken_files = BROCKEN_FILES_ALTER
+        processed_files = PROCESSED_FILES_ALTER
         excep_counter = excep_alter_counter
         processed_counter = processed_alter_counter
         cml, file_out_path = set_alternative_hypothesis(infile, phylo_tree, personal_dir)
+    else:
+        logging.warning("Check the type of hypothesis: null, alter")
+        return
 
     if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
         logging.info("{}: Not null size result file {} already exists for file_number {}".
@@ -159,16 +162,16 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
                 processed_counter.value += 1
                 logging.info("{}: The work has been done for file {}\nCounter of processed files = {}".
                              format(hypothesis_type, file_number, processed_counter.value))
-            if file_number not in PROCESSED_FILES:
-                PROCESSED_FILES.append(file_number)
-                logging.info("{}: PROCESSED_FILES list of length {}: {}".format(hypothesis_type, len(PROCESSED_FILES),
-                                                                                PROCESSED_FILES))
+            if file_number not in processed_files:
+                processed_files.append(file_number)
+                logging.info("{}: processed_files list of length {}: {}".format(hypothesis_type, len(processed_files),
+                                                                                processed_files))
         else:
             logging.info("{}: Null size result file number {}".format(hypothesis_type, file_number))
-            if file_number not in BROKEN_FILES:
-                BROKEN_FILES.append(file_number)
-                logging.info("{}: BROKEN_FILES list of length {}: {}".format(hypothesis_type, len(BROKEN_FILES),
-                                                                             BROKEN_FILES))
+            if file_number not in broken_files:
+                broken_files.append(file_number)
+                logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
+                                                                             broken_files))
     except TimeoutExpired as e:
         p.kill()
         logging.info("{}: Killed {}, {}".format(hypothesis_type, file_number, e))
@@ -176,19 +179,22 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
             excep_counter.value += 1
             logging.info("{}: exception counter {}".
                          format(hypothesis_type, excep_counter.value))
-        if file_number not in BROKEN_FILES:  # to do: list - to shared variable
-            BROKEN_FILES.append(file_number)
-            logging.info("{}: BROKEN_FILES list of length {}: {}".format(hypothesis_type, len(BROKEN_FILES),
-                                                                         BROKEN_FILES))
+        if file_number not in broken_files:  # to do: list - to shared variable
+            broken_files.append(file_number)
+            logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
+                                                                         broken_files))
     except SubprocessError:
         logging.info("{}: Not null return code, file number {}".format(hypothesis_type, file_number))
         with excep_counter.get_lock():
             excep_counter.value += 1
             logging.info("{}: exception counter {}".
                          format(hypothesis_type, excep_counter.value))
-        if file_number not in BROKEN_FILES:
-            BROKEN_FILES.append(file_number)
-            logging.info("{}: BROKEN_FILES of length {}: {}".format(hypothesis_type, len(BROKEN_FILES), BROKEN_FILES))
+        if file_number not in broken_files:
+            broken_files.append(file_number)
+            logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
+                                                                         broken_files))
+
+
 """
     cml, file_out_path = set_alternative_hypothesis(infile, phylo_tree, personal_dir)
     if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:

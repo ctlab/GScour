@@ -397,7 +397,7 @@ def replace_broken_files(directory_out):
                    os.path.join(broken_multiple_folder, file_number + ".log"))
 
 
-def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, species, directory_out):
+def main(orthodata_filepath, annotation_gbff, initfna_filepath, species, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
     if not os.path.isdir(directory_out):
         os.makedirs(directory_out)
@@ -405,11 +405,11 @@ def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, 
     for column_number, _ in enumerate(ortho_data.columns):
         species_numerating = str(column_number + 1)
         annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(species_numerating, 'gbff'))
-        annotation_csv_path = os.path.join(annotation_csv, "{}.{}".format(species_numerating, 'csv'))
-        logging.info('Working with annotation files {}\n{}'.format(annotation_gbff_path, annotation_csv_path))
+        # annotation_csv_path = os.path.join(annotation_csv, "{}.{}".format(species_numerating, 'csv'))
+        # logging.info('Working with annotation files {}\n{}'.format(annotation_gbff_path, annotation_csv_path))
         logging.info('Working with species number {}'.format(species_numerating))
-        df = pd.read_csv(annotation_csv_path, sep=',', names=['Protein product', 'Length'], usecols=[8, 9],
-                         converters={'Protein product': conv_string, 'Length': conv_int}, low_memory=False)
+        # df = pd.read_csv(annotation_csv_path, sep=',', names=['Protein product', 'Length'], usecols=[8, 9],
+        #                 converters={'Protein product': conv_string, 'Length': conv_int}, low_memory=False)
         ortho_protein_ids = ortho_data.iloc[:, column_number].values
 
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
@@ -429,8 +429,8 @@ if __name__ == '__main__':
     parser.add_argument('--ortho', help='Path to the single_copy_orthologs.tsv', nargs='?')
     parser.add_argument('--gbff', help='Path to the folder with annotation .gbff files from '
                                        'www.ncbi.nlm.nih.gov/genome/', nargs='?')
-    parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
-                                      'www.ncbi.nlm.nih.gov/genome/', nargs='?')
+    # parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
+    #                                  'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     parser.add_argument('--genome', help='Path to the folder with reference genome'
                                          'in FASTA format', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
@@ -438,7 +438,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        main(args.ortho, args.gbff, args.csv, args.genome, int(args.species), args.out)
+        main(args.ortho, args.gbff, args.genome, int(args.species), args.out)
         written_files_number = len(PROCESSED_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
         if delta == 0:

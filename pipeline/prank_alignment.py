@@ -14,16 +14,16 @@ LOG_FILE = "prank_alignment.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
-def init_counter(args):
+def init_counter(counter_args):
     """store the counter for later use"""
     global counter
-    counter = args
+    counter = counter_args
 
 
-def parse_dir(infolder):
-    for infile in os.listdir(infolder):
+def parse_dir(folder_in):
+    for infile in os.listdir(folder_in):
         if infile.split('.')[-1] == 'fna':
-            yield os.path.join(infolder, infile)
+            yield os.path.join(folder_in, infile)
 
 
 def get_final_file_path(outfile_path_without_extension, format_out):
@@ -100,8 +100,8 @@ if __name__ == '__main__':
         inputs = list(parse_dir(args.infolder))
         len_inputs = len(inputs)
         outfolder = args.outfolder
-        logging.info("Path to the folder with input files for prank: {}".format(infolder))
-        logging.info("Path to the folder with output files of prank: {}".format(outfolder))
+        logging.info("Path to the folder with input files for prank: {}\n"
+                     "Path to the folder with output files of prank: {}".format(infolder, outfolder))
         if not os.path.isdir(outfolder):
             os.makedirs(outfolder)
         output_format = args.f

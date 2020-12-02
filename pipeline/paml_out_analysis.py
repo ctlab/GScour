@@ -11,7 +11,7 @@ LN_NP_PATTERN = re.compile(r"lnL\(ntime:\s+\d+\s+np:\s+(\d+)\):\s+(-\d+\.\d+)")
 POSITIVE_PATTERN = re.compile(r"\s*(\d+)\s+(\w)\s+(\d+\.\d+)")
 POS_SITES_STRING = re.compile(r"Positive\ssites\sfor\sforeground\slineages\sProb\(w>1\):")
 POSITION_ACID_PATTERN = re.compile(r"\s*(\d+)\s+(\w)\s+(\d+\.\d+)")
-LOG_FILE = "analyse_paml_out_masked.log"
+LOG_FILE = "analyse_paml_out.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 BROKEN_PAML_OUTS = list()
 NO_SIGNIFICANCE = 0
@@ -47,18 +47,18 @@ def calc_p_value(np0, ln0, np1, ln1):
     return p_val
 
 
-def main(infolder):
+def main(folder_in):
     global NO_SIGNIFICANCE
     global POSITIVE_SITES_NUMBER
-    for personal_folder in os.scandir(infolder):
+    for personal_folder in os.scandir(folder_in):
         if os.path.isdir(personal_folder):
             folder_name = personal_folder.name
             np0, ln0, np1, ln1 = 0, 0., 0, 0.
             for infile in os.listdir(personal_folder):
-                if infile.endswith("_null1_masked.out"):
-                    np0, ln0, _ = get_ln_np(os.path.join(infolder, personal_folder, infile))
-                if infile.endswith("_alter1_masked.out"):
-                    np1, ln1, pos_sites = get_ln_np(os.path.join(infolder, personal_folder, infile))
+                if infile.endswith("_null1.out"):
+                    np0, ln0, _ = get_ln_np(os.path.join(folder_in, personal_folder, infile))
+                if infile.endswith("_alter1.out"):
+                    np1, ln1, pos_sites = get_ln_np(os.path.join(folder_in, personal_folder, infile))
             if all([np0, np1, ln0, ln1]):
                 p_val = calc_p_value(np0, ln0, np1, ln1)
                 if p_val and p_val < 0.05:
@@ -84,20 +84,20 @@ def main(infolder):
                 BROKEN_PAML_OUTS.append(folder_name)
 
 
-def get_genes_under_positive(POSITIVE_GENES, log_folder):
-    gene_names_dict = dict()
+def get_genes_under_positive(genes_under_positive, log_folder):
+    dict_of_gene_names = dict()
     for infile in os.listdir(log_folder):
         file_number = infile.split('.')[0]
-        if file_number in POSITIVE_GENES and infile.endswith("log"):
+        if file_number in genes_under_positive and infile.endswith("log"):
             with open(os.path.join(log_folder, infile), "r") as f:
                 for line in f:
                     if re.search(r"-\s5$", line):
                         pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
                         gene_name = (re.search(pattern, line)).group(1)
                         protein_name = (re.search(pattern, line)).group(2)
-                        if not gene_names_dict.get(infile):
-                            gene_names_dict[file_number] = [gene_name, protein_name]
-    return gene_names_dict
+                        if not dict_of_gene_names.get(infile):
+                            dict_of_gene_names[file_number] = [gene_name, protein_name]
+    return dict_of_gene_names
 
 
 if __name__ == '__main__':
