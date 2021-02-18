@@ -8,7 +8,8 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import numpy as np
 
-PROCESSED_FILES = dict()
+PROCESSED_FILES = dict()  # store the number of writings (1 writing = 1 seq = 1 species):
+# for species=5 and group=5 there should be PROCESSED_FILES[file_out_number] = 5 (without BROKEN lists)
 BROKEN_SPECIES = list()
 BROKEN_ACCORDANCE = dict()  # broken accordance with protein length (nuc = protein length * 3)
 BROKEN_MULTIPLE_THREE = dict()
@@ -262,9 +263,9 @@ def write_fasta_file(directory_out, file_out_number, seq):
     global PROCESSED_FILES
     with open(os.path.join(directory_out, file_out_number + ".fna"), "a") as ofile:
         SeqIO.write(seq, ofile, "fasta")
-        if not WRITTEN_FILES.get(file_out_number):
-            WRITTEN_FILES[file_out_number] = 0
-        WRITTEN_FILES[file_out_number] += 1
+        if not PROCESSED_FILES.get(file_out_number):
+            PROCESSED_FILES[file_out_number] = 0
+        PROCESSED_FILES[file_out_number] += 1
 
 
 def write_log_file(log_file, gene, protein_id, seq_length,
@@ -298,7 +299,7 @@ def write_files(seq_store, directory_out):
 
 def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, species_numerating,
                                  initfna_filepath):
-    anti_repeat_store = dict()
+    seq_store = dict()
     global BROKEN_START_CODON
     global BROKEN_STOP_CODON
     global BROKEN_MULTIPLE_THREE
@@ -345,7 +346,7 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
                         """extracted_seq - No, check_multiple_of_three(nucleotide_seq) = False, -
                            nucleotide_seq - for further processing"""
                     # check duplicates
-                    nucleotide_seq = anti_repeat_check(anti_repeat_store, protein_id,
+                    nucleotide_seq = anti_repeat_check(seq_store, protein_id,
                                                        nucleotide_seq, file_out_number,
                                                        check_start, check_accordance, check_stop, check_multiple, gene,
                                                        nucleotide_seq_length, file_out_number, species_numerating)
@@ -356,7 +357,7 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
                                  "of length {}\nseq\n{}"
                                  "length".format(gene, protein_id, protein_translation_length, nucleotide_seq_length,
                                                  nucleotide_seq))
-    write_files(anti_repeat_store, directory_out)
+    write_files(seq_store, directory_out)
 
 
 def conv_int(val):
@@ -397,8 +398,9 @@ def replace_broken_files(directory_out):
                    os.path.join(broken_multiple_folder, file_number + ".log"))
 
 
-def main(orthodata_filepath, annotation_gbff, initfna_filepath, species, directory_out):
+def main(orthodata_filepath, annotation_gbff, initfna_filepath, species, group, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
+    NUMBER_OF_NEED_TO_BE_WRITTEN = 0
     if not os.path.isdir(directory_out):
         os.makedirs(directory_out)
     ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
@@ -419,14 +421,14 @@ def main(orthodata_filepath, annotation_gbff, initfna_filepath, species, directo
     logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN: {}".format(NUMBER_OF_NEED_TO_BE_WRITTEN))
 
     for file, written_species in PROCESSED_FILES.items():
-        if written_species != species:
+        if written_species < group:
             if file not in BROKEN_SPECIES:
                 BROKEN_SPECIES.append(file)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ortho', help='Path to the single_copy_orthologs.tsv', nargs='?')
+    parser.add_argument('--ortho', help='Path to the _formed_orthologs_table.tsv', nargs='?')
     parser.add_argument('--gbff', help='Path to the folder with annotation .gbff files from '
                                        'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     # parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
@@ -434,11 +436,12 @@ if __name__ == '__main__':
     parser.add_argument('--genome', help='Path to the folder with reference genome'
                                          'in FASTA format', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
+    parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     parser.add_argument('--out', help='Path to the folder for result write out', nargs='?')
     args = parser.parse_args()
 
     try:
-        main(args.ortho, args.gbff, args.genome, int(args.species), args.out)
+        main(args.ortho, args.gbff, args.genome, int(args.species), int(args.group), args.out)
         written_files_number = len(PROCESSED_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
         if delta == 0:
