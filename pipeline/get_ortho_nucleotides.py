@@ -259,10 +259,12 @@ def anti_repeat_check(anti_repeat_store, protein_id, nucleotide_seq, file_out_nu
                 return nucleotide_seq
 
 
-def write_fasta_file(directory_out, file_out_number, seq):
+def write_fasta_file(directory_out, file_out_number, seq, species_numerating):
     global PROCESSED_FILES
     with open(os.path.join(directory_out, file_out_number + ".fna"), "a") as ofile:
         SeqIO.write(seq, ofile, "fasta")
+        logging.info("Sequence corresponding to the species number {} has been added to the file {}".format(
+            species_numerating, file_out_number))
         if not PROCESSED_FILES.get(file_out_number):
             PROCESSED_FILES[file_out_number] = 0
         PROCESSED_FILES[file_out_number] += 1
@@ -276,25 +278,24 @@ def write_log_file(log_file, gene, protein_id, seq_length,
             ofile.write("gene_name - protein_id - seq_length - file number - species_numerating\n")
         ofile.write("{} - {} - {} - {} - {}\n".format(gene, protein_id, seq_length,
                                                       file_out_number, species_numerating))
-        logging.info("wrote seq of gene {} corresponding {} in file number {}".format(gene, protein_id,
+        logging.info("Wrote seq of gene {} corresponding {} in file number {}".format(gene, protein_id,
                                                                                       file_out_number))
 
 
-def write_files(seq_store, directory_out):
-    for protein_id in seq_store.keys():
-        nucleotide_seq = seq_store.get(protein_id).get("seq")
-        if seq_store.get(protein_id).get("stop"):
-            nucleotide_seq = nucleotide_seq[:-3]
-        species_numerating = seq_store.get(protein_id).get("species_numerating")
-        gene = seq_store.get(protein_id).get("gene")
-        file_number = seq_store.get(protein_id).get("file_number")
-        nucleotide_seq_length = seq_store.get(protein_id).get("length")
-        seq_record = SeqRecord(nucleotide_seq, id=species_numerating, description="")
+def write_files(seq_store, protein_id, directory_out):
+    nucleotide_seq = seq_store.get(protein_id).get("seq")
+    if seq_store.get(protein_id).get("stop"):
+        nucleotide_seq = nucleotide_seq[:-3]
+    species_numerating = seq_store.get(protein_id).get("species_numerating")
+    gene = seq_store.get(protein_id).get("gene")
+    file_number = seq_store.get(protein_id).get("file_number")
+    nucleotide_seq_length = seq_store.get(protein_id).get("length")
+    seq_record = SeqRecord(nucleotide_seq, id=species_numerating, description="")
 
-        write_fasta_file(directory_out, file_number, seq_record)
-        log_file = os.path.join(directory_out, file_number + ".log")
-        write_log_file(log_file, gene, protein_id, nucleotide_seq_length,
-                       file_number, species_numerating)
+    write_fasta_file(directory_out, file_number, seq_record, species_numerating)
+    log_file = os.path.join(directory_out, file_number + ".log")
+    write_log_file(log_file, gene, protein_id, nucleotide_seq_length,
+                   file_number, species_numerating)
 
 
 def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, species_numerating,
@@ -353,11 +354,12 @@ def get_and_write_nucleotide_seq(gb_file, ortho_protein_ids, directory_out, spec
 
                     logging.info("Extracted and analysis has ended: detected gene {} corresponding protein_id {} with "
                                  "protein_length {} "
-                                 "nucleotide seq "
-                                 "of length {}\nseq\n{}"
-                                 "length".format(gene, protein_id, protein_translation_length, nucleotide_seq_length,
-                                                 nucleotide_seq))
-    write_files(seq_store, directory_out)
+                                 "nucleotide seq of length {}\n"
+                                 "seq:\n{}\n".format(gene, protein_id, protein_translation_length,
+                                                     nucleotide_seq_length,
+                                                     nucleotide_seq))
+                    write_files(seq_store, protein_id, directory_out)
+                    seq_store = dict()
 
 
 def conv_int(val):
@@ -400,11 +402,11 @@ def replace_broken_files(directory_out):
 
 def main(orthodata_filepath, annotation_gbff, initfna_filepath, species, group, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
-    NUMBER_OF_NEED_TO_BE_WRITTEN = 0
     if not os.path.isdir(directory_out):
         os.makedirs(directory_out)
     ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
     for column_number, _ in enumerate(ortho_data.columns):
+        NUMBER_OF_NEED_TO_BE_WRITTEN = 0
         species_numerating = str(column_number + 1)
         annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(species_numerating, 'gbff'))
         # annotation_csv_path = os.path.join(annotation_csv, "{}.{}".format(species_numerating, 'csv'))
@@ -413,12 +415,11 @@ def main(orthodata_filepath, annotation_gbff, initfna_filepath, species, group, 
         # df = pd.read_csv(annotation_csv_path, sep=',', names=['Protein product', 'Length'], usecols=[8, 9],
         #                 converters={'Protein product': conv_string, 'Length': conv_int}, low_memory=False)
         ortho_protein_ids = ortho_data.iloc[:, column_number].values
-
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
+        logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} : {}".format(species_numerating,
+                                                                               NUMBER_OF_NEED_TO_BE_WRITTEN))
         get_and_write_nucleotide_seq(annotation_gbff_path, ortho_protein_ids, directory_out,
                                      species_numerating, initfna_filepath)
-
-    logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN: {}".format(NUMBER_OF_NEED_TO_BE_WRITTEN))
 
     for file, written_species in PROCESSED_FILES.items():
         if written_species < group:
@@ -431,6 +432,8 @@ if __name__ == '__main__':
     parser.add_argument('--ortho', help='Path to the _formed_orthologs_table.tsv', nargs='?')
     parser.add_argument('--gbff', help='Path to the folder with annotation .gbff files from '
                                        'www.ncbi.nlm.nih.gov/genome/', nargs='?')
+    parser.add_argument('--refseq', help='Path to the folder with refseq annotated files'
+                                         '_cds_from_genomic.fna', nargs='?')
     # parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
     #                                  'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     parser.add_argument('--genome', help='Path to the folder with reference genome'

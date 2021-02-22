@@ -47,11 +47,11 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
         launch = 'prank -d={0} -o={1} -t={2} -codon > {3}'.format(infile, outfile_path_without_extension,
                                                                   tree, log_file)
     elif format_out and not tree:
-        launch = 'prank -d={0} -o={1} -showtree -codon -f=paml > {2}'.format(infile,
-                                                                             outfile_path_without_extension,
+        launch = 'prank -d={0} -o={1} -showtree -codon -f={2} > {3}'.format(infile,
+                                                                             outfile_path_without_extension, format_out,
                                                                              log_file)
     else:
-        launch = 'prank -d={0} -o={1} -showtree -codon  > {2}'.format(infile,
+        launch = 'prank -d={0} -o={1} -showtree -codon > {2}'.format(infile,
                                                                       outfile_path_without_extension,
                                                                       log_file)
     return launch

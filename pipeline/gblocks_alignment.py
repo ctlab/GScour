@@ -37,7 +37,7 @@ def launch_gblocks(infile, exec_path):
 
     global counter_file
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
-    launch = '{} {} -t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h ' \
+    launch = '{} {} -t=c -b1=5 -b2=5 -b3=7 -b4=6 -b5=h ' \
              '-p=Yes'.format(exec_path, infile)              # > LOG_FILE: to do multiprocessing
     os.system(launch)
     logging.info("Gblocks processed file {} with params {}".format(file_number, '-t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h'))
@@ -49,7 +49,8 @@ def launch_gblocks(infile, exec_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?')
-    parser.add_argument('--infolder', help='Path to the folder with input files for prank', nargs='?')
+    parser.add_argument('--infolder', help='Path to the folder with input files for gblocks'
+                                           'At the moment only the NBRF/PIR and FASTA formats are accepted', nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')
     args = parser.parse_args()
     threads = int(args.threads)

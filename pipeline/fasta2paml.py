@@ -13,21 +13,31 @@ BROKEN_FILES = list()
 BROKEN_FOLDER = "broken_length_files(fasta2paml)"
 LOG_FILE = "fasta2paml.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
+"""
+The script consists of two stage:
+1. Converting fasta format nucleotide codon sequences (from infolder) to philip-sequential format (to outfolder)
+2. Converting philip-sequential format to specific philip format required by PAML:
+In resulting outfolder: number_of_file.philip and directory "number_of_file" with .phy file for PAML.
+"""
 
 
 def parse_dir_out_gblocks(infolder):
+    """ parse directory with files out of Gblocks
+        can be change just to fasta extension"""
     for infile in os.listdir(infolder):
         if infile.split('.')[-1] == 'fas-gb':
             yield os.path.join(infolder, infile)
 
 
 def parse_phylip_dir(infolder):
+    """ parse directory with .phylip files"""
     for infile in os.listdir(infolder):
         if infile.split('.')[-1] == 'phylip':
             yield os.path.join(infolder, infile)
 
 
 def fasta2phylip(infile, folder_out):
+    """ converting fasta to philip-sequential format"""
     outfile = os.path.join(folder_out, "{}.{}".format(re.search(r'\/(\d+)\.', infile).group(1), "phylip"))
     try:
         with open(infile, 'r') as input:
@@ -42,21 +52,25 @@ def fasta2phylip(infile, folder_out):
 def chunks(s, n):
     """Produce `n`-character chunks from `s`."""
     for start in range(0, len(s), n):
-        #yield s[start:start + n]+'\n'
-
+        # yield s[start:start + n]+'\n'
         if start >= len(s) - n:
             yield s[start:start + n]
         else:
             yield s[start:start + n]+"\n"
 
 
-def check_lengths(lengths, file_number, species):
-    if all(x == lengths[0] for x in lengths) and len(lengths) == species and lengths[0] % 3 == 0:
+def check_lengths(lengths, file_number, species, group):
+    """ check: - the lengths of all sequences in one file of the same length
+               - number of sequences in one file more or equal then group, less or equal then species
+               - length of sequence  a multiple of three
+        replace completely broken files to BROKEN_FOLDER
+    """
+    if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
         logging.info("all seq lengths are equal, confirm of number of species")
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append(file_number)
-    elif not len(lengths) == species:
+    elif not group <= len(lengths) <= species:
         global NOT_NEEDED_SPECIES
         NOT_NEEDED_SPECIES.append(file_number)
     elif lengths[0] % 3 != 0:
@@ -86,7 +100,8 @@ def check_change_headers(line):
 """
 
 
-def phylip2paml(source_file_path, species):
+def phylip2paml(source_file_path, species, group):
+    """ converting philip-sequential to specific philip format for paml """
     file_number = re.search(r'(\d+)\.', source_file_path).group(1)
     personal_folder = os.path.join(os.path.split(source_file_path)[0], '{}'.format(file_number))
     target_file_path = os.path.join(personal_folder, '{}.{}'.format(file_number, "phy"))
@@ -111,7 +126,7 @@ def phylip2paml(source_file_path, species):
                     lengths.append(len(line_edited[:-1]))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
-    check_lengths(lengths, file_number, species)
+    check_lengths(lengths, file_number, species, group)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
@@ -122,24 +137,25 @@ def replace_broken_files(directory_out):
         os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_FOLDER, folder))
 
 
-def main(folder_in, folder_out, species):
+def main(folder_in, folder_out, species, group):
     for infile in parse_dir_out_gblocks(folder_in):
         fasta2phylip(infile, folder_out)
     for phylip_file in parse_phylip_dir(folder_out):
-        phylip2paml(phylip_file, species)
+        phylip2paml(phylip_file, species, group)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with input files for prank', nargs='?')
-    parser.add_argument('--outfolder', help='Path to the folder with output files of prank', nargs='?')
+    parser.add_argument('--infolder', help='Path to the folder with fasta files', nargs='?')
+    parser.add_argument('--outfolder', help='Path to the folder with result philip files', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
+    parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     args = parser.parse_args()
     outfolder = args.outfolder
     if not os.path.isdir(outfolder):
         os.makedirs(outfolder)
     try:
-        main(args.infolder, outfolder, int(args.species))
+        main(args.infolder, outfolder, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES:
             replace_broken_files(outfolder)

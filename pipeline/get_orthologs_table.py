@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import argparse
 import logging
 import os
@@ -14,10 +16,12 @@ Species named as a number
 def main(project_name, poff, species, group, genes, required):
     if not poff:
         proteinortho_data = pd.read_csv('{}.proteinortho.tsv'.format(project_name), sep='\t')
+        out_file_name = '{}_formed_table.ortho.tsv'.format(project_name)
     else:
         proteinortho_data = pd.read_csv('{}.poff.tsv'.format(project_name), sep='\t')
+        out_file_name = '{}_formed_table.ortho.poff.tsv'.format(project_name)
 
-    out_file_name = '{}_formed_orthologs_table.tsv'.format(project_name)
+
     logging.info("input file {}".format(proteinortho_data))
     species = int(species)
     group = int(group)
