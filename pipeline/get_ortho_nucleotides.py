@@ -15,6 +15,7 @@ BROKEN_ACCORDANCE = dict()  # broken accordance with protein length (nuc = prote
 BROKEN_MULTIPLE_THREE = dict()
 BROKEN_STOP_CODON = dict()
 BROKEN_START_CODON = dict()
+ABSENT_IN_CDS = dict()
 NUMBER_OF_NEED_TO_BE_WRITTEN = 0
 LOG_FILE = "get_ortho_nuc_seqs.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -328,6 +329,28 @@ def get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numeratin
             return seq_record
 
 
+def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out):
+    global ABSENT_IN_CDS
+    logging.info("check for file cds_from_genomic: {}".format(cds_from_genomic_file))
+    if os.path.isfile(cds_from_genomic_file):
+        for idx, protein_id in np.ndenumerate(ortho_protein_ids):
+            if protein_id == '*' or not protein_id:
+                continue
+            seq_record = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
+            file_out_number = str(idx[0] + 1)
+            if not seq_record:  # no sec_record when this species is not in the group
+                if not ABSENT_IN_CDS.get(species_numerating):
+                    ABSENT_IN_CDS[species_numerating] = list()
+                ABSENT_IN_CDS.get(species_numerating).append(protein_id)
+                logging.info("protein_id {} is absent in {}".format(protein_id, cds_from_genomic_file))
+                continue
+            write_fasta_file(directory_out, file_out_number, seq_record, species_numerating)
+        logging.info("all sequences for species {} wrote".format(species_numerating))
+        return True
+    logging.info("No such cds_from_genomic file")
+    return False
+
+
 def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_ids, directory_out, species_numerating,
                                  initfna_filepath):
     """
@@ -348,15 +371,7 @@ def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_i
     global BROKEN_ACCORDANCE
 
     """ trying to get nucleotide sequence from cds_from_genomic.fna """
-    logging.info("check for file cds_from_genomic: {}".format(cds_from_genomic_file))
-    if os.path.isfile(cds_from_genomic_file):
-        for idx, protein_id in np.ndenumerate(ortho_protein_ids):
-            seq_record = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
-            file_out_number = str(idx[0] + 1)
-            if not seq_record:  # no sec_record when this species is not in the group
-                continue
-            write_fasta_file(directory_out, file_out_number, seq_record, species_numerating)
-        logging.info("all sequences for species {} wrote".format(species_numerating))
+    if get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out):
         return
     """ trying to find sequence by protein_id in .gbff """
     seq_store = dict()
@@ -454,11 +469,7 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
         species_numerating = str(column_number + 1)
         annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(species_numerating, 'gbff'))
         cds_from_genomic_path = os.path.join(cds_from_genomic, "{}.{}".format(species_numerating, 'fna'))
-        # annotation_csv_path = os.path.join(annotation_csv, "{}.{}".format(species_numerating, 'csv'))
-        # logging.info('Working with annotation files {}\n{}'.format(annotation_gbff_path, annotation_csv_path))
         logging.info('Working with species number {}'.format(species_numerating))
-        # df = pd.read_csv(annotation_csv_path, sep=',', names=['Protein product', 'Length'], usecols=[8, 9],
-        #                 converters={'Protein product': conv_string, 'Length': conv_int}, low_memory=False)
         ortho_protein_ids = ortho_data.iloc[:, column_number].values
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
         logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} : {}".format(species_numerating,
@@ -508,6 +519,7 @@ if __name__ == '__main__':
     except:
         logging.exception("Unexpected error")
 
+    logging.warning("ABSENT_IN_CDS {} : {}".format(len(ABSENT_IN_CDS), ABSENT_IN_CDS))
     logging.warning("BROKEN_SPECIES {} : {}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
     logging.warning("BROKEN_STOP_CODON {} : {}".format(len(BROKEN_STOP_CODON), BROKEN_STOP_CODON))
     logging.warning("BROKEN_START_CODON {} : {}".format(len(BROKEN_START_CODON), BROKEN_START_CODON))
