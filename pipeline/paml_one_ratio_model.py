@@ -8,7 +8,7 @@ from Bio.Phylo.PAML import codeml
 import logging
 import os
 import re
-from ctypes import c_wchar_p
+
 
 BROKEN_FILES = list()
 PROCESSED_FILES = list()
@@ -18,12 +18,24 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 counter = None
 
 
-def parse_dir(folder_in):
-    for personal_folder in os.scandir(folder_in):
-        if os.path.isdir(personal_folder):
-            for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'phy':
-                    yield os.path.join(folder_in, personal_folder, infile)
+def get_tree_path(trees_folder, species_folder_name):
+    for tree in os.scandir(trees_folder):
+        if tree.name.split('.')[0] == species_folder_name:
+            return tree.name
+
+
+def get_input_items(folder_in, trees_folder):
+    """ parse root folder with files for paml
+    parse tree_folder to get appropriate tree """
+    for species_folder in os.scandir(folder_in):
+        if os.path.isdir(species_folder):
+            tree_name = get_tree_path(trees_folder, species_folder.name)
+            tree_path = os.path.join(trees_folder, tree_name)
+            for item in os.scandir(species_folder):
+                if os.path.isdir(item):
+                    for infile in os.listdir(item):
+                        if infile.split('.')[-1] == 'phy':
+                            yield folder_in, species_folder.name, item.name, infile, tree_path
 
 
 def init_indicators(args_counter):
@@ -68,19 +80,21 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
     return file_out_path
 
 
-def run_codeml(infile, exec_path, phylogeny_tree):
+def run_codeml(input_tuple, exec_path):
     global PROCESSED_FILES
     global counter
     global BROKEN_FILES
-    personal_dir = os.path.split(infile)[0]
+    folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
+    personal_dir = os.path.join(folder_in, species_folder, item_folder)
     file_number = (re.search(r"(\d+).phy", infile)).group(1)
     os.chdir(personal_dir)
     logging.info("working with {}".format(file_number))
-    file_out_path = set_one_ratio_model(infile, phylogeny_tree, personal_dir)
-    if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
-        logging.info("Not null size result file {} already exists for file_number {}".format(file_out_path,
-                                                                                              file_number))
-        return
+    infile_path = os.path.join(personal_dir, infile)
+    file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, personal_dir)
+    # if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
+    #     logging.info("Not null size result file {} already exists for file_number {}".format(file_out_path,
+    #                                                                                           file_number))
+    #     return
     p = subprocess.Popen(exec_path, stdin=PIPE, stdout=PIPE)  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
     try:
         p.wait(timeout=4000)
@@ -92,7 +106,7 @@ def run_codeml(infile, exec_path, phylogeny_tree):
                 logging.info("The work has been done for file {}\nCounter of processed files = {}".
                              format(file_number, counter.value))
             if file_number not in PROCESSED_FILES:
-                PROCESSED_FILES.append(file_number)
+                PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
                 logging.info("PROCESSED_FILES list of length {}: {}".format(len(PROCESSED_FILES), PROCESSED_FILES))
         else:
             logging.info("Null size result file number {}".format(file_number))
@@ -102,7 +116,7 @@ def run_codeml(infile, exec_path, phylogeny_tree):
     except TimeoutExpired as e:
         p.kill()
         logging.info("Killed {}, {}".format(file_number, e))
-        if file_number not in BROKEN_FILES:  # to do: list - to shared variable
+        if file_number not in BROKEN_FILES:  # TODO: list - to shared variable
             BROKEN_FILES.append(file_number)
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except SubprocessError:
@@ -112,29 +126,16 @@ def run_codeml(infile, exec_path, phylogeny_tree):
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
 
 
-def main(folder_in, phylogeny_tree, exec_path, threads_number):
-    """
-    for infile in parse_dir(folder_in):
-        write_ctl_file(infile, phylogeny_tree)
-
-
-    for infile in parse_dir(folder_in):
-        run_codeml(infile, exec_path)
-        """
-
-    inputs = list(parse_dir(folder_in))
+def main(folder_in, exec_path, tree_folder, threads_number):
+    inputs = list(get_input_items(folder_in, tree_folder))  # list of tuples
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
     logger.setLevel(logging.INFO)
     counter = multiprocessing.Value('i', 0)
-    # PROCESSED_FILES = multiprocessing.Array('i', range(5900))
-    # PROCESSED_FILES = multiprocessing.Array(c_wchar_p, 6000)
-    # manager = multiprocessing.Manager()
-    # pr = manager.list()
     pool = multiprocessing.Pool(processes=threads_number, initializer=init_indicators,
                                 initargs=(counter,))
-    i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [exec_path], len_inputs * [phylogeny_tree]))
+    i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [exec_path]))
     i.wait()
     i.get()
     logging.info("Number of files should be analyzed = {}".format(len_inputs))
@@ -142,20 +143,20 @@ def main(folder_in, phylogeny_tree, exec_path, threads_number):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exec', help='Path to the codeml executable', nargs='?', default="codeml")
+    parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
     parser.add_argument('--infolder', help='Path to the folder with input files for paml', nargs='?')
-    parser.add_argument('--tree', help='Path to the tree for paml', nargs='?')
+    parser.add_argument('--tree', help='Path to the trees folder for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads to use', nargs='?')
     args = parser.parse_args()
     infolder = args.infolder
-    executable_path = args.exec
-    tree = args.tree
+    executable_path = args.e
+    tree_folder = args.tree
     threads = int(args.threads)
-    logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
+    logging.info("Path to the folder with input files for paml: {}\nExecutable path: {}\nTree folder: {}\n"
                  "Threads to use = {}".
-                 format(infolder, tree, executable_path, threads))
+                 format(infolder, executable_path, tree_folder, threads))
     try:
-        main(infolder, tree, executable_path, threads)
+        main(infolder, executable_path, tree_folder, threads)
     except:
         logging.exception("Unexpected error")
 

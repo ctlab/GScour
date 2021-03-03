@@ -26,11 +26,11 @@ def main(project_name, poff, species, group, genes, required):
     species = int(species)
     group = int(group)
     # genes = int(genes)
-    # required: to do for multiple required species
+    # TODO: required - do for multiple required species
     result = proteinortho_data.loc[proteinortho_data['# Species'].isin(range(group, species + 1)) &
                                    (proteinortho_data['{}.faa'.format(required)]!='*')]
     result = result[~result["1.faa"].str.contains(',')]  # because of genes == 1
-    result = result[~result["2.faa"].str.contains(',')]  # to do: to normal view
+    result = result[~result["2.faa"].str.contains(',')]  # TODO: to normal view
     result = result[~result["3.faa"].str.contains(',')]
     result = result[~result["4.faa"].str.contains(',')]
     result = result[~result["5.faa"].str.contains(',')]

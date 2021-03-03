@@ -22,11 +22,12 @@ def parse_dir(infolder):
                     yield full_path, infile
 
 
-def run_swamp(personal_folder, infile, branchcodes, threshold, windowsize):
+def run_swamp(personal_folder, executable_path, infile, branchcodes, threshold, windowsize):
     global BROKEN_FILES
     try:
-        launch_swamp = 'python2 /scratch/afedorova/acfhp/SWAMP.py' \
-                       ' -i {} -b {} -t {} -w {} >> {}'.format(personal_folder, branchcodes, threshold, windowsize, log_file)
+        launch_swamp = 'python2 {}' \
+                       ' -i {} -b {} -t {} -w {} >> {}'.format(executable_path, personal_folder, branchcodes,
+                                                               threshold, windowsize, log_file)
         os.system(launch_swamp)
     except ValueError:
         logging.exception("infile {}: {}".format(infile, sys.exc_info()))
@@ -38,6 +39,7 @@ def run_swamp(personal_folder, infile, branchcodes, threshold, windowsize):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('-e', help='Path to the SWAMP executable', nargs='?')
     parser.add_argument('-i', help='INFOLDER', nargs='?')
     parser.add_argument('-b', help='BRANCHNAMESFILE', nargs='?')
     parser.add_argument('-t', help='THRESHOLD', nargs='?', default="")
@@ -46,7 +48,7 @@ if __name__ == '__main__':
     try:
         for folder, infile in parse_dir(args.i):
             print "pass dir", folder
-            run_swamp(folder, infile, args.b, args.t, args.w)
+            run_swamp(folder, args.e, infile, args.b, args.t, args.w)
     except:
         logging.exception("Unexpected error")
     logging.info("BROKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))

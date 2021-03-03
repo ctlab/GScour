@@ -38,7 +38,7 @@ def launch_gblocks(infile, exec_path):
     global counter_file
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
     launch = '{} {} -t=c -b1=5 -b2=5 -b3=7 -b4=6 -b5=h ' \
-             '-p=Yes'.format(exec_path, infile)              # > LOG_FILE: to do multiprocessing
+             '-p=Yes'.format(exec_path, infile)              # TODO: > LOG_FILE: to do multiprocessing
     os.system(launch)
     logging.info("Gblocks processed file {} with params {}".format(file_number, '-t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h'))
     with counter_file.get_lock():

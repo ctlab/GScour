@@ -57,7 +57,7 @@ def launch_guidance(infile, folder_out, number_of_threads, executable_path):
                     counter.value += 1
                     logging.info("Counter (ALIGNED_FILES) = {}\nList of ALIGNED_FILES: {}".
                                  format(counter.value, ALIGNED_FILES))
-    except: # don't catch - fix in to do list
+    except:  # TODO: don't catch need to be fixed
         logging.exception("{}, file_number {}".format(sys.exc_info(), file_number))
         EXCEPTION_NUMBER += 1
 

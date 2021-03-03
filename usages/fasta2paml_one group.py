@@ -1,4 +1,4 @@
-#!/usr/bin/sudo python
+#!/usr/bin/env python
 import logging
 import os
 import argparse
@@ -18,59 +18,40 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 The script consists of two stage:
 1. Converting fasta format nucleotide codon sequences (from infolder) to philip-sequential format (to outfolder)
 2. Converting philip-sequential format to specific philip format required by PAML:
-In resulting outfolder:  directory "group_id" with folders "file_name" with file_name.phy file for PAML.
+In resulting outfolder: number_of_file.philip and directory "number_of_file" with .phy file for PAML.
 
-For example:
-$ cd infolder
-$ ls */
-12/:            23/:           12345/:
-1.fasta         4055.fasta     2031.fasta 
-                3010.fasta     2.fasta
+It is the first version of file where no division into groups was implied. But there some check:
+group <= len(number of sequences in one file) <= species
 
-result:
-$ cd outfolder
-$ ls */
-12/:            23/:            12345/:
-1/:             4055/:          2031/:   
-1.phy           4055.phy        2031.phy
-                3010/:          2/:
-                3010.phy        2.phy    
+Script works, but results which are not divided into separate folders by groups
+would be hard for further processing (with paml, swamp)
 """
 
 
 def parse_dir_out_gblocks(infolder):
     """ parse directory with files out of Gblocks
-           can be change just to fasta extension"""
-    for personal_folder in os.scandir(infolder):
-        if os.path.isdir(personal_folder):
-            if len(personal_folder.name) < 9:  # TODO: replace anti-repeat check to get_ortho_nucl
-                for infile in os.listdir(personal_folder):
-                    if infile.split('.')[-1] == 'fas':
-                        yield personal_folder.name, infile
+        can be change just to fasta extension"""
+    for infile in os.listdir(infolder):
+        if infile.split('.')[-1] == 'fas-gb':
+            yield os.path.join(infolder, infile)
 
 
 def parse_phylip_dir(infolder):
     """ parse directory with .phylip files"""
-    for personal_folder in os.scandir(infolder):
-        if os.path.isdir(personal_folder):
-            for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'phylip':
-                    yield personal_folder.name, infile
+    for infile in os.listdir(infolder):
+        if infile.split('.')[-1] == 'phylip':
+            yield os.path.join(infolder, infile)
 
 
-def fasta2phylip(personal_folder, infile, folder_in, folder_out):
+def fasta2phylip(infile, folder_out):
     """ converting fasta to philip-sequential format"""
-    file_number = re.search(r'(\d+)\.', infile).group(1)
-    infile_path = os.path.join(folder_in, personal_folder, infile)
-    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_number, "phylip"))
-    if not os.path.isdir(os.path.join(folder_out, personal_folder)):
-        os.makedirs(os.path.join(folder_out, personal_folder))
+    outfile = os.path.join(folder_out, "{}.{}".format(re.search(r'\/(\d+)\.', infile).group(1), "phylip"))
     try:
-        with open(infile_path, 'r') as input:
-            with open(outfile_path, 'w') as output:
+        with open(infile, 'r') as input:
+            with open(outfile, 'w') as output:
                 alignments = SeqIO.parse(input, "fasta")
                 SeqIO.write(alignments, output, "phylip-sequential")
-        logging.info('phylip-sequential format file {} has been recorded'.format(outfile_path))
+        logging.info('phylip-sequential format file {} has been recorded'.format(outfile))
     except BaseException as e:
         logging.error("BaseException: {} for file {}".format(e, infile))
 
@@ -112,18 +93,17 @@ def write_target_phy_file(line_edited, target_file):
         target_file.write(chunk)
 
 
-def phylip2paml(folder_out, species_folder, source_file_name, species, group):
+def phylip2paml(source_file_path, species, group):
     """ converting philip-sequential to specific philip format for paml """
-    file_number = re.search(r'(\d+)\.', source_file_name).group(1)
-    # personal_folder = os.path.join(os.path.split(source_file)[0], '{}'.format(file_number))
-    target_file_path = os.path.join(folder_out, species_folder, file_number, '{}.{}'.format(file_number, "phy"))
-    source_file_path = os.path.join(folder_out, species_folder, source_file_name)
-    if not os.path.isdir(os.path.join(folder_out, species_folder, file_number)):
-        os.makedirs(os.path.join(folder_out, species_folder, file_number))
+    file_number = re.search(r'(\d+)\.', source_file_path).group(1)
+    personal_folder = os.path.join(os.path.split(source_file_path)[0], '{}'.format(file_number))
+    target_file_path = os.path.join(personal_folder, '{}.{}'.format(file_number, "phy"))
+    if not os.path.isdir(personal_folder):
+        os.makedirs(personal_folder)
     lengths = list()
     with open(target_file_path, 'w') as target_file:
-        with open(source_file_path, 'r') as source_file_path:
-            for line in source_file_path:
+        with open(source_file_path, 'r') as source_file:
+            for line in source_file:
                 if re.search(r"\d\s(\d+)", line):
                     target_file.write(line)
                 elif re.search(r"\d\s{9}", line):
@@ -157,21 +137,18 @@ def replace_broken_files(directory_out):
 
 
 def main(folder_in, folder_out, species, group):
-    for personal_folder, infile in parse_dir_out_gblocks(folder_in):
-        fasta2phylip(personal_folder, infile, folder_in, folder_out)
-    for species_folder, phylip_file in parse_phylip_dir(folder_out):
-        phylip2paml(folder_out, species_folder, phylip_file, species, group)
-        seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)
-        os.remove(seq_philip_file)
+    for infile in parse_dir_out_gblocks(folder_in):
+        fasta2phylip(infile, folder_out)
+    for phylip_file in parse_phylip_dir(folder_out):
+        phylip2paml(phylip_file, species, group)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with fasta files sorted by separated folders', nargs='?')
+    parser.add_argument('--infolder', help='Path to the folder with fasta files', nargs='?')
     parser.add_argument('--outfolder', help='Path to the folder with result philip files', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
-    # parser.add_argument('--tree', help='Path to the common tree')
     args = parser.parse_args()
     outfolder = args.outfolder
     if not os.path.isdir(outfolder):

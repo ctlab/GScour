@@ -188,7 +188,7 @@ def run_paml(infile, phylogeny_tree, exec_path, hypothesis_type):
             excep_counter.value += 1
             logging.info("{}: exception counter {}".
                          format(hypothesis_type, excep_counter.value))
-        if file_number not in broken_files:  # to do: list - to shared variable
+        if file_number not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_number)
             logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
                                                                          broken_files))

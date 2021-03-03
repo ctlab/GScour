@@ -63,7 +63,7 @@ def main(folder_in):
                 p_val = calc_p_value(np0, ln0, np1, ln1)
                 if p_val and p_val < 0.05:
                     number_pos = len(pos_sites)
-                    logging.info("{} number of positive sites {}".format(folder_name, number_pos))
+                    logging.info("{}: number of positive sites {}".format(folder_name, number_pos))
                     POSITIVE_SITES_NUMBER += number_pos
                     for sites in pos_sites:
                         pos, acid, probability = [sites[i] for i in range(3)]
@@ -84,17 +84,18 @@ def main(folder_in):
                 BROKEN_PAML_OUTS.append(folder_name)
 
 
-def get_genes_under_positive(genes_under_positive, log_folder):
+def get_gene_name_from_log(genes_under_positive, log_folder):
     dict_of_gene_names = dict()
     for infile in os.listdir(log_folder):
         file_number = infile.split('.')[0]
         if file_number in genes_under_positive and infile.endswith("log"):
             with open(os.path.join(log_folder, infile), "r") as f:
                 for line in f:
-                    if re.search(r"-\s5$", line):
+                    if re.search(r"-\s[0-9]+$", line):
                         pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
                         gene_name = (re.search(pattern, line)).group(1)
-                        protein_name = (re.search(pattern, line)).group(2)
+                        protein_name = (re.search(pattern, line)).group(2)  # adding some of the proteins to the dict
+                        # for extra consistency control
                         if not dict_of_gene_names.get(infile):
                             dict_of_gene_names[file_number] = [gene_name, protein_name]
     return dict_of_gene_names
@@ -106,16 +107,17 @@ if __name__ == '__main__':
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
     args = parser.parse_args()
     try:
-        main(args.infolder)
+        main(args.infolder)  # TODO: multiprocessing
         if BROKEN_PAML_OUTS:
             logging.warning("BROKEN_PAML_OUTS : {} : {}".format(len(BROKEN_PAML_OUTS), BROKEN_PAML_OUTS))
         logging.info("Number of no significance files {}".format(NO_SIGNIFICANCE))
         logging.info("Number of positive sites {}".format(POSITIVE_SITES_NUMBER))
         logging.info("Number of positive genes {} : {}".format(len(POSITIVE_GENES), POSITIVE_GENES))
         logging.info("Positive sites : file : position, acid, probability\n{}".format(repr(POSITIVE_SITES_DICT)))
-        gene_names_dict = get_genes_under_positive(POSITIVE_GENES, args.log)
+        gene_names_dict = get_gene_name_from_log(POSITIVE_GENES, args.log)
         if gene_names_dict:
-            logging.info("Genes under positive selection: file: gene, protein:\n{}".format(repr(gene_names_dict)))
+            logging.info("Genes under positive selection {}: file: gene\n{}".format(len(gene_names_dict),
+                                                                                    repr(gene_names_dict)))
     except:
         logging.exception("Unexpected error")
     logging.info("The work has been completed")

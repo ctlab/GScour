@@ -179,7 +179,7 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
             excep_counter.value += 1
             logging.info("{}: exception counter {}".
                          format(hypothesis_type, excep_counter.value))
-        if file_number not in broken_files:  # to do: list - to shared variable
+        if file_number not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_number)
             logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
                                                                          broken_files))
@@ -258,13 +258,14 @@ def main(folder_in, phylogeny_tree, exec_path, number_of_threads):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exec', help='Path to the codeml executable', nargs='?', default="codeml")
-    parser.add_argument('--infolder', help='The full path to the folder with input files for paml', nargs='?')
+    parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
+    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
+                        nargs='?')
     parser.add_argument('--tree', help='Path to the tree for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')
     args = parser.parse_args()
     infolder = args.infolder
-    executable_path = args.exec
+    executable_path = args.e
     tree = args.tree
     threads = int(args.threads)
     logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
