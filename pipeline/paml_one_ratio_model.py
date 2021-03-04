@@ -85,19 +85,19 @@ def run_codeml(input_tuple, exec_path):
     global counter
     global BROKEN_FILES
     folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
-    personal_dir = os.path.join(folder_in, species_folder, item_folder)
+    item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     file_number = (re.search(r"(\d+).phy", infile)).group(1)
-    os.chdir(personal_dir)
-    logging.info("working with {}".format(file_number))
-    infile_path = os.path.join(personal_dir, infile)
-    file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, personal_dir)
+    os.chdir(item_folder_path)
+    logging.info("Working with {}".format(file_number))
+    infile_path = os.path.join(item_folder_path, infile)
+    file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
     # if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
     #     logging.info("Not null size result file {} already exists for file_number {}".format(file_out_path,
     #                                                                                           file_number))
     #     return
-    p = subprocess.Popen(exec_path, stdin=PIPE, stdout=PIPE)  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
+    p = subprocess.Popen('/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml', stdin=PIPE, stdout=PIPE)  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
     try:
-        p.wait(timeout=4000)
+        p.wait(timeout=40000)
         if not p.poll():
             raise SubprocessError
         if os.path.getsize(file_out_path) > 0:
@@ -120,14 +120,15 @@ def run_codeml(input_tuple, exec_path):
             BROKEN_FILES.append(file_number)
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except SubprocessError:
-        logging.info("Not null return code, file number {}".format(file_number))
+        logging.info("Not null return code: file number {}".format(file_number))
+        #print(e.args)
         if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
 
 
-def main(folder_in, exec_path, tree_folder, threads_number):
-    inputs = list(get_input_items(folder_in, tree_folder))  # list of tuples
+def main(folder_in, exec_path, trees_folder, threads_number):
+    inputs = list(get_input_items(folder_in, trees_folder))  # list of tuples
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
@@ -145,18 +146,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
     parser.add_argument('--infolder', help='Path to the folder with input files for paml', nargs='?')
-    parser.add_argument('--tree', help='Path to the trees folder for paml', nargs='?')
+    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads to use', nargs='?')
     args = parser.parse_args()
-    infolder = args.infolder
+    in_folder = args.infolder
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
     logging.info("Path to the folder with input files for paml: {}\nExecutable path: {}\nTree folder: {}\n"
                  "Threads to use = {}".
-                 format(infolder, executable_path, tree_folder, threads))
+                 format(in_folder, executable_path, tree_folder, threads))
     try:
-        main(infolder, executable_path, tree_folder, threads)
+        main(in_folder, executable_path, tree_folder, threads)
     except:
         logging.exception("Unexpected error")
 

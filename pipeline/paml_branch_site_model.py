@@ -40,12 +40,24 @@ For analysis performs: ln0, np0 from H0; ln1, np1 from H1;
 """
 
 
-def parse_dir(folder_in):
-    for personal_folder in os.scandir(folder_in):
-        if os.path.isdir(personal_folder):
-            for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'phy':
-                    yield os.path.join(folder_in, personal_folder, infile)
+def get_tree_path(trees_folder, species_folder_name):
+    for tree in os.scandir(trees_folder):
+        if tree.name.split('.')[0] == species_folder_name:
+            return tree.name
+
+
+def get_input_items(folder_in, trees_folder):
+    """ parse root folder with files for paml
+    parse tree_folder to get appropriate tree """
+    for species_folder in os.scandir(folder_in):
+        if os.path.isdir(species_folder):
+            tree_name = get_tree_path(trees_folder, species_folder.name)
+            tree_path = os.path.join(trees_folder, tree_name)
+            for item in os.scandir(species_folder):
+                if os.path.isdir(item):
+                    for infile in os.listdir(item):
+                        if infile.split('.')[-1] == 'phy':
+                            yield folder_in, species_folder.name, item.name, infile, tree_path
 
 
 def init_indicators(null_args, alter_args, excep_null, excep_alt):
@@ -122,11 +134,13 @@ def set_null_hypothesis(infile, phylo_tree, personal_dir):
     return cml, file_out_path
 
 
-def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
-    personal_dir = os.path.split(infile)[0]
+def run_paml(input_tuple, exec_path, hypothesis_type):
+    folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
+    item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     file_number = (re.search(r"(\d+).phy", infile)).group(1)
-    os.chdir(personal_dir)
-    logging.info("working with {}".format(file_number))  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
+    infile_path = os.path.join(item_folder_path, infile)
+    os.chdir(item_folder_path)
+    logging.info("Working with {}".format(file_number))  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
 
     if hypothesis_type == "null":
         global BROCKEN_FILES_NULL, PROCESSED_FILES_NULL
@@ -135,7 +149,7 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
         processed_files = PROCESSED_FILES_NULL
         excep_counter = excep_null_counter
         processed_counter = processed_null_counter
-        cml, file_out_path = set_null_hypothesis(infile, phylo_tree, personal_dir)
+        cml, file_out_path = set_null_hypothesis(infile_path, phylogeny_tree_path, item_folder_path)
     elif hypothesis_type == "alter":
         global BROCKEN_FILES_ALTER, PROCESSED_FILES_ALTER
         global excep_alter_counter, processed_alter_counter
@@ -143,18 +157,18 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
         processed_files = PROCESSED_FILES_ALTER
         excep_counter = excep_alter_counter
         processed_counter = processed_alter_counter
-        cml, file_out_path = set_alternative_hypothesis(infile, phylo_tree, personal_dir)
+        cml, file_out_path = set_alternative_hypothesis(infile_path, phylogeny_tree_path, item_folder_path)
     else:
         logging.warning("Check the type of hypothesis: null, alter")
         return
 
-    if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
-        logging.info("{}: Not null size result file {} already exists for file_number {}".
-                     format(hypothesis_type, file_out_path, file_number))
-        return
-    p = subprocess.Popen(exec_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    # if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
+    #     logging.info("{}: Not null size result file {} already exists for file_number {}".
+    #                  format(hypothesis_type, file_out_path, file_number))
+    #     return
+    p = subprocess.Popen('/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     try:
-        p.wait(timeout=4000)
+        p.wait(timeout=40000)
         if not p.poll():
             raise SubprocessError
         if os.path.getsize(file_out_path) > 0:
@@ -195,62 +209,28 @@ def run_paml(infile, phylo_tree, exec_path, hypothesis_type):
                                                                          broken_files))
 
 
-"""
-    cml, file_out_path = set_alternative_hypothesis(infile, phylo_tree, personal_dir)
-    if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
-        logging.info("Not null size result file {} already exists for file_number {}".format(file_out_path,
-                                                                                             file_number))
-        return
-    p = subprocess.Popen(exec_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    try:
-        p.wait(timeout=4000)
-        if not p.poll():
-            raise SubprocessError
-        logging.info("paml out file {} has been written".format(file_out_path))
-        with counter.get_lock():
-            counter.value += 1
-            logging.info("Counter of processed files = {}".format(counter.value))
-        if file_number not in PROCESSED_FILES:
-            PROCESSED_FILES.append(file_number)
-    except subprocess.TimeoutExpired as e:
-        p.kill()
-        EXCEPTION_NUMBER += 1
-        logging.exception("Alternative hypothesis, Killed {}, {}".format(file_number, e))
-        if file_number not in BROCKEN_FILES_ALTER:  # to do: list - to shared variable
-            BROCKEN_FILES_ALTER.append(file_number)
-    except SubprocessError:
-        logging.info("Not null return code, file number {}".format(file_number))
-        if file_number not in BROCKEN_FILES_NULL:
-            BROCKEN_FILES_ALTER.append(file_number)
-"""
-
-
-def main(folder_in, phylogeny_tree, exec_path, number_of_threads):
-    """
-    for infile in parse_dir(folder_in):
-        run_paml(infile, phylogeny_tree, exec_path) """
-    inputs = list(parse_dir(folder_in))
+def main(folder_in, trees_folder, exec_path, number_of_threads):
+    inputs = list(get_input_items(folder_in, trees_folder))
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
     logger.setLevel(logging.INFO)
+
     null_processed_counter = multiprocessing.Value('i', 0)
     alter_processed_counter = multiprocessing.Value('i', 0)
-    null_excep_counter = multiprocessing.Value('i', 0)
-    alter_excep_counter = multiprocessing.Value('i', 0)
+    null_exception_counter = multiprocessing.Value('i', 0)
+    alter_exception_counter = multiprocessing.Value('i', 0)
     # PROCESSED_FILES = multiprocessing.Array('i', range(5900))
     # PROCESSED_FILES = multiprocessing.Array(c_wchar_p, 6000)
     # manager = multiprocessing.Manager()
     # pr = manager.list()
     pool = multiprocessing.Pool(processes=number_of_threads, initializer=init_indicators,
-                                initargs=(null_processed_counter,alter_processed_counter,null_excep_counter,
-                                          alter_excep_counter,))
-    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [phylogeny_tree], len_inputs * [exec_path],
-                                         len_inputs * ["null"]))
+                                initargs=(null_processed_counter, alter_processed_counter, null_exception_counter,
+                                          alter_exception_counter,))
+    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path], len_inputs * ["null"]))
     i.wait()
     i.get()
-    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [phylogeny_tree], len_inputs * [exec_path],
-                                         len_inputs * ["alter"]))
+    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path], len_inputs * ["alter"]))
     i.wait()
     i.get()
     logging.info("Number of files should be analyzed: {}".format(len_inputs))
@@ -261,18 +241,18 @@ if __name__ == '__main__':
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
     parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
-    parser.add_argument('--tree', help='Path to the tree for paml', nargs='?')
-    parser.add_argument('--threads', help='Number of threads', nargs='?')
+    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
+    parser.add_argument('--threads', help='Number of threads to use', nargs='?')
     args = parser.parse_args()
-    infolder = args.infolder
+    in_folder = args.infolder
     executable_path = args.e
-    tree = args.tree
+    tree_folder = args.tree
     threads = int(args.threads)
     logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
                  "Threads to use = {}".
-                 format(infolder, tree, executable_path, threads))
+                 format(in_folder, tree_folder, executable_path, threads))
     try:
-        main(infolder, tree, executable_path, threads)
+        main(in_folder, tree_folder, executable_path, threads)
     except:
         logging.exception("Unexpected error")
         if BROCKEN_FILES_NULL:
