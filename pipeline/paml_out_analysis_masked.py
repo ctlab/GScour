@@ -50,38 +50,43 @@ def calc_p_value(np0, ln0, np1, ln1):
 def main(infolder):
     global NO_SIGNIFICANCE
     global POSITIVE_SITES_NUMBER
-    for personal_folder in os.scandir(infolder):
-        if os.path.isdir(personal_folder):
-            folder_name = personal_folder.name
-            np0, ln0, np1, ln1 = 0, 0., 0, 0.
-            for infile in os.listdir(personal_folder):
-                if infile.endswith("_null1_masked.out"):
-                    np0, ln0, _ = get_ln_np(os.path.join(infolder, personal_folder, infile))
-                if infile.endswith("_alter1_masked.out"):
-                    np1, ln1, pos_sites = get_ln_np(os.path.join(infolder, personal_folder, infile))
-            if all([np0, np1, ln0, ln1]):
-                p_val = calc_p_value(np0, ln0, np1, ln1)
-                if p_val and p_val < 0.05:
-                    number_pos = len(pos_sites)
-                    logging.info("{} number of positive sites {}".format(folder_name, number_pos))
-                    POSITIVE_SITES_NUMBER += number_pos
+    for species_folder in os.scandir(infolder):
+        if os.path.isdir(species_folder):
+            for item in os.scandir(species_folder):
+                np0, ln0, np1, ln1 = 0, 0., 0, 0.
+                pos_sites = []
+                if os.path.isdir(item):
+                    item_folder_name = item.name
+                    for infile in os.listdir(species_folder):
+                        if infile.endswith("_null1_masked.out"):
+                            np0, ln0, _ = get_ln_np(os.path.join(infolder, species_folder.name,
+                                                                 item_folder_name, infile))
+                        if infile.endswith("_alter1_masked.out"):
+                            np1, ln1, pos_sites = get_ln_np(os.path.join(infolder, species_folder.name,
+                                                                         item_folder_name, infile))
+                if all([np0, np1, ln0, ln1]):
+                    p_val = calc_p_value(np0, ln0, np1, ln1)
+                    if p_val and p_val < 0.05:
+                        number_pos = len(pos_sites)
+                        logging.info("{} number of positive sites {}".format(item_folder_name, number_pos))
+                        POSITIVE_SITES_NUMBER += number_pos
                     for sites in pos_sites:
                         pos, acid, probability = [sites[i] for i in range(3)]
-                        logging.info("{} positive sites : position, acid, probability : {}, {}, {}".format(folder_name,
+                        logging.info("{} positive sites : position, acid, probability : {}, {}, {}".format(item_folder_name,
                                                                                                            pos,
                                                                                                            acid,
                                                                                                            probability))
-                        if folder_name not in POSITIVE_GENES:
-                            POSITIVE_GENES.append(folder_name)
-                        if not POSITIVE_SITES_DICT.get(folder_name):
-                            POSITIVE_SITES_DICT[folder_name] = pos_sites
+                        if item_folder_name not in POSITIVE_GENES:
+                            POSITIVE_GENES.append(item_folder_name)
+                        if not POSITIVE_SITES_DICT.get(item_folder_name):
+                            POSITIVE_SITES_DICT[item_folder_name] = pos_sites
+                    else:
+                        logging.info("{} no significance, p-value {}".format(item_folder_name, p_val))
+                        NO_SIGNIFICANCE += 1
                 else:
-                    logging.info("{} no significance, p-value {}".format(folder_name, p_val))
-                    NO_SIGNIFICANCE += 1
-            else:
-                logging.warning("lack of params {}: np0 {}, ln0 {}, np1 {}, ln1 {}, pos_sites {}".format(
-                    folder_name, np0, ln0, np1, ln1, pos_sites))
-                BROKEN_PAML_OUTS.append(folder_name)
+                    logging.warning("lack of params {}: np0 {}, ln0 {}, np1 {}, ln1 {}, pos_sites {}".format(
+                        item_folder_name, np0, ln0, np1, ln1, pos_sites))
+                    BROKEN_PAML_OUTS.append(item_folder_name)
 
 
 def get_genes_under_positive(genes_under_positive, log_folder):
@@ -102,7 +107,8 @@ def get_genes_under_positive(genes_under_positive, log_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with input files for paml', nargs='?')
+    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
+                        nargs='?')
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
     args = parser.parse_args()
     try:
