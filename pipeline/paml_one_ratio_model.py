@@ -2,13 +2,13 @@
 import argparse
 import multiprocessing
 import subprocess
+import sys
 from subprocess import TimeoutExpired, SubprocessError
 from subprocess import Popen, PIPE
 from Bio.Phylo.PAML import codeml
 import logging
 import os
 import re
-
 
 BROKEN_FILES = list()
 PROCESSED_FILES = list()
@@ -96,36 +96,36 @@ def run_codeml(input_tuple, exec_path):
     infile_path = os.path.join(item_folder_path, infile)
     file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
     if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
-        logging.info("Not null size result file {} already exists for file_number {}".format(file_out_path,
-                                                                                             file_number))
-        return
-    p = subprocess.Popen(exec_path, stdin=PIPE, stdout=PIPE)  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
+        with open(file_out_path, 'r') as o_f:
+            if "Time used" in o_f.readlines()[-1]:
+                logging.info("The work has already been done for file_number {}".format(file_out_path,
+                                                                                        file_number))
+                return
+    p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
     try:
-        p.wait(timeout=16000)  # Timeout in seconds: about 4 hours
-        if not p.poll():
-            raise SubprocessError
-        if os.path.getsize(file_out_path) > 0:
-            with counter.get_lock():
-                counter.value += 1
-                logging.info("The work has been done for file {}\nCounter of processed files = {}".
-                             format(file_number, counter.value))
-            if file_number not in PROCESSED_FILES:
-                PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
-                logging.info("PROCESSED_FILES list of length {}: {}".format(len(PROCESSED_FILES), PROCESSED_FILES))
-        else:
-            logging.info("Null size result file number {}".format(file_number))
-            if file_number not in BROKEN_FILES:
-                BROKEN_FILES.append(file_number)
-                logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
+        return_code = p.wait(timeout=120)  # Timeout in seconds
+        stdout, stderr = p.communicate()
+        logging.info("Return code={} for file number {}, stderr: {}".format(return_code, file_number, stderr))
+        if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
+            with open(file_out_path, 'r') as o_f:
+                if "Time used" in o_f.readlines()[-1]:
+                    with counter.get_lock():
+                        counter.value += 1
+                    logging.info("The work has been done for file {}\nCounter of processed files = {}".
+                                 format(file_number, counter.value))
+                    if file_number not in PROCESSED_FILES:
+                        PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
+                        logging.info("PROCESSED_FILES list of length {}: {}".format(len(PROCESSED_FILES), PROCESSED_FILES))
+                else:
+                    logging.info("The work has not been finished for file number {}".format(file_number))
+                    if file_number not in BROKEN_FILES:
+                        BROKEN_FILES.append(file_number)
+                        logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except TimeoutExpired as e:
         p.kill()
         logging.info("Killed {}, {}".format(file_number, e))
         if file_number not in BROKEN_FILES:  # TODO: list - to shared variable
-            BROKEN_FILES.append(file_number)
-            logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
-    except SubprocessError:
-        logging.info("Not null return code: file number {}".format(file_number))
-        if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
 
