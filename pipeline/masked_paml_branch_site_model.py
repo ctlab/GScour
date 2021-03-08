@@ -179,9 +179,9 @@ def run_paml(input_tuple, exec_path, hypothesis_type):
     #     logging.info("{}: Not null size result file {} already exists for file_number {}".
     #                  format(hypothesis_type, file_out_path, file_number))
     #     return
-    p = subprocess.Popen('/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml', stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    p = subprocess.Popen(exec_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     try:
-        p.wait(timeout=16000)  # Timeout in seconds: about 4 hours
+        p.wait(timeout=600)  # Timeout in seconds
         if not p.poll():
             raise SubprocessError
         if os.path.getsize(file_out_path) > 0:

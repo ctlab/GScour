@@ -39,7 +39,7 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, windows_si
                        ' -i {} -b {} -t {} -w {} >> {}'.format(executable_path, items_folder, branch_codes,
                                                                threshold, windows_size, LOG_FILE)
         if os.system(launch_swamp):
-            raise ValueError
+            raise ValueError      # TODO: catch the full stderr from swamp; target dict
     except ValueError:
         logging.exception("sys.exc_info() {0}".format(sys.exc_info()))
         file_number = (re.search(r"/(\d+)/*", items_folder)).group(1)

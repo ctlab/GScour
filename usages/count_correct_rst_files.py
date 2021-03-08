@@ -30,19 +30,21 @@ def main(folder_in):
         rst_file = os.path.join(folder_in, species_folder, item_folder, infile)
         with open(rst_file, 'r') as f:
             if os.path.getsize(rst_file) > 0:
-                for line in f.readline():
+                for line in f:
                     if "Summary of changes along branches" in line:
                         right_rst_counter += 1
-                        if not rst_dict.get(item_folder):
-                            rst_dict[item_folder] = list()
-                        rst_dict[item_folder].append(infile)
+                        if not rst_dict.get(species_folder):
+                            rst_dict[species_folder] = list()
+                        rst_dict[species_folder].append(item_folder)
             else:
                 counter_empty += 1
 
-    logging.info("common counter={}", counter)
-    logging.info("counter_empty={}", counter_empty)
-    logging.info("right_rst_counter={}", right_rst_counter)
-    logging.info("rst_dict: \n{}", rst_dict)
+    logging.info("common counter={}".format(counter))
+    logging.info("counter_empty={}".format(counter_empty))
+    logging.info("right_rst_counter={}".format(right_rst_counter))
+    logging.info("rst_dict:\n{}\nRst_dict by species folder:".format(rst_dict))
+    for key, value in rst_dict.items():
+        logging.info("{}:\n{}".format(key, value))
 
 
 if __name__ == '__main__':
