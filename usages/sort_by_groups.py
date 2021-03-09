@@ -73,6 +73,7 @@ def replace_files_by_groups(folder_in, groups_dict):
 
 
 def main(folder_in):
+    logging.info("folder to work with: {}".format(folder_in))
     groups_dict = form_dict_of_groups(folder_in)
     replace_files_by_groups(folder_in, groups_dict)
 

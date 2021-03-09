@@ -30,7 +30,7 @@ would be hard for further processing (with paml, swamp)
 
 def parse_dir_out_gblocks(infolder):
     """ parse directory with files out of Gblocks
-        can be change just to fasta extension"""
+        'fas-gb' can be change just to .fas extension """
     for infile in os.listdir(infolder):
         if infile.split('.')[-1] == 'fas-gb':
             yield os.path.join(infolder, infile)
@@ -59,7 +59,6 @@ def fasta2phylip(infile, folder_out):
 def chunks(s, n):
     """Produce `n`-character chunks from `s`."""
     for start in range(0, len(s), n):
-        # yield s[start:start + n]+'\n'
         if start >= len(s) - n:
             yield s[start:start + n]
         else:
@@ -116,7 +115,7 @@ def phylip2paml(source_file_path, species, group):
                     target_file.write(name_of_seq + '\n')
 
                     line_edited = re.sub(name_of_seq_9spaces, "", line)
-                    lengths.append(len(line_edited[:-1]))  # length except \n character
+                    lengths.append(len(line_edited.rstrip()))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
     check_lengths(lengths, file_number, species, group)
@@ -130,7 +129,7 @@ def replace_broken_files(directory_out):
         os.makedirs(BROKEN_FOLDER)
         for folder in BROKEN_FILES:
             os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_FOLDER, folder))
-    if NOT_NEEDED_SPECIES:
+    if NOT_NEEDED_SPECIES:  # TODO: testing
         os.makedirs(NOT_NEEDED_SPECIES_FOLDER)
         for folder in NOT_NEEDED_SPECIES:
             os.replace(os.path.join(directory_out, folder), os.path.join(NOT_NEEDED_SPECIES_FOLDER, folder))
