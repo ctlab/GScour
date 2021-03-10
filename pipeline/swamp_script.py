@@ -6,9 +6,17 @@ import logging
 import os
 import logging
 
-LOG_FILE = '../usages/swamp_log.log'
+"""
+script for launch swamp (python3)
+target_dict - if there is certain files to launch
+target_dict in format:
+target_dict[species_folder] = [item_folder1, item_folder2...]
+"""
+LOG_FILE = os.path.join(os.getcwd(), 'swamp_log.log')
 BROKEN_FILES = list()
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
+# TODO: child_logger
+target_dict = {}
 
 
 def get_branch_names_file_path(branch_names_folder, species_folder_name):
@@ -20,7 +28,7 @@ def get_branch_names_file_path(branch_names_folder, species_folder_name):
 def get_input_items(folder_in, branch_name_folder):
     """ parse root folder with files for paml
     parse branch_names_folder to get appropriate branches code file
-    return item folder and path to the file with branch codes"""
+    return item folder and path to the branch_code file """
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder):
             branch_name = get_branch_names_file_path(branch_name_folder, species_folder.name)
@@ -32,17 +40,38 @@ def get_input_items(folder_in, branch_name_folder):
                             yield os.path.join(folder_in, species_folder.name, item.name), branch_name_path
 
 
+def get_target_input_items(folder_in, branch_name_folder):
+    """ parse root folder with files for paml
+    parse branch_names_folder to get appropriate branch_code file
+    return item folder and path to the branch_code file
+    return item folder if it's in the target_dict """
+    global target_dict
+    for species_folder in os.scandir(folder_in):
+        species_folder_path = os.path.join(folder_in, species_folder.name)
+        if os.path.isdir(species_folder_path):
+            if target_dict.get(species_folder.name):
+                branch_name = get_branch_names_file_path(branch_name_folder, species_folder.name)
+                branch_name_path = os.path.join(branch_name_folder, branch_name)
+                for item in os.scandir(species_folder_path):
+                    item_folder_path = os.path.join(folder_in, species_folder.name, item.name)
+                    if os.path.isdir(item_folder_path):
+                        if item.name in target_dict[species_folder.name]:
+                            for in_file in os.scandir(item_folder_path):
+                                if in_file.name.split('.')[-1] == 'phy':
+                                    yield os.path.join(folder_in, species_folder.name, item.name), branch_name_path
+
+
 def run_swamp(items_folder, executable_path, branch_codes, threshold, windows_size):
     global BROKEN_FILES
+    launch_swamp = '{}' \
+                   ' -i {} -b {} -t {} -w {} >> {}'.format(executable_path, items_folder, branch_codes,
+                                                           threshold, windows_size, LOG_FILE)
     try:
-        launch_swamp = '{}' \
-                       ' -i {} -b {} -t {} -w {} >> {}'.format(executable_path, items_folder, branch_codes,
-                                                               threshold, windows_size, LOG_FILE)
-        if os.system(launch_swamp):
-            raise ValueError      # TODO: catch the full stderr from swamp; target dict
-    except ValueError:
-        logging.exception("sys.exc_info() {0}".format(sys.exc_info()))
-        file_number = (re.search(r"/(\d+)/*", items_folder)).group(1)
+        if os.system(launch_swamp):  # TODO: catching full swamp stderr
+            raise ValueError
+    except ValueError as e:
+        file_number = items_folder.split('/')[-1]
+        logging.exception("File {} error args: {}".format(items_folder, e.args))
         if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)
 
@@ -57,8 +86,12 @@ if __name__ == '__main__':
     parser.add_argument('-w', help='WINDOWSIZE', nargs='?')
     args = parser.parse_args()
     try:
-        for item_folder, branch_names_file in get_input_items(args.i, args.b):
-            run_swamp(item_folder, args.e, branch_names_file, args.t, args.w)
+        if target_dict:
+            for item_folder, branch_names_file in get_target_input_items(args.i, args.b):
+                run_swamp(item_folder, args.e, branch_names_file, args.t, args.w)
+        else:
+            for item_folder, branch_names_file in get_input_items(args.i, args.b):
+                run_swamp(item_folder, args.e, branch_names_file, args.t, args.w)
     except:
         logging.exception("Unexpected error")
     logging.info("BROKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))

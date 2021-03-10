@@ -80,7 +80,7 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
     return file_out_path
 
 
-def run_codeml(input_tuple, exec_path):
+def run_codeml(input_tuple, exec_path, overwrite_flag):
     global PROCESSED_FILES
     global counter
     global BROKEN_FILES
@@ -95,14 +95,15 @@ def run_codeml(input_tuple, exec_path):
     logging.info("Working with {}".format(file_number))
     infile_path = os.path.join(item_folder_path, infile)
     file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
-    if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
-        with open(file_out_path, 'r') as o_f:
-            if "Time used" in o_f.readlines()[-1]:
-                logging.info("The work has already been done for file_number {}".format(file_out_path,
-                                                                                        file_number))
-                return
+
+    if not overwrite_flag:
+        if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
+            with open(file_out_path, 'r') as o_f:
+                if "Time used" in o_f.readlines()[-1]:
+                    logging.info("The work has already been done for file {}...continue...".format(file_out_path))
+                    return
+
     p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
     try:
         return_code = p.wait(timeout=120)  # Timeout in seconds
         stdout, stderr = p.communicate()
@@ -130,7 +131,7 @@ def run_codeml(input_tuple, exec_path):
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
 
 
-def main(folder_in, exec_path, trees_folder, threads_number):
+def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):
     inputs = list(get_input_items(folder_in, trees_folder))  # list of tuples
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
@@ -139,7 +140,7 @@ def main(folder_in, exec_path, trees_folder, threads_number):
     counter = multiprocessing.Value('i', 0)
     pool = multiprocessing.Pool(processes=threads_number, initializer=init_indicators,
                                 initargs=(counter,))
-    i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [exec_path]))
+    i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [exec_path], len_inputs * [overwrite_flag]))
     i.wait()
     i.get()
     logging.info("Number of files should be analyzed = {}".format(len_inputs))
@@ -147,21 +148,26 @@ def main(folder_in, exec_path, trees_folder, threads_number):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
+    parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml')
     parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads to use', nargs='?')
+    parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
     in_folder = args.infolder
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
+    if args.rework == 'y':
+        rework = True
+    else:
+        rework = False
     logging.info("Path to the folder with input files for paml: {}\nExecutable path: {}\nTree folder: {}\n"
-                 "Threads to use = {}".
-                 format(in_folder, executable_path, tree_folder, threads))
+                 "Threads to use = {}, rework = {}".
+                 format(in_folder, executable_path, tree_folder, threads, rework))
     try:
-        main(in_folder, executable_path, tree_folder, threads)
+        main(in_folder, executable_path, tree_folder, threads, rework)
     except:
         logging.exception("Unexpected error")
 

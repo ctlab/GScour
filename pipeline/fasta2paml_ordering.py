@@ -1,4 +1,4 @@
-#!/usr/bin/sudo python
+#!/usr/bin/env python
 import logging
 import os
 import argparse
@@ -50,7 +50,7 @@ def get_order(folder_in, species_folder):
 
 def parse_dir_out_gblocks(folder_in):
     """ parse directory with files out of Gblocks
-           can be change just to fasta extension"""
+        'fas-gb' can be change just to .fas"""
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder):
             order_string = get_order(folder_in, species_folder.name)
@@ -58,7 +58,8 @@ def parse_dir_out_gblocks(folder_in):
             #     logging.info("Please check .order file for {}/{}".format(folder_in, species_folder.name))
             #     yield   # if len(personal_folder.name) < 9:  # TODO: replace anti-repeat check to get_ortho_nucl
             for infile in os.listdir(species_folder):
-                if infile.split('.')[-1] == 'fas':
+                if infile.split('.')[-1] == 'fas-gb':
+                    logging.info("yield {} {} {}".format(species_folder.name, infile, order_string))
                     yield species_folder.name, infile, order_string
 
 
@@ -155,8 +156,8 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
                     target_file.write(name_of_seq + '\n')
 
                     line_edited = re.sub(name_of_seq_9spaces, "", line)
-                    lengths.append(len(line_edited.rstrip()))  # length except \n character
-                    # lengths.append(len(line_edited[:-1]))  # length except \n character
+                    # lengths.append(len(line_edited.rstrip()))  # length except \n character
+                    lengths.append(len(line_edited[:-1]))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
     check_lengths(lengths, species_folder, file_number, species, group)

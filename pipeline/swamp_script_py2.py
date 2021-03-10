@@ -12,6 +12,7 @@ import logging
 """
 script for launch swamp (python2)
 target_dict - if there is certain files to launch
+target_dict in format:
 target_dict[species_folder] = [item_folder1, item_folder2...]
 """
 
@@ -23,15 +24,18 @@ target_dict = {
 
     }
 
+
 def get_branch_names_file_path(branch_names_folder, species_folder_name):
     for branch_name_file in scandir.scandir(branch_names_folder):
         if branch_name_file.name.split('.')[0] == species_folder_name:
             return branch_name_file.name
 
+
 def get_target_input_items(folder_in, branch_name_folder):
     """ parse root folder with files for paml
-    parse branch_names_folder to get appropriate branches code file
-    return item folder and path to the file with branch codes"""
+    parse branch_names_folder to get appropriate branch_code file
+    return item folder and path to the branch_code file
+    return item folder if it's in the target_dict """
     global target_dict
     for species_folder in scandir.scandir(folder_in):
         species_folder_path = os.path.join(folder_in, species_folder.name)
@@ -71,11 +75,10 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, window_siz
                    ' -i {} -b {} -t {} -w {} >> {}'.format(executable_path, items_folder, branch_codes,
                                                            threshold, window_size, log_file)
     try:
-        os.system(launch_swamp)
         if os.system(launch_swamp): # TODO: catching full swamp stderr
             raise ValueError
     except ValueError as e:
-        file_number = (re.search(r"/(\d+)/*", items_folder)).group(1)
+        file_number = items_folder.split('/')[-1]
         logging.exception("File {} error args: {}".format(items_folder, e.args))
         if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)

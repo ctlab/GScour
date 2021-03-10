@@ -10,7 +10,6 @@ import logging
 import os
 import logging
 
-
 BROCKEN_FILES_NULL = list()
 BROCKEN_FILES_ALTER = list()
 excep_null_counter = None
@@ -143,7 +142,7 @@ def set_null_hypothesis(infile, phylogeny_tree, personal_dir):
     return cml, file_out_path
 
 
-def run_paml(input_tuple, exec_path, hypothesis_type):
+def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
     folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     infile_path = os.path.join(item_folder_path, infile)
@@ -153,7 +152,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type):
         logging.info("There is no _masked.phy for {}:\n{}".format(infile_path, e.args))
         return
     os.chdir(item_folder_path)
-    logging.info("Working with {}".format(file_number))  # '/home/alina_grf/BIOTOOLS/paml4.9j/bin/codeml'
+    logging.info("Working with {}".format(file_number))
 
     if hypothesis_type == "null":
         global BROCKEN_FILES_NULL, PROCESSED_FILES_NULL
@@ -175,54 +174,45 @@ def run_paml(input_tuple, exec_path, hypothesis_type):
         logging.warning("Check the type of hypothesis: null, alter")
         return
 
-    # if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
-    #     logging.info("{}: Not null size result file {} already exists for file_number {}".
-    #                  format(hypothesis_type, file_out_path, file_number))
-    #     return
-    p = subprocess.Popen(exec_path, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    if not overwrite_flag:
+        if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
+            with open(file_out_path, 'r') as o_f:
+                if "Time used" in o_f.readlines()[-1]:
+                    logging.info("The work has already been done for file {}...continue...".format(file_out_path))
+                    return
+
+    p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        p.wait(timeout=600)  # Timeout in seconds
-        if not p.poll():
-            raise SubprocessError
-        if os.path.getsize(file_out_path) > 0:
-            with processed_counter.get_lock():
-                processed_counter.value += 1
-                logging.info("{}: The work has been done for file {}\nCounter of processed files = {}".
-                             format(hypothesis_type, file_number, processed_counter.value))
-            if file_number not in processed_files:
-                processed_files.append(file_number)
-                logging.info("{}: processed_files list of length {}: {}".format(hypothesis_type, len(processed_files),
-                                                                                processed_files))
-        else:
-            logging.info("{}: Null size result file number {}".format(hypothesis_type, file_number))
-            if file_number not in broken_files:
-                broken_files.append(file_number)
-                logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
-                                                                             broken_files))
+        return_code = p.wait(timeout=500)  # Timeout in seconds
+        stdout, stderr = p.communicate()
+        logging.info("Return code={} for file number {}, stderr: {}".format(return_code, file_number, stderr))
+        if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
+            with open(file_out_path, 'r') as o_f:
+                if "Time used" in o_f.readlines()[-1]:
+                    with processed_counter.get_lock():
+                        processed_counter.value += 1
+                    logging.info("The work has been done for file {}\nCounter of processed files = {}".
+                                 format(file_number, processed_counter.value))
+                    if file_number not in processed_files:
+                        processed_files.append(file_number)  # TODO: list - to shared variable
+                        logging.info(
+                            "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
+                else:
+                    logging.info("The work has not been finished for file number {}".format(file_number))
+                    if file_number not in broken_files:
+                        broken_files.append(file_number)
+                        logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
     except TimeoutExpired as e:
         p.kill()
-        logging.info("{}: Killed {}, {}".format(hypothesis_type, file_number, e))
         with excep_counter.get_lock():
             excep_counter.value += 1
-            logging.info("{}: exception counter {}".
-                         format(hypothesis_type, excep_counter.value))
+        logging.info("Killed {}, {}\nException_counter={}".format(file_number, e, excep_counter))
         if file_number not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_number)
-            logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
-                                                                         broken_files))
-    except SubprocessError:
-        logging.info("{}: Not null return code, file number {}".format(hypothesis_type, file_number))
-        with excep_counter.get_lock():
-            excep_counter.value += 1
-            logging.info("{}: exception counter {}".
-                         format(hypothesis_type, excep_counter.value))
-        if file_number not in broken_files:
-            broken_files.append(file_number)
-            logging.info("{}: broken_files list of length {}: {}".format(hypothesis_type, len(broken_files),
-                                                                         broken_files))
+            logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
 
 
-def main(folder_in, trees_folder, exec_path, number_of_threads):
+def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
     inputs = list(get_input_items(folder_in, trees_folder))
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
@@ -238,12 +228,14 @@ def main(folder_in, trees_folder, exec_path, number_of_threads):
     # manager = multiprocessing.Manager()
     # pr = manager.list()
     pool = multiprocessing.Pool(processes=number_of_threads, initializer=init_indicators,
-                                initargs=(null_processed_counter,alter_processed_counter,null_excep_counter,
+                                initargs=(null_processed_counter, alter_processed_counter, null_excep_counter,
                                           alter_excep_counter,))
-    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path], len_inputs * ["null"]))
+    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
+                                         len_inputs * ["null"], len_inputs * [overwrite_flag]))
     i.wait()
     i.get()
-    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path], len_inputs * ["alter"]))
+    i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
+                                         len_inputs * ["alter"], len_inputs * [overwrite_flag]))
     i.wait()
     i.get()
     logging.info("Number of files should be analyzed: {}".format(len_inputs))
@@ -256,14 +248,19 @@ if __name__ == '__main__':
                         nargs='?')
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads to use', nargs='?')
+    parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
     infolder = args.infolder
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
+    if args.rework == 'y':
+        rework = True
+    else:
+        rework = False
     logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
-                 "Threads to use = {}".
-                 format(infolder, tree_folder, executable_path, threads))
+                 "Threads to use = {}, rework = {}".
+                 format(infolder, tree_folder, executable_path, threads, rework))
     try:
         main(infolder, tree_folder, executable_path, threads)
     except:
