@@ -41,9 +41,9 @@ $ ls */
 
 def get_order(folder_in, species_folder):
     folder_path = os.path.join(folder_in, species_folder)
-    for infile in os.listdir(folder_path):
-        if infile == '{}.{}'.format(species_folder, 'order'):
-            with open(os.path.join(folder_path, infile), 'r') as f:
+    for infile in os.scandir(folder_path):
+        if infile.name == '{}.{}'.format(species_folder, 'order'):
+            with open(os.path.join(folder_path, infile.name), 'r') as f:
                 order_string = f.read()
                 return order_string.rstrip()
 
@@ -54,12 +54,11 @@ def parse_dir_out_gblocks(folder_in):
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder):
             order_string = get_order(folder_in, species_folder.name)
-            # if not order_string:
-            #     logging.info("Please check .order file for {}/{}".format(folder_in, species_folder.name))
-            #     yield   # if len(personal_folder.name) < 9:  # TODO: replace anti-repeat check to get_ortho_nucl
+            if not order_string:
+                logging.warning("Please check .order file for {}{}".format(folder_in, species_folder.name))
+                yield
             for infile in os.listdir(species_folder):
                 if infile.split('.')[-1] == 'fas-gb':
-                    logging.info("yield {} {} {}".format(species_folder.name, infile, order_string))
                     yield species_folder.name, infile, order_string
 
 
@@ -103,7 +102,7 @@ def chunks(s, n):
         if start >= len(s) - n:
             yield s[start:start + n]
         else:
-            yield s[start:start + n]+"\n"
+            yield s[start:start + n]  # +"\n"
 
 
 def check_lengths(lengths, species_folder, file_number, species, group):
@@ -146,13 +145,13 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
             for line in source_file_path:
                 if re.search(r"\d\s(\d+)", line):
                     target_file.write(line)
-                elif re.search(r"\d\s{9}", line):
+                elif re.search(r"\d+\s{9}", line):
                     """                
                     - insert two spaces and \n instead of 9 after name of sequence
                     - split string on lines by 60 character per line
                     """
-                    name_of_seq_9spaces = (re.search(r"(\d)\s{9}", line)).group()
-                    name_of_seq = (re.search(r"(\d)", line)).group()
+                    name_of_seq_9spaces = (re.search(r"(\d+)\s{9}", line)).group()
+                    name_of_seq = (re.search(r"(\d+)", line)).group()
                     target_file.write(name_of_seq + '\n')
 
                     line_edited = re.sub(name_of_seq_9spaces, "", line)

@@ -262,7 +262,7 @@ if __name__ == '__main__':
                  "Threads to use = {}, rework = {}".
                  format(infolder, tree_folder, executable_path, threads, rework))
     try:
-        main(infolder, tree_folder, executable_path, threads)
+        main(infolder, tree_folder, executable_path, threads, rework)
     except:
         logging.exception("Unexpected error")
         if BROCKEN_FILES_NULL:

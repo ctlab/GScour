@@ -13,6 +13,7 @@ target_dict in format:
 target_dict[species_folder] = [item_folder1, item_folder2...]
 """
 LOG_FILE = os.path.join(os.getcwd(), 'swamp_log.log')
+print("LOG_FILE", LOG_FILE)
 BROKEN_FILES = list()
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 # TODO: child_logger

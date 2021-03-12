@@ -9,6 +9,7 @@ import sys
 import logging
 import os
 import logging
+import traceback
 """
 script for launch swamp (python2)
 target_dict - if there is certain files to launch
@@ -79,7 +80,8 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, window_siz
             raise ValueError
     except ValueError as e:
         file_number = items_folder.split('/')[-1]
-        logging.exception("File {} error args: {}".format(items_folder, e.args))
+        logging.exception("File {} \nTraceback: {}".format(items_folder, traceback.print_exception(*sys.exc_info())))
+
         if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)
 
