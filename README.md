@@ -1,19 +1,30 @@
 # Genome-scale detection of positive selection
 ## Requirements
-### Perl
-Perl 5: https://www.perl.org/
+- Biopython
+- PAML (Phylogenetic Analysis by Maximum Likelihood)
+- Numpy
+- Pandas
+- Proteinortho (https://gitlab.com/paulklemm_PHD/proteinortho)
 ### Aligners and alignment analysis tools
-##### PRANK
-multiple sequence aligner (http://wasabiapp.org/software/prank/) - v.170427
+- PRANK
+Multiple sequence aligner (http://wasabiapp.org/software/prank/) - v.170427
 For launch scripts without significant changes add path to prank location in your environment variable PATH like
 export PATH="$PATH:/path/to/dir/prank/bin/"
-
-GUIDANCE (http://guidance.tau.ac.il/) - v2.02
+- GUIDANCE (http://guidance.tau.ac.il/) - v2.02
 GUIDANCE allows using alignment (MAFFT, PRANK, CLUSTALW) as a subprocess.
-
+- Gblocks (http://gensoft.pasteur.fr/docs/gblocks/0.91b/)
+- SWAMP (https://github.com/peterwharrison/SWAMP)
 ## Steps
 ### 1. One-to-one orthologs
 Obtain one-to-one ortholog clusters for whole-genome sequences.
+#### 1.1 Finding orthologous proteins
+- Launch proteinortho. For example, launch_proteinortho.sh or launch_proteinortho_synteny.sh;
+Result file will be needed: project_name.proteinortho.tsv or project_name.poff.tsv if synteny.
+- Form a ortologs table with fulfillment of requirements: single-copy orthologs only, group, required     
+`get_orthologs_table.py --project project_name --species 8 --group 6 --required 6`
+#### 1.2 Finding appropriate nucleotide sequences  
+
+
 
 ### 2. Sequences
 #### 2a. Get sequences
