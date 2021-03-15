@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import logging
 import re
+import traceback
 
 counter_file = None
 LOG_FILE = "gblocks_alignment.log"
@@ -69,9 +70,10 @@ if __name__ == '__main__':
         i = pool.starmap_async(launch_gblocks, zip(inputs, len_inputs * [executable_path]))
         i.wait()
         i.get()
-    except:
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
         logging.info("Number of processed files = {}".format(counter_file.value))
-        logging.exception("Unexpected error")
+
     logging.info("Number of processed files = {}".format(counter_file.value))
     logging.info("The work has been completed")
 

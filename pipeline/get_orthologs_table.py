@@ -3,6 +3,8 @@
 import argparse
 import logging
 import os
+import traceback
+
 import pandas as pd
 
 DEFAULT_PROJECT_NAME = os.getcwd().split('/')[-1]
@@ -13,30 +15,24 @@ Species named as a number
 """
 
 
-def main(project_name, poff, species, group, genes, required):
+def main(project_name, poff, species, group, required):
     if not poff:
-        proteinortho_data = pd.read_csv('{}.proteinortho.tsv'.format(project_name), sep='\t')
+        proteinortho_file = '{}.proteinortho.tsv'.format(project_name)
+        proteinortho_data = pd.read_csv(proteinortho_file, sep='\t')
         out_file_name = '{}_formed_table.ortho.tsv'.format(project_name)
     else:
-        proteinortho_data = pd.read_csv('{}.poff.tsv'.format(project_name), sep='\t')
+        proteinortho_file = '{}.poff.tsv'.format(project_name)
+        proteinortho_data = pd.read_csv(proteinortho_file, sep='\t')
         out_file_name = '{}_formed_table.ortho.poff.tsv'.format(project_name)
 
-
-    logging.info("input file {}".format(proteinortho_data))
+    logging.info("Input file {}".format(proteinortho_file))
     species = int(species)
     group = int(group)
-    # genes = int(genes)
-    # TODO: required - do for multiple required species
     result = proteinortho_data.loc[proteinortho_data['# Species'].isin(range(group, species + 1)) &
-                                   (proteinortho_data['{}.faa'.format(required)]!='*')]
-    result = result[~result["1.faa"].str.contains(',')]  # because of genes == 1
-    result = result[~result["2.faa"].str.contains(',')]  # TODO: to normal view
-    result = result[~result["3.faa"].str.contains(',')]
-    result = result[~result["4.faa"].str.contains(',')]
-    result = result[~result["5.faa"].str.contains(',')]
-    result = result[~result["6.faa"].str.contains(',')]
-    result = result[~result["7.faa"].str.contains(',')]
-    result = result[~result["8.faa"].str.contains(',')]
+                                   (proteinortho_data['{}.faa'.format(required)] != '*')]
+    for species_column in result.columns[3: 3 + species + 1]:
+        result = result[~result[species_column].str.contains(',')]  # because of genes == 1 (single-copy orthologs)
+
     #  result = proteinortho_data.loc[(proteinortho_data['# Species'] == species)
     #                               & (proteinortho_data['Genes'] == species)]
 
@@ -53,12 +49,12 @@ if __name__ == "__main__":
                         default="")
     parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
-    parser.add_argument('--genes', help='Maximal number of genes for species', nargs='?')
-    parser.add_argument('--required', help='Required species comma separated', nargs='?')
+    # parser.add_argument('--genes', help='Maximal number of genes for species', nargs='?') # TODO: is it necessary?
+    parser.add_argument('--required', help='One required, target species', nargs='?')  # TODO: multi required species?
     args = parser.parse_args()
     try:
-        main(args.project, args.poff, args.species, args.group, args.genes, args.required)
-    except:
-        logging.exception("Unexpected error")
+        main(args.project, args.poff, args.species, args.group, args.required)
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
 
     logging.info("The orthologs table was recorded")

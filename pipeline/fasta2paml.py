@@ -2,6 +2,8 @@
 import logging
 import os
 import argparse
+import traceback
+
 from Bio import SeqIO
 import re
 
@@ -181,6 +183,6 @@ if __name__ == '__main__':
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
     logging.info("The work has been completed")

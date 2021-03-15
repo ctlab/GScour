@@ -2,6 +2,8 @@
 import logging
 import os
 import argparse
+import traceback
+
 from Bio import SeqIO
 import re
 import shutil
@@ -105,12 +107,13 @@ def chunks(s, n):
             yield s[start:start + n]  # +"\n"
 
 
-def check_lengths(lengths, species_folder, file_number, species, group):
+def check_lengths(lengths, species_folder, file_number, group):
     """ check: - the lengths of all sequences in one file of the same length
                - number of sequences in one file more or equal then group, less or equal then species
                - length of sequence  a multiple of three
         replace completely broken files to BROKEN_FOLDER
     """
+    species = len(species_folder)
     if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
         logging.info("all seq lengths are equal, confirm of number of species")
     elif not all(x == lengths[0] for x in lengths):
@@ -132,7 +135,7 @@ def write_target_phy_file(line_edited, target_file):
         target_file.write(chunk)
 
 
-def phylip2paml(folder_out, species_folder, source_file_name, species, group):
+def phylip2paml(folder_out, species_folder, source_file_name, group):
     """ converting philip-sequential to specific philip format for paml """
     file_number = re.search(r'(\d+)\.', source_file_name).group(1)
     target_file_path = os.path.join(folder_out, species_folder, file_number, '{}.{}'.format(file_number, "phy"))
@@ -159,7 +162,7 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
                     lengths.append(len(line_edited[:-1]))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
-    check_lengths(lengths, species_folder, file_number, species, group)
+    check_lengths(lengths, species_folder, file_number, group)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
@@ -175,11 +178,11 @@ def replace_broken_files(directory_out):
             # os.remove(os.path.join(directory_out, folder)) # TODO: shutil not delete source, just leave empty
 
 
-def main(folder_in, folder_out, species, group):
+def main(folder_in, folder_out, group):
     for personal_folder, infile, order_string in parse_dir_out_gblocks(folder_in):
         fasta2phylip(personal_folder, infile, order_string, folder_in, folder_out)
     for species_folder, phylip_file in parse_phylip_dir(folder_out):
-        phylip2paml(folder_out, species_folder, phylip_file, species, group)
+        phylip2paml(folder_out, species_folder, phylip_file, group)
         seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)
         os.remove(seq_philip_file)
 
@@ -188,14 +191,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--infolder', help='Path to the folder with fasta files sorted by separated folders', nargs='?')
     parser.add_argument('--outfolder', help='Path to the folder with result philip files', nargs='?')
-    parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     args = parser.parse_args()
     outfolder = args.outfolder
     if not os.path.isdir(outfolder):
         os.makedirs(outfolder)
     try:
-        main(args.infolder, outfolder, int(args.species), int(args.group))
+        main(args.infolder, outfolder, int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES or NOT_NEEDED_SPECIES:
             replace_broken_files(outfolder)
@@ -203,6 +205,6 @@ if __name__ == '__main__':
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
     logging.info("The work has been completed")

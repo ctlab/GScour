@@ -2,6 +2,8 @@
 import argparse
 import sys
 import logging
+import traceback
+
 from scipy import stats
 import os
 import logging
@@ -122,6 +124,6 @@ if __name__ == '__main__':
         if gene_names_dict:
             logging.info("Genes under positive selection {}: file: gene\n{}".format(len(gene_names_dict),
                                                                                     repr(gene_names_dict)))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
     logging.info("The work has been completed")

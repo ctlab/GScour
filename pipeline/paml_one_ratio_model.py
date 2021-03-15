@@ -3,6 +3,7 @@ import argparse
 import multiprocessing
 import subprocess
 import sys
+import traceback
 from subprocess import TimeoutExpired, SubprocessError
 from subprocess import Popen, PIPE
 from Bio.Phylo.PAML import codeml
@@ -168,8 +169,8 @@ if __name__ == '__main__':
                  format(in_folder, executable_path, tree_folder, threads, rework))
     try:
         main(in_folder, executable_path, tree_folder, threads, rework)
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
 
     # logging.info("Number of BROCKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     # logging.info("Counter of processed files {}".format(counter.value))

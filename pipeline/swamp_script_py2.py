@@ -102,7 +102,9 @@ if __name__ == '__main__':
         else:
             for item_folder, branch_names_file in get_input_items(args.i, args.b):
                 run_swamp(item_folder, args.e, branch_names_file, args.t, args.w)
-    except:
-        logging.exception("Unexpected error")
+    #except:
+    #    logging.exception("Unexpected error")
+    except BaseException as e: #  TODO: test
+        print("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
     logging.info("BROKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     logging.info("The work has been completed")

@@ -6,6 +6,7 @@ import os
 import logging
 import re
 import sys
+import traceback
 
 ALIGNED_FILES = list()
 EXCEPTION_NUMBER = 0
@@ -86,8 +87,8 @@ if __name__ == '__main__':
             args.exec]))
         i.wait()
         i.get()
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
 
     logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
     logging.info("Number of exceptions = {}".format(EXCEPTION_NUMBER))

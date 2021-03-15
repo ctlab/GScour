@@ -6,6 +6,7 @@ import os
 import logging
 import re
 import sys
+import traceback
 
 ALIGNED_FILES = list()
 EXCEPTION_NUMBER = 0
@@ -112,8 +113,8 @@ if __name__ == '__main__':
         i.wait()
         i.get()
         # pool.starmap(launch_prank, zip(inputs, len_inputs * [outfolder], len_inputs * [args.tree]))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
         logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
         logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
     logging.info("Number of ALIGNED_FILES = {}".format(counter.value))

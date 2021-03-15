@@ -14,9 +14,6 @@ POS_SITES_STRING = re.compile(r"Positive\ssites\sfor\sforeground\slineages\sProb
 POSITION_ACID_PATTERN = re.compile(r"\s*(\d+)\s+(\w)\s+(\d+\.\d+)")
 
 
-# LOG_FILE = "analyse_paml_out_masked.log"
-
-
 def get_ln_np(infile):
     with open(infile, "r") as f:
         pos_sites = list()
@@ -105,9 +102,7 @@ def main(in_folder, ortho_logs):
                 broken_paml_outs += broken_paml_outs_item
                 no_significance += no_significance_item
                 positive_sites_number += positive_sites_number_item
-                print("positive_sites_dict", positive_sites_dict)
                 positive_sites_dict.update(positive_sites_dict_item)
-                print("positive_sites_dict_item", positive_sites_dict_item)
                 positive_genes += positive_genes_item
 
             child_logger.warning("broken_paml_outs : {} : {}".format(len(broken_paml_outs), broken_paml_outs))
@@ -146,15 +141,15 @@ def get_names_of_genes_under_positive(genes_under_positive, seq_log_folder, chil
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', default='')
     args = parser.parse_args()
-    infolder = args.infolder
+    in_dir = args.i
     log_folder = args.log
-    print("Passed args: infolder {}, log folder {}".format(infolder, log_folder))
+    print("Passed args: input directory {}, log folder {}".format(in_dir, log_folder))
     try:
-        main(infolder, log_folder)
+        main(in_dir, log_folder)
     except BaseException as e:
         print("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
     print("The work has been completed")

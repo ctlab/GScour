@@ -3,6 +3,7 @@ import argparse
 import multiprocessing
 import re
 import subprocess
+import traceback
 from subprocess import SubprocessError, TimeoutExpired
 from Bio.Phylo.PAML import codeml
 import os
@@ -255,8 +256,8 @@ if __name__ == '__main__':
                  format(in_folder, tree_folder, executable_path, threads, rework))
     try:
         main(in_folder, tree_folder, executable_path, threads, rework)
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
         if BROCKEN_FILES_NULL:
             logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
         if BROCKEN_FILES_ALTER:
