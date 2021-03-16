@@ -8,7 +8,6 @@ import argparse
 import sys
 import logging
 import os
-import logging
 import traceback
 """
 script for launch swamp (python2)

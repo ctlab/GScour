@@ -3,10 +3,8 @@ import argparse
 import sys
 import logging
 import traceback
-
 from scipy import stats
 import os
-import logging
 import re
 
 LN_NP_PATTERN = re.compile(r"lnL\(ntime:\s+\d+\s+np:\s+(\d+)\):\s+(-\d+\.\d+)")

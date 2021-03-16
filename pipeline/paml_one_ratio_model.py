@@ -124,11 +124,12 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
                     if file_number not in BROKEN_FILES:
                         BROKEN_FILES.append(file_number)
                         logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
-    except TimeoutExpired as e:
+    except TimeoutExpired as err:
         p.kill()
-        logging.info("Killed {}, {}".format(file_number, e))
-        if file_number not in BROKEN_FILES:  # TODO: list - to shared variable
-            BROKEN_FILES.append(file_number)
+        file_id = "{}/{}".format(species_folder, item_folder)
+        logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, counter.value))
+        if file_id not in BROKEN_FILES:  # TODO: list - to shared variable
+            BROKEN_FILES.append(file_id)
             logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
 
 

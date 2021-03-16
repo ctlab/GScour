@@ -9,7 +9,7 @@ import sys
 from Bio.Phylo.PAML import codeml
 import logging
 import os
-import logging
+
 
 BROCKEN_FILES_NULL = list()
 BROCKEN_FILES_ALTER = list()
@@ -149,8 +149,8 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
     infile_path = os.path.join(item_folder_path, infile)
     try:
         file_number = (re.search(r"(\d+)_masked.phy", infile)).group(1)
-    except AttributeError as e:
-        logging.info("There is no _masked.phy for {}:\n{}".format(infile_path, e.args))
+    except AttributeError as err:
+        logging.info("There is no _masked.phy for {}:\n{}".format(infile_path, err.args))
         return
     os.chdir(item_folder_path)
     logging.info("Working with {}".format(file_number))
@@ -203,13 +203,14 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                     if file_number not in broken_files:
                         broken_files.append(file_number)
                         logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
-    except TimeoutExpired as e:
+    except TimeoutExpired as err:
         p.kill()
         with excep_counter.get_lock():
             excep_counter.value += 1
-        logging.info("Killed {}, {}\nException_counter={}".format(file_number, e, excep_counter))
-        if file_number not in broken_files:  # TODO: list - to shared variable
-            broken_files.append(file_number)
+        file_id = "{}/{}".format(species_folder, item_folder)
+        logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, excep_counter.value))
+        if file_id not in broken_files:  # TODO: list - to shared variable
+            broken_files.append(file_id)
             logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
 
 

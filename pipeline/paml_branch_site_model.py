@@ -195,13 +195,14 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                     if file_number not in broken_files:
                         broken_files.append(file_number)
                         logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
-    except TimeoutExpired as e:
+    except TimeoutExpired as err:
         p.kill()
         with excep_counter.get_lock():
             excep_counter.value += 1
-        logging.info("Killed {}, {}\nException_counter={}".format(file_number, e, excep_counter))
-        if file_number not in broken_files:  # TODO: list - to shared variable
-            broken_files.append(file_number)
+        file_id = "{}/{}".format(species_folder, item_folder)
+        logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, excep_counter.value))
+        if file_id not in broken_files:  # TODO: list - to shared variable
+            broken_files.append(file_id)
             logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
 
 

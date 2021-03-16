@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import re
-import sys
-import logging
 import os
 import logging
 import traceback

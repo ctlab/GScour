@@ -4,7 +4,6 @@ import argparse
 import logging
 import os
 import traceback
-
 import pandas as pd
 
 DEFAULT_PROJECT_NAME = os.getcwd().split('/')[-1]

@@ -1,4 +1,4 @@
-#!/usr/bin/sudo python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import argparse
 import logging
@@ -21,6 +21,7 @@ ABSENT_IN_CDS = dict()
 NUMBER_OF_NEED_TO_BE_WRITTEN = 0
 LOG_FILE = "get_ortho_nuc_seqs.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
+BROKEN_LIST = []  # broken_list for re-extracting seqs from list ['item1', 'item2'..], e.g ['3557', '5781', '1503']
 
 
 def check_start_codon(seq, file_out_number, protein_id, start_codons="ATG"):
@@ -225,8 +226,18 @@ def check_translate(seq, protein_translation, initfna_filepath, feature, record_
     return extracted_seq, False
 
 
-def anti_repeat_check(anti_repeat_store, protein_id, nucleotide_seq, file_out_number, start,
-                      accordance, stop, multiple, gene, nucleotide_seq_length, file_number, species_numerating):
+def anti_repeat_check(protein_id, seq_record, anti_repeat_store):
+    if not anti_repeat_store.get(protein_id):
+        anti_repeat_store[protein_id] = {
+            "seq": seq_record  # seq_record = SeqRecord(record.seq, id=species_numerating, description="")
+            }
+        return True
+    return False
+
+
+def anti_repeat_check_with_comparing(anti_repeat_store, protein_id, nucleotide_seq, file_out_number, start,
+                                     accordance, stop, multiple, gene, nucleotide_seq_length, file_number,
+                                     species_numerating):
     if not anti_repeat_store.get(protein_id):
         anti_repeat_store[protein_id] = {
             "seq": nucleotide_seq, "start": start, "accordance": accordance,
@@ -247,14 +258,14 @@ def anti_repeat_check(anti_repeat_store, protein_id, nucleotide_seq, file_out_nu
                                                                          len(nucleotide_seq),
                                                                          previous_seq, nucleotide_seq))
 
-            previous_start = anti_repeat_store.get(start)
-            previous_accordance = anti_repeat_store.get(accordance)
-            previous_stop = anti_repeat_store.get(stop)
-            previous_multiple = anti_repeat_store.get(multiple)
+            previous_start = anti_repeat_store.get(protein_id).get(start)
+            previous_accordance = anti_repeat_store.get(protein_id).get(accordance)
+            previous_stop = anti_repeat_store.get(protein_id).get(stop)
+            previous_multiple = anti_repeat_store.get(protein_id).get(multiple)
             if [previous_start, previous_accordance, previous_stop, previous_multiple].count(True) > [start, accordance,
                                                                                                       stop, multiple]. \
                     count(True):
-                logging.info("nucleotide seq was replaces by previous seq")
+                logging.info("replace the current seq with the previous one: return previous seq")
                 return previous_seq
             else:
                 anti_repeat_store[protein_id] = {
@@ -262,6 +273,8 @@ def anti_repeat_check(anti_repeat_store, protein_id, nucleotide_seq, file_out_nu
                     "stop": stop, "multiple": multiple, "gene": gene, "length": nucleotide_seq_length,
                     "file_number": file_number, "species_numerating": species_numerating
                     }
+                logging.info("current seq is better then previous, replace the previous seq with the current one in "
+                             "the anti_repeat_store, return current seq")
                 return nucleotide_seq
 
 
@@ -331,7 +344,7 @@ def get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numeratin
             return seq_record
 
 
-def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out):
+def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out, seq_store):
     global ABSENT_IN_CDS
     logging.info("check for file cds_from_genomic: {}".format(cds_from_genomic_file))
     if os.path.isfile(cds_from_genomic_file):
@@ -339,28 +352,36 @@ def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_num
             if protein_id == '*' or not protein_id:
                 continue
             seq_record = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
+            seq_length = len(seq_record.seq)
             file_out_number = str(idx[0] + 1)
-            if not seq_record:  # no sec_record when this species is not in the group
+            if not seq_record:  # no seq_record when this species is not in the group
                 if not ABSENT_IN_CDS.get(species_numerating):
                     ABSENT_IN_CDS[species_numerating] = list()
                 ABSENT_IN_CDS.get(species_numerating).append(protein_id)
                 logging.info("protein_id {} is absent in {}".format(protein_id, cds_from_genomic_file))
                 continue
-            write_fasta_file(directory_out, file_out_number, seq_record, species_numerating)
+            if anti_repeat_check(protein_id, seq_record, seq_store):
+                write_fasta_file(directory_out, file_out_number, seq_record, species_numerating)
+                log_file = os.path.join(directory_out, file_out_number + ".log")
+                write_log_file(log_file, "gene_name", protein_id, seq_length,  # will extract gene_name from another
+                               file_out_number, species_numerating)            # species
         logging.info("all sequences for species {} wrote".format(species_numerating))
         return True
     logging.info("No such cds_from_genomic file")
     return False
 
 
-def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_ids, directory_out, species_numerating,
-                                 initfna_filepath):
+def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_ids, dir_out, species_numerating,
+                                 genome_fna_path):
     """
+    :param species_numerating:
+    :param dir_out:
+    :param ortho_protein_ids:
     :param gb_file: GenBank annotation file .gbff
     :param cds_from_genomic_file: RefSeq annotated cds_from_genomic.fna (or other source FASTA format of'
                                       'the nucleotide sequences corresponding to all CDS'
                                       'features annotated on the assembly)
-    :param initfna_filepath: folder with genomes
+    :param genome_fna_path: folder with genomes
     1. Trying to get nucleotide sequence from cds_from_genomic.fna
     2. If there is no such file, trying to find sequence by protein_id in .gbff
     3. Checking nucleotide sequence for start/stop codon/multiple 3/accordance with protein_length extracted from .gbff
@@ -371,12 +392,11 @@ def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_i
     global BROKEN_STOP_CODON
     global BROKEN_MULTIPLE_THREE
     global BROKEN_ACCORDANCE
-
+    seq_store = dict()
     """ trying to get nucleotide sequence from cds_from_genomic.fna """
-    if get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out):
+    if get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, dir_out, seq_store):
         return
     """ trying to find sequence by protein_id in .gbff """
-    seq_store = dict()
     for (protein_id, protein_translation, protein_translation_length, nucleotide_seq,
          index_count, file_out_number, nucleotide_seq_length, gene, feature, record_id) in \
             get_seq_from_gbff(gb_file, ortho_protein_ids):
@@ -391,7 +411,7 @@ def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_i
             delete_from_broken(file_out_number, protein_id)  # common: if check_multiple-ok, then OK
         else:  # extract from genome .fna
             extracted_seq, check_trans_result = check_translate(nucleotide_seq, protein_translation,
-                                                                initfna_filepath, feature, record_id,
+                                                                genome_fna_path, feature, record_id,
                                                                 species_numerating,
                                                                 check_multiple, check_start, check_stop,
                                                                 check_accordance,
@@ -410,16 +430,17 @@ def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_i
                 """ else: if the attempt to extract right seq from genome .fna has failed - extracted_seq - return to
                    nucleotide_seq from .gbff """
         # check duplicates
-        nucleotide_seq = anti_repeat_check(seq_store, protein_id, nucleotide_seq, file_out_number,
-                                           check_start, check_accordance, check_stop, check_multiple, gene,
-                                           nucleotide_seq_length, file_out_number, species_numerating)
+        nucleotide_seq = anti_repeat_check_with_comparing(seq_store, protein_id, nucleotide_seq, file_out_number,
+                                                          check_start, check_accordance, check_stop, check_multiple,
+                                                          gene, nucleotide_seq_length,
+                                                          file_out_number, species_numerating)
 
         logging.info("Extracted and analysis has ended: detected gene {} corresponding protein_id {} with "
                      "protein_length {} "
                      "nucleotide seq of length {}\n"
                      "seq:\n{}\n".format(gene, protein_id, protein_translation_length,
                                          nucleotide_seq_length, nucleotide_seq))
-        write_fasta_and_log(seq_store, protein_id, directory_out)
+        write_fasta_and_log(seq_store, protein_id, dir_out)
         seq_store = dict()
 
 
@@ -463,6 +484,7 @@ def replace_broken_files(directory_out):
 
 def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath, species, group, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
+    global BROKEN_LIST
     if not os.path.isdir(directory_out):
         os.makedirs(directory_out)
     ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
@@ -472,7 +494,13 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
         annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(species_numerating, 'gbff'))
         cds_from_genomic_path = os.path.join(cds_from_genomic, "{}.{}".format(species_numerating, 'fna'))
         logging.info('Working with species number {}'.format(species_numerating))
-        ortho_protein_ids = ortho_data.iloc[:, column_number].values
+        if BROKEN_LIST:
+            broken_list_int_convert = list()
+            for number in BROKEN_LIST:
+                broken_list_int_convert.append(int(number) - 1)
+                ortho_protein_ids = ortho_data.iloc[broken_list_int_convert, column_number].values
+        else:
+            ortho_protein_ids = ortho_data.iloc[:, column_number].values
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
         logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} : {}".format(species_numerating,
                                                                                NUMBER_OF_NEED_TO_BE_WRITTEN))
