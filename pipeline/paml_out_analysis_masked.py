@@ -82,7 +82,7 @@ def count_sites(in_folder, species_folder, item, child_logger):
     return broken_paml_outs_item, no_significance_item, positive_sites_number_item, items_of_pos_site_dict_item
 
 
-def main(in_folder, ortho_logs):
+def main(in_folder, ortho_logs, required_species):
     global common_pos_gene_dict
     for species_folder in os.scandir(in_folder):
         broken_paml_outs = list()
@@ -118,7 +118,8 @@ def main(in_folder, ortho_logs):
         if os.path.isdir(species_folder):
             if ortho_logs:
                 if items_of_pos_site_dict:
-                    gene_names_dict = get_names_of_genes_under_positive(items_of_pos_site_dict, ortho_logs, child_logger)
+                    gene_names_dict = get_names_of_genes_under_positive(items_of_pos_site_dict, ortho_logs,
+                                                                        required_species, child_logger)
                     if gene_names_dict:
                         child_logger.info("Gene_name_dict of length {}:\nGenes under positive selection: gene: "
                                           "protein, "
@@ -135,7 +136,8 @@ def main(in_folder, ortho_logs):
                 child_logger.info("Path to the log folder was not provided")
 
 
-def get_names_of_genes_under_positive(items_of_pos_site_dict, seq_log_folder, child_logger):
+def get_names_of_genes_under_positive(items_of_pos_site_dict, seq_log_folder, required_species, child_logger):
+    """ get gene name and protein_id wich corresponds to the required_species """
     dict_of_gene_names = dict()
     pattern = ""
     for infile in os.scandir(seq_log_folder):
@@ -144,7 +146,7 @@ def get_names_of_genes_under_positive(items_of_pos_site_dict, seq_log_folder, ch
             child_logger.info("open log file {}".format(os.path.join(seq_log_folder, infile.name)))
             with open(os.path.join(seq_log_folder, infile.name), "r") as f:
                 for line in f:
-                    if re.search(r"-\s\d+$", line):
+                    if re.search(r"-\s[{}]+$".format(required_species), line):
                         pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
                         gene_name = (re.search(pattern, line)).group(1)
                         protein_name = (re.search(pattern, line)).group(2)
@@ -160,12 +162,15 @@ if __name__ == '__main__':
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', default='')
+    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?')
     args = parser.parse_args()
     in_dir = args.i
     log_folder = args.log
-    print("Passed args: input directory {}, log folder {}".format(in_dir, log_folder))
+    required_species = args.required
+    print("Passed args: input directory {}, log folder {}, required species {}".format(in_dir, log_folder,
+                                                                                       required_species))
     try:
-        main(in_dir, log_folder)
+        main(in_dir, log_folder, required_species)
     except BaseException as e:
         print("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
     print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n", common_pos_gene_dict)

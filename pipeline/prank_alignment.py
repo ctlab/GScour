@@ -5,7 +5,6 @@ import multiprocessing
 import os
 import logging
 import re
-import sys
 import traceback
 
 ALIGNED_FILES = list()
@@ -49,12 +48,12 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
                                                                   tree, log_file)
     elif format_out and not tree:
         launch = 'prank -d={0} -o={1} -showtree -codon -f={2} > {3}'.format(infile,
-                                                                             outfile_path_without_extension, format_out,
-                                                                             log_file)
+                                                                            outfile_path_without_extension, format_out,
+                                                                            log_file)
     else:
         launch = 'prank -d={0} -o={1} -showtree -codon > {2}'.format(infile,
-                                                                      outfile_path_without_extension,
-                                                                      log_file)
+                                                                     outfile_path_without_extension,
+                                                                     log_file)
     return launch
 
 
@@ -73,21 +72,20 @@ def launch_prank(infile, folder_out, tree, format_out):
                 with counter.get_lock():
                     counter.value += 1
                     logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value))
-
-    except:
+    except BaseException as err:
         global EXCEPTION_NUMBER
-        logging.exception("sys.exc_info() {0}, outfile number {1}".format(sys.exc_info(),
-                                                                          outfile_path_without_extension))
+        logging.exception("Unexpected error with outfile number {}: {}, \ntraceback: {}".
+                          format(outfile_path_without_extension, err.args, traceback.print_tb(err.__traceback__)))
         EXCEPTION_NUMBER += 1
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with input files for prank', nargs='?')
-    parser.add_argument('--outfolder', help='Path to the folder with output files of prank', nargs='?')
-    parser.add_argument('--tree', help='Path to the tree', nargs='?', default="")
-    parser.add_argument('--f', help='Output format: ["fasta" (default), "phylipi", "phylips", "paml", "nexus"]',
-                        nargs='?', default="")
+    parser.add_argument('--i', help='Path to the folder with input files (.fna) for prank', nargs='?')
+    parser.add_argument('--o', help='Path to the folder with output files of prank', nargs='?')
+    parser.add_argument('--tree', help='Path to the tree, exclude if there is no tree', nargs='?', default="")
+    parser.add_argument('--f', help='Output format: ["fasta" (default, exclude option --f if left by default),'
+                                    '"phylipi", "phylips", "paml", "nexus"]', nargs='?', default="")
     parser.add_argument('--threads', help='Number of threads', nargs='?')
     args = parser.parse_args()
     threads = int(args.threads)
@@ -97,24 +95,23 @@ if __name__ == '__main__':
         logger = multiprocessing.get_logger()
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter,))
-        infolder = args.infolder
-        inputs = list(parse_dir(args.infolder))
+        in_dir = args.i
+        inputs = list(parse_dir(in_dir))
         len_inputs = len(inputs)
-        outfolder = args.outfolder
+        out_dir = args.o
         logging.info("Path to the folder with input files for prank: {}\n"
-                     "Path to the folder with output files of prank: {}".format(infolder, outfolder))
-        if not os.path.isdir(outfolder):
-            os.makedirs(outfolder)
+                     "Path to the folder with output files of prank: {}".format(in_dir, out_dir))
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
         output_format = args.f
         if output_format not in ["fasta", "phylipi", "phylips", "paml", "nexus", ""]:
             raise SyntaxError("Not valid output format, check option --f, -h for help")
-        i = pool.starmap_async(launch_prank, zip(inputs, len_inputs * [outfolder], len_inputs * [args.tree],
+        i = pool.starmap_async(launch_prank, zip(inputs, len_inputs * [out_dir], len_inputs * [args.tree],
                                                  len_inputs * [output_format]))
         i.wait()
         i.get()
-        # pool.starmap(launch_prank, zip(inputs, len_inputs * [outfolder], len_inputs * [args.tree]))
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
         logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
         logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
     logging.info("Number of ALIGNED_FILES = {}".format(counter.value))

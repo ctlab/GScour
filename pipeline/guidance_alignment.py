@@ -41,8 +41,8 @@ def launch_guidance(infile, folder_out, number_of_threads, executable_path):
     --msaProgram: Which MSA program to use
     --seqType: Type of sequences for alignment (amino acids, nucleotides, or codons)
     --outDir: Output directory that will be created automatically and hold all output files
-     [please provid full (and not relative) path]
-    --bootstraps: Number of bootstrap iterations (only for GUIDQANCE). Defaut=100
+     [please provide full (and not relative) path]
+    --bootstraps: Number of bootstrap iterations (only for GUIDANCE). Default=100
     --prank: path to prank executable. Default=prank
     """
     launch = 'perl {} --seqFile {} --msaProgram PRANK ' \
@@ -51,44 +51,46 @@ def launch_guidance(infile, folder_out, number_of_threads, executable_path):
                                                                 personal_dir_out)
     try:
         if not os.system(launch):
-            logging.info("guidance completed task for file {}".format(file_number))
+            logging.info("Guidance completed task for file {}".format(file_number))
             if file_number not in ALIGNED_FILES:
                 ALIGNED_FILES.append(file_number)
                 with counter.get_lock():
                     counter.value += 1
                     logging.info("Counter (ALIGNED_FILES) = {}\nList of ALIGNED_FILES: {}".
                                  format(counter.value, ALIGNED_FILES))
-    except:  # TODO: don't catch need to be fixed
+    except BaseException as err:  # TODO: don't catch need to be fixed
         logging.exception("{}, file_number {}".format(sys.exc_info(), file_number))
+        logging.exception("Unexpected error: {}, \ntraceback: P{}".format(err.args,
+                                                                          traceback.print_tb(err.__traceback__)))
         EXCEPTION_NUMBER += 1
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with input files for prank', nargs='?')
-    parser.add_argument('--outfolder', help='Path to the folder with output files of prank', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with input files for guidance', nargs='?')
+    parser.add_argument('--o', help='Path to the folder with output files of guidance', nargs='?')
     parser.add_argument('--exec', help='Path to the guidance executable "guidance.pl"', nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')
     args = parser.parse_args()
     threads = int(args.threads)
-    infolder = args.infolder
-    outfolder = args.outfolder
+    in_dir = args.i
+    out_dir = args.o
     logging.info("Path to the folder with input files for guidance: {}\n"
-                 "Path to the folder with output files of guidance: {}\n".format(infolder, outfolder))
+                 "Path to the folder with output files of guidance: {}\n".format(in_dir, out_dir))
     try:
         counter = multiprocessing.Value('i', 0)
         multiprocessing.log_to_stderr()
         logger = multiprocessing.get_logger()
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter,))
-        inputs = list(parse_dir(infolder))
+        inputs = list(parse_dir(in_dir))
         len_inputs = len(inputs)
-        i = pool.starmap_async(launch_guidance, zip(inputs, len_inputs * [outfolder], len_inputs * [threads], len_inputs * [
-            args.exec]))
+        i = pool.starmap_async(launch_guidance, zip(inputs, len_inputs * [out_dir], len_inputs * [threads],
+                                                    len_inputs * [args.exec]))
         i.wait()
         i.get()
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
 
     logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
     logging.info("Number of exceptions = {}".format(EXCEPTION_NUMBER))

@@ -68,9 +68,9 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, windows_si
     try:
         if os.system(launch_swamp):  # TODO: catching full swamp stderr
             raise ValueError
-    except ValueError as e:
+    except ValueError as err:
         file_number = items_folder.split('/')[-1]
-        logging.exception("File {} error args: {}".format(items_folder, e.args))
+        logging.exception("File {} error args: {}".format(items_folder, err.args))
         if file_number not in BROKEN_FILES:
             BROKEN_FILES.append(file_number)
 

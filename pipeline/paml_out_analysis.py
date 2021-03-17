@@ -47,10 +47,10 @@ def calc_p_value(np0, ln0, np1, ln1):
     return p_val
 
 
-def main(folder_in):
+def main(in_dir):
     global NO_SIGNIFICANCE
     global POSITIVE_SITES_NUMBER
-    for species_folder in os.scandir(folder_in):
+    for species_folder in os.scandir(in_dir):
         if os.path.isdir(species_folder):
             for item in os.scandir(species_folder):
                 np0, ln0, np1, ln1 = 0, 0., 0, 0.
@@ -59,10 +59,10 @@ def main(folder_in):
                     item_folder_name = item.name
                     for infile in os.listdir(item):
                         if infile.endswith("_null1.out"):
-                            np0, ln0, _ = get_ln_np(os.path.join(folder_in, species_folder.name,
+                            np0, ln0, _ = get_ln_np(os.path.join(in_dir, species_folder.name,
                                                                  item_folder_name, infile))
                         if infile.endswith("_alter1.out"):
-                            np1, ln1, pos_sites = get_ln_np(os.path.join(folder_in, species_folder.name,
+                            np1, ln1, pos_sites = get_ln_np(os.path.join(in_dir, species_folder.name,
                                                                          item_folder_name, infile))
                 if all([np0, np1, ln0, ln1]):
                     p_val = calc_p_value(np0, ln0, np1, ln1)
@@ -87,18 +87,18 @@ def main(folder_in):
                     BROKEN_PAML_OUTS.append(item_folder_name)
 
 
-def get_gene_name_from_log(genes_under_positive, log_folder):
+def get_gene_name_from_log(genes_under_positive, log_folder, required_species):
+    """ get gene name and protein_id wich corresponds to the required_species """
     dict_of_gene_names = dict()
     for infile in os.listdir(log_folder):
         file_number = infile.split('.')[0]
         if file_number in genes_under_positive and infile.endswith("log"):
             with open(os.path.join(log_folder, infile), "r") as f:
                 for line in f:
-                    if re.search(r"-\s[0-9]+$", line):
+                    if re.search(r"-\s[{}]+$".format(required_species), line):
                         pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
                         gene_name = (re.search(pattern, line)).group(1)
-                        protein_name = (re.search(pattern, line)).group(2)  # adding some of the proteins to the dict
-                        # for extra consistency control
+                        protein_name = (re.search(pattern, line)).group(2)
                         if not dict_of_gene_names.get(infile):
                             dict_of_gene_names[file_number] = [gene_name, protein_name]
     return dict_of_gene_names
@@ -106,19 +106,20 @@ def get_gene_name_from_log(genes_under_positive, log_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
+    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?')
     args = parser.parse_args()
     try:
-        main(args.infolder)  # TODO: multiprocessing
+        main(args.i)  # TODO: multiprocessing
         if BROKEN_PAML_OUTS:
             logging.warning("BROKEN_PAML_OUTS : {} : {}".format(len(BROKEN_PAML_OUTS), BROKEN_PAML_OUTS))
         logging.info("Number of no significance files {}".format(NO_SIGNIFICANCE))
         logging.info("Number of positive sites {}".format(POSITIVE_SITES_NUMBER))
         logging.info("Number of positive genes {} : {}".format(len(POSITIVE_GENES), POSITIVE_GENES))
         logging.info("Positive sites : file : position, acid, probability\n{}".format(repr(POSITIVE_SITES_DICT)))
-        gene_names_dict = get_gene_name_from_log(POSITIVE_GENES, args.log)
+        gene_names_dict = get_gene_name_from_log(POSITIVE_GENES, args.log, args.required)
         if gene_names_dict:
             logging.info("Genes under positive selection {}: file: gene\n{}".format(len(gene_names_dict),
                                                                                     repr(gene_names_dict)))

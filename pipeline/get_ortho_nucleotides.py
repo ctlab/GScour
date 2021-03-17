@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import re
 import traceback
 
 import pandas as pd
@@ -340,8 +341,10 @@ def get_seq_from_gbff(gb_file, ortho_protein_ids):
 def get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating):
     for record in SeqIO.parse(cds_from_genomic_file, "fasta"):
         if protein_id in record.name:
+            if "gene=" in record.description:
+                gene_name = re.search(r'gene=([A-Za-z0-9]+)', record.description).group(1)
             seq_record = SeqRecord(record.seq, id=species_numerating, description="")
-            return seq_record
+            return seq_record, gene_name
 
 
 def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out, seq_store):
@@ -351,7 +354,7 @@ def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_num
         for idx, protein_id in np.ndenumerate(ortho_protein_ids):
             if protein_id == '*' or not protein_id:
                 continue
-            seq_record = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
+            seq_record, gene_name = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
             seq_length = len(seq_record.seq)
             file_out_number = str(idx[0] + 1)
             if not seq_record:  # no seq_record when this species is not in the group
@@ -363,8 +366,8 @@ def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_num
             if anti_repeat_check(protein_id, seq_record, seq_store):
                 write_fasta_file(directory_out, file_out_number, seq_record, species_numerating)
                 log_file = os.path.join(directory_out, file_out_number + ".log")
-                write_log_file(log_file, "gene_name", protein_id, seq_length,  # will extract gene_name from another
-                               file_out_number, species_numerating)            # species
+                write_log_file(log_file, gene_name, protein_id, seq_length,
+                               file_out_number, species_numerating)
         logging.info("all sequences for species {} wrote".format(species_numerating))
         return True
     logging.info("No such cds_from_genomic file")
@@ -547,7 +550,7 @@ if __name__ == '__main__':
             logging.info("removed broken species files into folder 'broken_species_files' in cwd,"
                          "please check out folder for .fna files number: {}".format(residue))
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
 
     logging.warning("ABSENT_IN_CDS {} : {}".format(len(ABSENT_IN_CDS), ABSENT_IN_CDS))
     logging.warning("BROKEN_SPECIES {} : {}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
