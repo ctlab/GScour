@@ -4,6 +4,8 @@ import argparse
 import logging
 import os
 import re
+import traceback
+
 from Bio import SeqIO
 
 """
@@ -28,8 +30,6 @@ $ ls */
 So, there will be a folder for every combination of species (for every group)
 """
 
-
-REPEATING_SPECIES = list()
 LOG_FILE = "sort_by_groups.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
@@ -42,17 +42,14 @@ def parse_fasta_dir(infolder):
             yield os.path.join(infolder, infile)
 
 
-def form_dict_of_groups(infolder):
-    global REPEATING_SPECIES
+def form_dict_of_groups(in_dir):
     groups_dict = dict()
-    for fasta_file in parse_fasta_dir(infolder):
+    for fasta_file in parse_fasta_dir(in_dir):
         list_names = list()
         file_number = re.search(r'(\d+)\.', fasta_file).group(1)
         for record in SeqIO.parse(fasta_file, "fasta"):
-            list_names.append(record.name)
-        if len(list_names) != len(set(list_names)):
-            REPEATING_SPECIES.append(file_number)
-            continue
+            list_names.append(int(record.name))
+        list_names.sort()
         name_set = frozenset(list_names)
         if not groups_dict.get(name_set):
             groups_dict[name_set] = list()
@@ -80,10 +77,10 @@ def main(folder_in):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with .fas files to sort', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with .fas files to sort', nargs='?')
     args = parser.parse_args()
     try:
-        main(args.infolder)
-    except:
-        logging.exception("Unexpected error")
-    logging.info("REPEATING_SPECIES list of length {}:\n{}".format(len(REPEATING_SPECIES), REPEATING_SPECIES))
+        main(args.i)
+    except BaseException as e:
+        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+    logging.info("The work has been completed")

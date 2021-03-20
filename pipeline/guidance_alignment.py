@@ -5,10 +5,9 @@ import multiprocessing
 import os
 import logging
 import re
-import sys
 import traceback
 
-ALIGNED_FILES = list()
+PROCESSED_FILES = list()
 EXCEPTION_NUMBER = 0
 counter = None
 LOG_FILE = "guidance_alignment.log"
@@ -29,7 +28,7 @@ def parse_dir(folder_in):
 
 def launch_guidance(infile, folder_out, number_of_threads, executable_path):
     global counter
-    global ALIGNED_FILES
+    global PROCESSED_FILES
     global EXCEPTION_NUMBER
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
     personal_dir_out = os.path.join(folder_out, file_number)
@@ -49,25 +48,20 @@ def launch_guidance(infile, folder_out, number_of_threads, executable_path):
              '--seqType nuc ' \
              '--proc_num {} --outDir {} --bootstraps 20'.format(executable_path, infile, number_of_threads,
                                                                 personal_dir_out)
-    try:
-        if not os.system(launch):
-            logging.info("Guidance completed task for file {}".format(file_number))
-            if file_number not in ALIGNED_FILES:
-                ALIGNED_FILES.append(file_number)
-                with counter.get_lock():
-                    counter.value += 1
-                    logging.info("Counter (ALIGNED_FILES) = {}\nList of ALIGNED_FILES: {}".
-                                 format(counter.value, ALIGNED_FILES))
-    except BaseException as err:  # TODO: don't catch need to be fixed
-        logging.exception("{}, file_number {}".format(sys.exc_info(), file_number))
-        logging.exception("Unexpected error: {}, \ntraceback: P{}".format(err.args,
-                                                                          traceback.print_tb(err.__traceback__)))
-        EXCEPTION_NUMBER += 1
+
+    os.system(launch)
+    logging.info("Guidance completed task for file {}".format(file_number))
+    if file_number not in PROCESSED_FILES:
+        PROCESSED_FILES.append(file_number)  # TODO: to shared variables
+        with counter.get_lock():
+            counter.value += 1
+            logging.info("Counter (PROCESSED_FILES) = {}\nList of PROCESSED_FILES: {}".
+                         format(counter.value, PROCESSED_FILES))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the folder with input files for guidance', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with input files (.fna) for guidance', nargs='?')
     parser.add_argument('--o', help='Path to the folder with output files of guidance', nargs='?')
     parser.add_argument('--exec', help='Path to the guidance executable "guidance.pl"', nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')

@@ -17,21 +17,22 @@ LOG_FILE = "fasta2paml_ordering.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
 The script consists of two stage:
-1. Converting fasta format nucleotide codon sequences (from infolder) to philip-sequential format (to outfolder)
-in accordance with specific order (which is searched in the file infolder/species_folder/species_folder_name.order) 
+1. Converting fasta format nucleotide codon sequences (from input directory) to philip-sequential format (to output 
+directory)
+in accordance with specific order (which is searched in the file in_dir/species_folder/species_folder_name.order) 
 required for the paml
 2. Converting philip-sequential format to specific philip format required by PAML:
-In resulting outfolder:  directory "group_id" with folders "file_name" with file_name.phy file for PAML.
+In resulting out_dir:  directory "group_id" with folders "file_name" with file_name.phy file for PAML.
 
 For example:
-$ cd infolder
+$ cd in_dir
 $ ls */
 12/:            23/:           12345/:
 1.fasta         4055.fasta     2031.fasta 
 12.order        3010.fasta     2.fasta
                 23.order       12345.order 
 result:
-$ cd outfolder
+$ cd out_dir
 $ ls */
 12/:            23/:            12345/:
 1/:             4055/:          2031/:   
@@ -189,18 +190,18 @@ def main(folder_in, folder_out, group):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with fasta files sorted by separated folders', nargs='?')
-    parser.add_argument('--outfolder', help='Path to the folder with result philip files', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with fasta files sorted by separated folders', nargs='?')
+    parser.add_argument('--o', help='Path to the folder with result philip files', nargs='?')
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     args = parser.parse_args()
-    outfolder = args.outfolder
-    if not os.path.isdir(outfolder):
-        os.makedirs(outfolder)
+    out_dir = args.o
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
     try:
-        main(args.infolder, outfolder, int(args.group))
+        main(args.i, out_dir, int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES or NOT_NEEDED_SPECIES:
-            replace_broken_files(outfolder)
+            replace_broken_files(out_dir)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))

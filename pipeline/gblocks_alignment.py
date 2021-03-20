@@ -18,28 +18,17 @@ def init_counter(args):
     counter_file = args
 
 
-def parse_dir(infolder):
-    for infile in os.listdir(infolder):
+def parse_dir(in_dir):
+    for infile in os.listdir(in_dir):
         if infile.split('.')[-1] == 'fas':
-            yield os.path.join(infolder, infile)
+            yield os.path.join(in_dir, infile)
 
 
 def launch_gblocks(infile, exec_path):
-    """outdated inspection
-    if os.path.splitext(os.path.splitext(infile)[1])[0] == '.fas':
-        delta = datetime.datetime.now() - datetime.datetime.strptime(time.ctime(os.path.getmtime(infile)),
-                                                                         "%a %b %d %H:%M:%S %Y")
-        if delta.seconds > 7000:
-            logging.info("The last touch time of file {} is more then 7000s".format(infile))
-            launch = '/home/alina_grf/BIOTOOLS/Gblocks_0.91b/Gblocks {0} -t=d -b1=3 -b2=3 -b3=7 -b4=3 -b5=h -b6=Yes ' \
-                     '-p=Yes'.format(infile)
-            os.system(launch)
-            """
-
     global counter_file
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
-    launch = '{} {} -t=c -b1=5 -b2=5 -b3=7 -b4=6 -b5=h ' \
-             '-p=Yes'.format(exec_path, infile)              # TODO: > LOG_FILE: to do multiprocessing
+    launch = '{} {} -t=c -b1=5 -b2=5 -b3=7 -b4=2 -b5=h ' \
+             '-p=Yes >> {}'.format(exec_path, infile, LOG_FILE)  # TODO: > LOG_FILE: to do multiprocessing
     os.system(launch)
     logging.info("Gblocks processed file {} with params {}".format(file_number, '-t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h'))
     with counter_file.get_lock():
@@ -49,9 +38,9 @@ def launch_gblocks(infile, exec_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--i', help='Path to the folder with input files for Gblocks'
+                                    'FASTA formats are accepted', nargs='?')
     parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?')
-    parser.add_argument('--infolder', help='Path to the folder with input files for gblocks'
-                                           'At the moment only the NBRF/PIR and FASTA formats are accepted', nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')
     args = parser.parse_args()
     threads = int(args.threads)
@@ -61,12 +50,12 @@ if __name__ == '__main__':
         logger = multiprocessing.get_logger()
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter_file,))
-        infolder = args.infolder
+        in_dir = args.i
         executable_path = args.exec
-        inputs = list(parse_dir(infolder))
+        inputs = list(parse_dir(in_dir))
         len_inputs = len(inputs)
         logging.info("Path to the folder with input files for Gblocks: {}\nExecutable path: {}".
-                     format(infolder, executable_path))
+                     format(in_dir, executable_path))
         i = pool.starmap_async(launch_gblocks, zip(inputs, len_inputs * [executable_path]))
         i.wait()
         i.get()
@@ -76,4 +65,3 @@ if __name__ == '__main__':
 
     logging.info("Number of processed files = {}".format(counter_file.value))
     logging.info("The work has been completed")
-

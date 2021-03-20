@@ -7,7 +7,7 @@ import logging
 import re
 import traceback
 
-ALIGNED_FILES = list()
+PROCESSED_FILES = list()
 EXCEPTION_NUMBER = 0
 counter = None
 LOG_FILE = "prank_alignment.log"
@@ -63,12 +63,12 @@ def launch_prank(infile, folder_out, tree, format_out):
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
     final_file_path = get_final_file_path(outfile_path_without_extension, format_out)
     try:
-        global ALIGNED_FILES
+        global PROCESSED_FILES
         launch_command = get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out)
         if not os.system(launch_command):
             logging.info("prank completed task for file {}".format(file_number))
-            if file_number not in ALIGNED_FILES:
-                ALIGNED_FILES.append(file_number)
+            if file_number not in PROCESSED_FILES:
+                PROCESSED_FILES.append(file_number)
                 with counter.get_lock():
                     counter.value += 1
                     logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value))
@@ -112,8 +112,8 @@ if __name__ == '__main__':
         i.get()
     except BaseException as e:
         logging.exception("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
-        logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
+        logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
         logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
-    logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
+    logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
     logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
     logging.info("The work has been completed")
