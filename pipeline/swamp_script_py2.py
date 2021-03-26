@@ -104,6 +104,6 @@ if __name__ == '__main__':
     #except:
     #    logging.exception("Unexpected error")
     except BaseException as e: #  TODO: test
-        print("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        print("Unexpected error: {}".format(e))
     logging.info("BROKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     logging.info("The work has been completed")

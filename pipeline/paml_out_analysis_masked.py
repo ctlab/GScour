@@ -172,6 +172,6 @@ if __name__ == '__main__':
     try:
         main(in_dir, log_folder, required_species)
     except BaseException as e:
-        print("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        print("Unexpected error: {}".format(e))
     print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n", common_pos_gene_dict)
     print("The work has been completed")

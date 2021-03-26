@@ -1,4 +1,4 @@
-#!/usr/bin/sudo python
+#!/usr/bin/env python
 import logging
 import os
 import argparse
@@ -186,5 +186,5 @@ if __name__ == '__main__':
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
     logging.info("The work has been completed")

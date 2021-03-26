@@ -550,7 +550,7 @@ if __name__ == '__main__':
             logging.info("removed broken species files into folder 'broken_species_files' in cwd,"
                          "please check out folder for .fna files number: {}".format(residue))
     except BaseException as e:
-        logging.exception("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
 
     logging.warning("ABSENT_IN_CDS {} : {}".format(len(ABSENT_IN_CDS), ABSENT_IN_CDS))
     logging.warning("BROKEN_SPECIES {} : {}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))

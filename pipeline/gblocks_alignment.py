@@ -60,7 +60,7 @@ if __name__ == '__main__':
         i.wait()
         i.get()
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
         logging.info("Number of processed files = {}".format(counter_file.value))
 
     logging.info("Number of processed files = {}".format(counter_file.value))

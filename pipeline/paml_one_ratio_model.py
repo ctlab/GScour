@@ -10,7 +10,13 @@ from Bio.Phylo.PAML import codeml
 import logging
 import os
 import re
-
+"""
+Under this model, the relationship holds that ω = dN/dS, the ratio of
+nonsynonymous/synonymous substitution rates. This basic model is fitted by specifying model = 0
+NSsites = 0
+The ω ratio is a measure of natural selection acting on the protein. Simplistically, values of ω < 1, =
+1, and > 1 means negative purifying selection, neutral evolution, and positive selection.
+"""
 BROKEN_FILES = list()
 PROCESSED_FILES = list()
 WRITE_CTL_FILE = 0
@@ -56,19 +62,22 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
     cml.set_options(noisy=9)
     cml.set_options(verbose=1)
     cml.set_options(runmode=0)
-    cml.set_options(seqtype=1)
-    cml.set_options(CodonFreq=2)
-    cml.set_options(clock=0)
+    cml.set_options(seqtype=1)  # 1:codons; 2:AAs; 3:codons-->AAs
+    cml.set_options(CodonFreq=2)  # 0:1/61 each, 1:F1X4, 2:F3X4, 3:codon table
+    cml.set_options(clock=0)  # 0:no clock, 1:global clock; 2:local clock; 3:TipDate
     cml.set_options(aaDist=0)
-    cml.set_options(model=0)
-    cml.set_options(NSsites=[0])
+    cml.set_options(model=0)  # models for codons: 0:one, 1:b, 2:2 or more dN/dS ratios for branches
+    cml.set_options(NSsites=[0])  # * 0:one w;1:neutral;2:selection; 3:discrete;4:freqs;
+                   # 5:gamma;6:2gamma;7:beta;8:beta&w;9:beta&gamma;
+                   # 10:beta&gamma+1; 11:beta&normal>1; 12:0&2normal>1;
+                   # 13:3normal>0
     cml.set_options(icode=0)
     cml.set_options(Mgene=0)
-    cml.set_options(fix_kappa=0)
-    cml.set_options(kappa=2)
-    cml.set_options(fix_omega=0)
-    cml.set_options(omega=.4)
-    cml.set_options(fix_alpha=1)
+    cml.set_options(fix_kappa=0)  # 1: kappa fixed, 0: kappa to be estimated
+    cml.set_options(kappa=2)  # initial or fixed kappa
+    cml.set_options(fix_omega=0)  # 1:omega fixed, 0:omega to be estimated
+    cml.set_options(omega=1)  # initial or fixed omega, for codons or codon-based AAs
+    cml.set_options(fix_alpha=1)  # 0: estimate gamma shape parameter; 1: fix it at alpha
     cml.set_options(alpha=0.)
     cml.set_options(Malpha=0)
     cml.set_options(ncatG=8)
@@ -151,13 +160,13 @@ def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml')
-    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads to use', nargs='?')
     parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
-    in_folder = args.infolder
+    in_folder = args.i
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
@@ -171,7 +180,7 @@ if __name__ == '__main__':
     try:
         main(in_folder, executable_path, tree_folder, threads, rework)
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
 
     # logging.info("Number of BROCKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     # logging.info("Counter of processed files {}".format(counter.value))

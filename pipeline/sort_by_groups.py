@@ -31,15 +31,15 @@ So, there will be a folder for every combination of species (for every group)
 """
 
 LOG_FILE = "sort_by_groups.log"
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 
-def parse_fasta_dir(infolder):
+def parse_fasta_dir(in_dir):
     """.fas-gb is format out of Gblocks
     this extension can be adjusted for needs"""
-    for infile in os.listdir(infolder):
+    for infile in os.listdir(in_dir):
         if infile.split('.')[-1] == 'fas-gb':
-            yield os.path.join(infolder, infile)
+            yield os.path.join(in_dir, infile)
 
 
 def form_dict_of_groups(in_dir):
@@ -48,12 +48,20 @@ def form_dict_of_groups(in_dir):
         list_names = list()
         file_number = re.search(r'(\d+)\.', fasta_file).group(1)
         for record in SeqIO.parse(fasta_file, "fasta"):
-            list_names.append(int(record.name))
+            try:
+                list_names.append(int(record.name))
+            except BaseException as err:
+                logging.exception("File {}: {}, \ntraceback: P{}".format(fasta_file, err.args,
+                                                                         traceback.print_tb(err.__traceback__)))
+                continue
         list_names.sort()
-        name_set = frozenset(list_names)
-        if not groups_dict.get(name_set):
-            groups_dict[name_set] = list()
-        groups_dict[name_set].append(file_number)
+        sorted_name = ""
+        for item in list_names:
+            sorted_name += str(item)
+        # name_set = frozenset(sorted_name)
+        if not groups_dict.get(sorted_name):
+            groups_dict[sorted_name] = list()
+        groups_dict[sorted_name].append(file_number)
     return groups_dict
 
 
@@ -82,5 +90,5 @@ if __name__ == '__main__':
     try:
         main(args.i)
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
     logging.info("The work has been completed")

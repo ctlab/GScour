@@ -24,12 +24,13 @@ LOG_FILE = "paml_branch_site_masked.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 """There are two hypothesis:
-H0: model = 2, NSsites = 2 (branch-site model),
+H0 (The null model for Branch-site model A): 
+    Model A1: model = 2, NSsites = 2, fix_omega = 1, omega = 1
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 1   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
-H1: model = 2, NSsites = 2 (branch-site model),
+H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ):
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate
@@ -266,7 +267,7 @@ if __name__ == '__main__':
     try:
         main(infolder, tree_folder, executable_path, threads, rework)
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
         if BROCKEN_FILES_NULL:
             logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
         if BROCKEN_FILES_ALTER:

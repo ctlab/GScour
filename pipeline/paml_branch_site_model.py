@@ -22,12 +22,13 @@ LOG_FILE = "paml_branch_site.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 """There are two hypothesis:
-H0: model = 2, NSsites = 2 (branch-site model),
+H0 (The null model for Branch-site model A): 
+    Model A1: model = 2, NSsites = 2, fix_omega = 1, omega = 1
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 1   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
-H1: model = 2, NSsites = 2 (branch-site model),
+H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ): 
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate
@@ -52,12 +53,13 @@ def get_input_items(folder_in, trees_folder):
     parse tree_folder to get appropriate tree """
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder):
+            logging.info("working with species folder {}".format(species_folder.name))
             tree_name = get_tree_path(trees_folder, species_folder.name)
             tree_path = os.path.join(trees_folder, tree_name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
                     for infile in os.listdir(item):
-                        if infile.split('.')[-1] == 'phy':
+                        if infile.split('.')[-1] == 'phy' and not re.search('[a-zA-Z]', infile.split('.')[0]):
                             yield folder_in, species_folder.name, item.name, infile, tree_path
 
 
@@ -140,9 +142,9 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     infile_path = os.path.join(item_folder_path, infile)
     try:
-        file_number = (re.search(r"(\d+)_masked.phy", infile)).group(1)
-    except AttributeError as e:
-        logging.info("There is no _masked.phy for {}:\n{}".format(infile_path, e.args))
+        file_number = (re.search(r"(\d+).phy", infile)).group(1)
+    except AttributeError as err:
+        logging.info("There is no .phy for {}:\n{}".format(infile_path, err.args))
         return
     os.chdir(item_folder_path)
     logging.info("Working with {}".format(file_number))
@@ -238,13 +240,13 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
-    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
     parser.add_argument('--threads', help='Number of threads to use', nargs='?')
     parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
-    in_folder = args.infolder
+    in_folder = args.i
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
@@ -258,7 +260,8 @@ if __name__ == '__main__':
     try:
         main(in_folder, tree_folder, executable_path, threads, rework)
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
+        # logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
         if BROCKEN_FILES_NULL:
             logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
         if BROCKEN_FILES_ALTER:

@@ -124,5 +124,5 @@ if __name__ == '__main__':
             logging.info("Genes under positive selection {}: file: gene\n{}".format(len(gene_names_dict),
                                                                                     repr(gene_names_dict)))
     except BaseException as e:
-        logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
+        logging.exception("Unexpected error: {}".format(e))
     logging.info("The work has been completed")
