@@ -34,11 +34,16 @@ H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ):
     fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
     
-in paml_out_analysis.py:
-For analysis performs: ln0, np0 from H0; ln1, np1 from H1; 
-                       ΔLRT = 2×(lnL1 - lnL0)
-                       n = np1 - np0
-                       p_val = 1 - stats.chi2.cdf(ΔLRT, n)
+From readme of paml example lysozymeLarge.ctl:
+Alternative hypothesis (branch site model A, with w2 estimated):
+model = 2    NSsites = 2   fix_omega = 0   omega = 1.5 (or any value > 1)
+
+As the branch-site model is
+known to cause computational difficulties for the numer-
+ical optimization algorithm in PAML, each analysis is con-
+ducted three times with different starting values to ensure
+that the global peak is found (Statistical Properties of the Branch-Site Test of Positive
+Selection, Ziheng Yang and Mario dos Reis)
 """
 
 
@@ -95,7 +100,7 @@ def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
     cml.set_options(fix_kappa=0)
     cml.set_options(kappa=2)
     cml.set_options(fix_omega=0)
-    cml.set_options(omega=1)
+    cml.set_options(omega=1.5)
     cml.set_options(getSE=0)
     cml.set_options(RateAncestor=0)
     cml.set_options(Small_Diff=.45e-6)
@@ -202,7 +207,9 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
         with excep_counter.get_lock():
             excep_counter.value += 1
         file_id = "{}/{}".format(species_folder, item_folder)
-        logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, excep_counter.value))
+        logging.info("Killed {} hypothesis_type {}, {}, {},\nException_counter={}".format(file_id, hypothesis_type,
+                                                                                          err.args, err,
+                                                                                          excep_counter.value))
         if file_id not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_id)
             logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))

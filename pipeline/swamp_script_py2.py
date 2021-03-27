@@ -77,7 +77,7 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, window_siz
     try:
         if os.system(launch_swamp): # TODO: catching full swamp stderr
             raise ValueError
-    except ValueError as e:
+    except ValueError as err:
         file_number = items_folder.split('/')[-1]
         logging.exception("File {} \nTraceback: {}".format(items_folder, traceback.print_exception(*sys.exc_info())))
 
