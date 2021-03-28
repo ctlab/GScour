@@ -60,40 +60,40 @@ https://github.com/ctlab/search_for_positive_selection/blob/4d8b21788f315c2d8a00
 #### 4.1 Preprocessing, sort by groups.
 Sort fasta files from one folder to child subfolders with unique names 
 corresponding to set of species in fasta file (sorted in increasing order). For example:
-`$ cd /abspath/tothe/nuc_out_prank/
-$ ls
-1.fasta 2.fasta 3.fasta
-$ less 1.fasta      $ less 2.fasta      $ less 3.fasta 
+`$ cd /abspath/tothe/nuc_out_prank/  
+$ ls  
+1.fasta 2.fasta 3.fasta  
+$ less 1.fasta      $ less 2.fasta      $ less 3.fasta   
 >1                  >2                  >3
-ATG....             ATG...              ATG...
->2                  >3                  >2    
-ATG....             ATG...              ATG...`
+ATG....             ATG...              ATG...    
+>2                  >3                  >2      
+ATG....             ATG...              ATG...`  
 
-Result of the script:
-`$ cd /abspath/tothe/nuc_out_prank/
-$ ls */
-12/:            23/:
-1.fasta         2.fasta
-                3.fasta`
+Result of the script:  
+`$ cd /abspath/tothe/nuc_out_prank/  
+$ ls */  
+12/:            23/:  
+1.fasta         2.fasta  
+                3.fasta`  
                 
-So, there will be a folder for every combination of species (for every group).
-`python sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`
-#### 4.2 Preprocessing, convert fasta to paml format
-The script (fasta2paml.py) consists of two stage:
+So, there will be a folder for every combination of species (for every group).  
+`python sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`  
+#### 4.2 Preprocessing, convert fasta to paml format  
+The script (fasta2paml.py) consists of two stage:  
 1. Converting fasta format nucleotide codon sequences (from input directory) to philip-sequential format (to output 
-directory)
-2. Converting philip-sequential format to specific philip format required by PAML:
+directory)  
+2. Converting philip-sequential format to specific philip format required by PAML:  
 In resulting out_dir:  directory of name "group_id" with folders "file_name" with file_name.phy file for PAML.
-For example:
-`$ cd /abspath/tothe/nuc_out_prank/
-$ ls */
+For example:  
+`$ cd /abspath/tothe/nuc_out_prank/  
+$ ls */  
 12/:            23/:           12345/:
-1.fasta         4055.fasta     2031.fasta 
+1.fasta         4055.fasta     2031.fasta   
                 3010.fasta     2.fasta`
 
-Result:
-`$ cd out_dir
-$ ls */
+Result:  
+`$ cd out_dir  
+$ ls */  
 12/:            23/:            12345/:
 1/:             4055/:          2031/:   
 1.phy           4055.phy        2031.phy
