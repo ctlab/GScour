@@ -37,8 +37,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.outfolder)
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as err:
+        logging.info("Unexpected error: {}".format(err))
     logging.info("NOT_FOUND_FILES list of length {}:\n{}".format(len(NOT_FOUND_FILES), NOT_FOUND_FILES))
 
 

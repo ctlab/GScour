@@ -53,5 +53,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.infolder)
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as e:
+        logging.info("Unexpected error: {}".format(e))

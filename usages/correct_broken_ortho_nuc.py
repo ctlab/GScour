@@ -470,8 +470,8 @@ if __name__ == '__main__':
             logging.info("removed broken species, broken multiple files into folders 'broken_species_files'"
                          "'broken_multiple_files' in cwd,"
                          "please check out folder for .fna files number: {}".format(residue))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as err:
+        logging.info("Unexpected error: {}".format(err))
 
     logging.warning("BROKEN_SPECIES {} : {}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
     logging.warning("BROKEN_STOP_CODON {} : {}".format(len(BROKEN_STOP_CODON), BROKEN_STOP_CODON))

@@ -77,8 +77,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         main(args.broken, args.clean)
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as err:
+        logging.info("Unexpected error: {}".format(err))
     logging.info("BROKEN_FASTA list of length {}:\n{}".format(len(BROKEN_FASTA), BROKEN_FASTA))
     logging.info("REMOVED_FASTA list of length {}:\n{}".format(len(REMOVED_FASTA), REMOVED_FASTA))
     logging.info("REMOVED_LOG list of length {}:\n{}".format(len(REMOVED_LOG), REMOVED_LOG))

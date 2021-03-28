@@ -47,9 +47,13 @@ def check_start_codon(seq, file_out_number, protein_id, start_codons="ATG"):
 def check_accordance_with_protein_length(seq_length, protein_length, protein_id, file_out_number):
     global BROKEN_ACCORDANCE
     n = seq_length - 3 * protein_length
-    if n == 0:
-        logging.info(
-            "check_accordance_with_protein_length-OK for file {} protein_id {}".format(file_out_number, protein_id))
+    if n in range(-9, 10):  # do softer condition to exclude very rough mistaken sequences
+        if n == 0:
+            logging.info(
+                "check_accordance_with_protein_length-OK for file {} protein_id {}".format(file_out_number, protein_id))
+        else:
+            logging.info("check_accordance_with_protein_length-NEAR OK: delta = seq_length - 3 * protein_length = {}\n"
+                         "for file {} protein_id {}".format(n, file_out_number, protein_id))
         try:
             BROKEN_ACCORDANCE.get(file_out_number).remove(protein_id)
             if not BROKEN_ACCORDANCE.get(file_out_number):
@@ -105,8 +109,7 @@ def check_multiple_of_three(seq, file_out_number, protein_id):
 
 
 def check_common_accordance(check_multiple, check_start, check_stop, check_accordance):
-    if (check_start or not check_start) and (check_accordance or not check_accordance) and (
-            check_stop or not check_stop) and check_multiple:
+    if (check_start or not check_start) and (check_stop or not check_stop) and check_multiple and check_accordance:
         logging.info("Check common accordance - OK: check_multiple - {}, check_start - {}, check_stop - {}, "
                      "check_accordance "
                      "- {}".format(check_multiple,
@@ -205,7 +208,7 @@ def check_translate(seq, protein_translation, initfna_filepath, feature, record_
         logging.info("from check_translate:\n protein counted length={}\nprotein translation length from .gbff={}\n "
                      "length seq[:-3]=length"
                      "without right stop codon(check_stop=True)={}\n"
-                     "length of man extracted seq={}"
+                     "length of man extracted seq={}\n"
                      "protein counted:\n{}\n"
                      "protein translation:\n{}\n"
                      "nuc sequence, show stop codon:\n{}\n"
@@ -216,7 +219,7 @@ def check_translate(seq, protein_translation, initfna_filepath, feature, record_
     else:
         logging.info("from check_translate:\n protein counted length={}\nprotein translation length from .gbff={}\n "
                      "length seq=length with broken stop codon(check_stop=False)={}\n"
-                     "length of man extracted seq={}"
+                     "length of man extracted seq={}\n"
                      "protein counted:\n{}\n"
                      "protein translation:\n{}\n"
                      "nuc sequence, show broken stop codon\n{}"
@@ -339,6 +342,7 @@ def get_seq_from_gbff(gb_file, ortho_protein_ids):
 
 
 def get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating):
+    seq_record, gene_name = "", ""
     for record in SeqIO.parse(cds_from_genomic_file, "fasta"):
         if protein_id in record.name:
             if "gene=" in record.description:
@@ -355,7 +359,6 @@ def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_num
             if protein_id == '*' or not protein_id:
                 continue
             seq_record, gene_name = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
-            seq_length = len(seq_record.seq)
             file_out_number = str(idx[0] + 1)
             if not seq_record:  # no seq_record when this species is not in the group
                 if not ABSENT_IN_CDS.get(species_numerating):
@@ -363,6 +366,10 @@ def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_num
                 ABSENT_IN_CDS.get(species_numerating).append(protein_id)
                 logging.info("protein_id {} is absent in {}".format(protein_id, cds_from_genomic_file))
                 continue
+            else:
+                seq_length = len(seq_record.seq)
+            if not gene_name:
+                logging.warning("empty gene_name")
             if anti_repeat_check(protein_id, seq_record, seq_store):
                 write_fasta_file(directory_out, file_out_number, seq_record, species_numerating)
                 log_file = os.path.join(directory_out, file_out_number + ".log")
@@ -411,7 +418,7 @@ def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_i
         check_stop = check_stop_codon(nucleotide_seq, file_out_number, protein_id)
         check_multiple = check_multiple_of_three(nucleotide_seq, file_out_number, protein_id)
         if check_common_accordance(check_multiple, check_start, check_stop, check_accordance):
-            delete_from_broken(file_out_number, protein_id)  # common: if check_multiple-ok, then OK
+            delete_from_broken(file_out_number, protein_id)  # common: if check_multiple, check_accordance-ok, then OK
         else:  # extract from genome .fna
             extracted_seq, check_trans_result = check_translate(nucleotide_seq, protein_translation,
                                                                 genome_fna_path, feature, record_id,
@@ -485,7 +492,7 @@ def replace_broken_files(directory_out):
                    os.path.join(broken_multiple_folder, file_number + ".log"))
 
 
-def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath, species, group, directory_out):
+def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath, species, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
     global BROKEN_LIST
     if not os.path.isdir(directory_out):
@@ -510,11 +517,6 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
         get_and_write_nucleotide_seq(annotation_gbff_path, cds_from_genomic_path, ortho_protein_ids, directory_out,
                                      species_numerating, initfna_filepath)
 
-    for file, written_species in PROCESSED_FILES.items():
-        if written_species < group:
-            if file not in BROKEN_SPECIES:
-                BROKEN_SPECIES.append(file)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -533,9 +535,10 @@ if __name__ == '__main__':
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     parser.add_argument('--out', help='Path to the folder for result write out', nargs='?')
     args = parser.parse_args()
+    group = int(args.group)
 
     try:
-        main(args.ortho, args.gbff, args.cds, args.genome, int(args.species), int(args.group), args.out)
+        main(args.ortho, args.gbff, args.cds, args.genome, int(args.species), args.out)
         written_files_number = len(PROCESSED_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
         if delta == 0:
@@ -544,6 +547,10 @@ if __name__ == '__main__':
         logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN = {},  WRITTEN_FILES = {}, where {} in BROKEN_SPECIES list: {}"
                      .format(NUMBER_OF_NEED_TO_BE_WRITTEN, written_files_number, len(BROKEN_SPECIES),
                              repr(BROKEN_SPECIES)))
+        for file, written_species in PROCESSED_FILES.items():
+            if written_species < group:
+                if file not in BROKEN_SPECIES:
+                    BROKEN_SPECIES.append(file)
         if BROKEN_SPECIES:
             replace_broken_files(args.out)
             residue = written_files_number - len(BROKEN_SPECIES)

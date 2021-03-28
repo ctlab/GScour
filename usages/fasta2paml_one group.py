@@ -161,6 +161,6 @@ if __name__ == '__main__':
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as err:
+        logging.info("Unexpected error: {}".format(err))
     logging.info("The work has been completed")

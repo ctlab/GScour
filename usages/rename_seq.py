@@ -49,7 +49,7 @@ if __name__ == '__main__':
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(threads)
         pool.starmap(rename_seq, zip(inputs, len(inputs) * [args.outfolder_fas], len(inputs) * [args.outfolder_txt]))
-    except:
-        logging.exception("Unexpected error")
+    except BaseException as err:
+        logging.info("Unexpected error: {}".format(err))
 
     logging.info("The work has been completed")
