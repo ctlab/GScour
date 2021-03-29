@@ -49,7 +49,8 @@ if __name__ == "__main__":
     parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     # parser.add_argument('--genes', help='Maximal number of genes for species', nargs='?') # TODO: is it necessary?
-    parser.add_argument('--required', help='One required, target species', nargs='?')  # TODO: multi required species?
+    parser.add_argument('--required', help='One required, target species in relation to which the analysis is made',
+                        nargs='?')  # TODO: multi required species?
     args = parser.parse_args()
     try:
         main(args.project, args.poff, args.species, args.group, args.required)

@@ -127,19 +127,22 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
                                  format(file_number, counter.value))
                     if file_number not in PROCESSED_FILES:
                         PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
-                        logging.info("PROCESSED_FILES list of length {}: {}".format(len(PROCESSED_FILES), PROCESSED_FILES))
+                        logging.info("OK file {}".format(file_number))
+                        # logging.info("PROCESSED_FILES list of length {}: {}".format(len(PROCESSED_FILES),
+                        # PROCESSED_FILES))
                 else:
                     logging.info("The work has not been finished for file number {}".format(file_number))
                     if file_number not in BROKEN_FILES:
                         BROKEN_FILES.append(file_number)
-                        logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
+                        logging.info("BAD file {}".format(file_number))
+                        # logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
         logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, counter.value))
         if file_id not in BROKEN_FILES:  # TODO: list - to shared variable
             BROKEN_FILES.append(file_id)
-            logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
+            # logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
 
 
 def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):

@@ -8,12 +8,12 @@ from Bio import SeqIO
 import re
 
 NOT_EQUAL_LENGTH = list()
-NOT_NEEDED_SPECIES = list()
+BROKEN_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
 BROKEN_FILES = list()
-BROKEN_FOLDER = "broken_length_files(fasta2paml)"
-NOT_NEEDED_SPECIES_FOLDER = "not_needed_species(f2p)"
+BROKEN_FOLDER = "broken_length_f2p"
+BROKEN_SPECIES_FOLDER = "broken_species_f2p"
 LOG_FILE = "fasta2paml.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
@@ -99,8 +99,8 @@ def check_lengths(lengths, file_number, species, group):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append(file_number)
     elif not group <= len(lengths) <= species:
-        global NOT_NEEDED_SPECIES
-        NOT_NEEDED_SPECIES.append(file_number)
+        global BROKEN_SPECIES
+        BROKEN_SPECIES.append(file_number)
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
         NOT_MULTIPLE_OF_THREE.append(file_number)
@@ -146,15 +146,15 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
 
 def replace_broken_files(directory_out):
     global BROKEN_FOLDER
-    global NOT_NEEDED_SPECIES
+    global BROKEN_SPECIES
     if BROKEN_FILES:
         os.makedirs(BROKEN_FOLDER)
         for folder in BROKEN_FILES:
             os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_FOLDER, folder))
-    if NOT_NEEDED_SPECIES:  # TODO: testing
-        os.makedirs(NOT_NEEDED_SPECIES_FOLDER)
-        for folder in NOT_NEEDED_SPECIES:
-            os.replace(os.path.join(directory_out, folder), os.path.join(NOT_NEEDED_SPECIES_FOLDER, folder))
+    if BROKEN_SPECIES:  # TODO: testing
+        os.makedirs(BROKEN_SPECIES_FOLDER)
+        for folder in BROKEN_SPECIES:
+            os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_SPECIES_FOLDER, folder))
 
 
 def main(folder_in, folder_out, species, group):
@@ -179,10 +179,10 @@ if __name__ == '__main__':
     try:
         main(args.i, out_dir, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
-        if BROKEN_FILES or NOT_NEEDED_SPECIES:
+        if BROKEN_FILES or BROKEN_SPECIES:
             replace_broken_files(out_dir)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
-        logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
+        logging.warning("BROKEN_SPECIES {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except BaseException as e:

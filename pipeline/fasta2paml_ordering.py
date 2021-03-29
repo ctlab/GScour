@@ -10,7 +10,7 @@ import re
 import shutil
 
 NOT_EQUAL_LENGTH = list()
-NOT_NEEDED_SPECIES = list()
+BROKEN_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
 BROKEN_FILES = list()
@@ -115,9 +115,9 @@ def chunks(s, n):
 
 
 def check_lengths(lengths, species_folder, file_number, species, group):
-    """ check: - the lengths of all sequences in one file of the same length
-               - number of sequences in one file more or equal then group, less or equal then species
-               - length of sequence  a multiple of three
+    """ check: - the lengths of all sequences in one file are of the same length
+               - number of sequences in one file more or equal then group number, less or equal then species number
+               - length of sequence is multiple of three
         replace completely broken files to BROKEN_FOLDER
     """
     if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
@@ -126,8 +126,8 @@ def check_lengths(lengths, species_folder, file_number, species, group):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_number))
     elif not group <= len(lengths) <= species:
-        global NOT_NEEDED_SPECIES
-        NOT_NEEDED_SPECIES.append('{}/{}'.format(species_folder, file_number))
+        global BROKEN_SPECIES
+        BROKEN_SPECIES.append('{}/{}'.format(species_folder, file_number))
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
         NOT_MULTIPLE_OF_THREE.append('{}/{}'.format(species_folder, file_number))
@@ -178,8 +178,8 @@ def replace_broken_files(directory_out):
     if BROKEN_FILES:
         for folder in BROKEN_FILES:
             shutil.move(os.path.join(directory_out, folder), os.path.join(broken_length_folder, folder))
-    if NOT_NEEDED_SPECIES:
-        for folder in NOT_NEEDED_SPECIES:
+    if BROKEN_SPECIES:
+        for folder in BROKEN_SPECIES:
             shutil.move(os.path.join(directory_out, folder), os.path.join(not_needed_species_folder, folder))
             # os.remove(os.path.join(directory_out, folder)) # TODO: shutil not delete source, just leave empty
 
@@ -207,10 +207,10 @@ if __name__ == '__main__':
     try:
         main(args.i, args.order, out_dir, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
-        if BROKEN_FILES or NOT_NEEDED_SPECIES:
+        if BROKEN_FILES or BROKEN_SPECIES:
             replace_broken_files(out_dir)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
-        logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
+        logging.warning("BROKEN_SPECIES number {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except BaseException as e:

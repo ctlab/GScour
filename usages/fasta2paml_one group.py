@@ -6,7 +6,7 @@ from Bio import SeqIO
 import re
 
 NOT_EQUAL_LENGTH = list()
-NOT_NEEDED_SPECIES = list()
+BROKEN_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
 BROKEN_FILES = list()
@@ -77,7 +77,7 @@ def check_lengths(lengths, file_number, species, group):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append(file_number)
     elif not group <= len(lengths) <= species:
-        global NOT_NEEDED_SPECIES
+        global BROKEN_SPECIES
         NOT_NEEDED_SPECIES.append(file_number)
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
@@ -124,7 +124,7 @@ def phylip2paml(source_file_path, species, group):
 
 def replace_broken_files(directory_out):
     global BROKEN_FOLDER
-    global NOT_NEEDED_SPECIES
+    global BROKEN_SPECIES
     if BROKEN_FILES:
         os.makedirs(BROKEN_FOLDER)
         for folder in BROKEN_FILES:
@@ -155,10 +155,10 @@ if __name__ == '__main__':
     try:
         main(args.infolder, outfolder, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
-        if BROKEN_FILES or NOT_NEEDED_SPECIES:
+        if BROKEN_FILES or BROKEN_SPECIES:
             replace_broken_files(outfolder)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
-        logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(NOT_NEEDED_SPECIES), NOT_NEEDED_SPECIES))
+        logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except BaseException as err:

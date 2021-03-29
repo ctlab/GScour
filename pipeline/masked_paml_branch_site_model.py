@@ -197,13 +197,14 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                                  format(file_number, processed_counter.value))
                     if file_number not in processed_files:
                         processed_files.append(file_number)  # TODO: list - to shared variable
-                        logging.info(
-                            "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
+                        # logging.info(
+                        #     "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
+
                 else:
                     logging.info("The work has not been finished for file number {}".format(file_number))
                     if file_number not in broken_files:
                         broken_files.append(file_number)
-                        logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
+                        # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
     except TimeoutExpired as err:
         p.kill()
         with excep_counter.get_lock():
@@ -212,7 +213,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
         logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, excep_counter.value))
         if file_id not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_id)
-            logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
+            # logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
 
 
 def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
@@ -268,10 +269,10 @@ if __name__ == '__main__':
         main(infolder, tree_folder, executable_path, threads, rework)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-        if BROCKEN_FILES_NULL:
-            logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
-        if BROCKEN_FILES_ALTER:
-            logging.warning("BROCKEN_FILES_ALTER: {}".format(BROCKEN_FILES_ALTER))
+        # if BROCKEN_FILES_NULL:
+        #     logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
+        # if BROCKEN_FILES_ALTER:
+        #     logging.warning("BROCKEN_FILES_ALTER: {}".format(BROCKEN_FILES_ALTER))
     # logging.info("Counter of processed files {}".format(counter.value))
     # logging.info("Number of exceptions: {}".format(EXCEPTION_NUMBER))
     logging.info("The work has been completed")
