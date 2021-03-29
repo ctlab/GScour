@@ -56,26 +56,29 @@ Adjust parameters b1-b5 to your needs in the code
 https://github.com/ctlab/search_for_positive_selection/blob/4d8b21788f315c2d8a00a92b2bdfb3c0063d45ee/pipeline/gblocks_alignment.py#L30  
 `python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --exec /abspath/Gblocks_0.91b/Gblocks --threads 2`
 
-### 4. Evolutionary analyses
+### 4. Evolutionary analysis
 #### 4.1 Preprocessing, sort by groups.
 Sort fasta files from one folder to child subfolders with unique names 
-corresponding to set of species in fasta file (sorted in increasing order). For example:
-`$ cd /abspath/tothe/nuc_out_prank/  
+corresponding to set of species in fasta file (sorted in increasing order). For example:  
+```bash
+$ cd /abspath/tothe/nuc_out_prank/  
 $ ls  
 1.fasta 2.fasta 3.fasta  
-$ less 1.fasta      $ less 2.fasta      $ less 3.fasta   
->1                  >2                  >3
-ATG....             ATG...              ATG...    
->2                  >3                  >2      
-ATG....             ATG...              ATG...`  
+$ less 1.fasta    $ less 2.fasta    $ less 3.fasta  
+>1                >2                >3  
+ATG...            ATG...            ATG...  
+>2                >3                >2      
+ATG...            ATG...            ATG...
+```
 
 Result of the script:  
-`$ cd /abspath/tothe/nuc_out_prank/  
+```bash
+$ cd /abspath/tothe/nuc_out_prank/  
 $ ls */  
 12/:            23/:  
-1.fasta         2.fasta  
-                3.fasta`  
-                
+1.fasta         2.fasta    
+                3.fasta  
+ ```                              
 So, there will be a folder for every combination of species (for every group).  
 `python sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`  
 #### 4.2 Preprocessing, convert fasta to paml format  
@@ -84,22 +87,25 @@ The script (fasta2paml.py) consists of two stage:
 directory)  
 2. Converting philip-sequential format to specific philip format required by PAML:  
 In resulting out_dir:  directory of name "group_id" with folders "file_name" with file_name.phy file for PAML.
-For example:  
-`$ cd /abspath/tothe/nuc_out_prank/  
+For example: 
+```bash
+$ cd /abspath/tothe/nuc_out_prank/  
 $ ls */  
 12/:            23/:           12345/:
 1.fasta         4055.fasta     2031.fasta   
-                3010.fasta     2.fasta`
-
-Result:  
-`$ cd out_dir  
+                3010.fasta     2.fasta
+```
+Result:
+```bash
+$ cd out_dir  
 $ ls */  
 12/:            23/:            12345/:
 1/:             4055/:          2031/:   
 1.phy           4055.phy        2031.phy
                 3010/:          2/:
-                3010.phy        2.phy`    
-In --i and out --o folders can be the same. Making a backups is recommended and and necessary for further analysis.
+                3010.phy        2.phy    
+```
+In --i and out --o folders can be the same. Making a backups is recommended and and necessary for further analysis.  
 `python fasta2paml.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/nuc_out_prank/  
 --species 8 --group 6`  
 See 'fasta2paml.log' in working directory.  
@@ -109,21 +115,58 @@ Name of tree should be the same as name of species folder ('12' -> '12.tree'). P
 #### 4.4 Test right order
 Test PAML (codeml) for know right order for sequences to exclude PAML's errors.
 Test can be perform with launch of one ratio PAML model with script 'paml_one_ratio_model.py',  
-see --help for arguments: option --e can be skipped if use codeml from biopython (Bio.Phylo.PAML).
-`python paml_one_ratio_model.py --i /abspath/tothe/nuc_out_prank/ --tree /abspath/folder_trees/ --threads 22`
+see --help for arguments: option --e can be skipped if use codeml from biopython (Bio.Phylo.PAML).  
+`python paml_one_ratio_model.py --i /abspath/tothe/nuc_out_prank/ --tree /abspath/folder_trees/ --threads 22`  
 This script writes .ctl file and launch one ratio model.  
 See "paml_one_ratio.log", further testing may be continued in separate item's folders just from command line.
 #### 4.5 Ordering
 - After known the right orders, files .order for every group of species should be placed to separate folder.  
 Name of .order file should be the same as name of species folder ('12' -> '12.order')
-- Launch fasta2paml_ordering.py (can be launched on the backup folder)
+- Launch fasta2paml_ordering.py (can be launched on the backup folder)  
 `python fasta2paml_ordering.py --i /abspath/tothe/nuc_out_prank/ --order /abspath/folder_orders/ --o /abspath/tothe/nuc_out_prank/ 
 --species 8 --group 6`  
 See 'fasta2paml_ordering.log' in working directory.  
-#### 4.6 One ratio model
-See launch example above.
-#### 4.7 SWAMP masking
-- Construct branchcode for every species group
-- Launch SWAMP
+#### 4.6 One ratio model  
+See launch example above.  
+#### 4.7 SWAMP masking  
+- Construct branchnames for every species group  
+- Launch SWAMP  
+"swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment.
+See stdout and 'swamp_log.log'.  
 #### 4.8 Perform maximum likelihood (ML) dN/dS analysis to infer positive selection of genes and codons, using codeml from the PAML software package.
-Branch-site model
+__Branch-site model__  
+There are two hypothesis:  
+```
+H0 (The null model for Branch-site model A):  
+    Model A1: model = 2, NSsites = 2, fix_omega = 1, omega = 1  
+    fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated  
+    kappa = 2   * initial or fixed kappa  
+    fix_omega = 1   * 1: omega or omega_1 fixed, 0: estimate  
+    omega = 1   * initial or fixed omega, for codons or codon-based AAs  
+H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ):  
+    fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated  
+    kappa = 2   * initial or fixed kappa  
+    fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate  
+    omega = 1   * initial or fixed omega, for codons or codon-based AAs  
+```    
+From readme of paml example lysozymeLarge.ctl:
+Alternative hypothesis (branch site model A, with w2 estimated):  
+```
+model = 2    NSsites = 2   fix_omega = 0   omega = 1.5 (__or any value > 1__)
+```
+> As the branch-site model is known to cause computational difficulties for the numer-  
+ical optimization algorithm in PAML, each analysis is conducted three times with  
+different starting values to ensure that the global peak is found (*Statistical Properties of the Branch-Site Test of Positive
+Selection, Ziheng Yang and Mario dos Reis*)
+
+For masking files (after SWAMP) launch, for example:  
+`python masked_paml_branch_site_model.py --i /abspath/tothe/for_paml/  
+--tree /abspath/folder_trees/ --threads 10`
+
+For files without masking:  
+`python paml_branch_site_model.py --i /abspath/tothe/for_paml/  
+--tree /abspath/folder_trees/ --threads 10`
+See --help for help with arguments. See log file "paml_branch_site.log" or "paml_branch_site_masked.log": errors by keyword  
+"WARNING".
+### 5. Analysing PAML's results  
+`python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`
