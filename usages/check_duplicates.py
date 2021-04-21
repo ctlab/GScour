@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import logging
 import os
@@ -29,6 +30,6 @@ if __name__ == '__main__':
     parser.add_argument('--i', help='Path to the folder with .log files to analyze', nargs='?')
     args = parser.parse_args()
     try:
-        main(args.infolder)
+        main(args.i)
     except BaseException as err:
         logging.info("Unexpected error: {}".format(err))

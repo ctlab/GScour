@@ -198,7 +198,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                         # logging.info(
                         #     "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
                 else:
-                    logging.info("The work has not been finished for file number {}".format(file_number))
+                    logging.warning("The work has not been finished for file number {}".format(file_number))
                     if file_number not in broken_files:
                         broken_files.append(file_number)
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
@@ -207,7 +207,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
         with excep_counter.get_lock():
             excep_counter.value += 1
         file_id = "{}/{}".format(species_folder, item_folder)
-        logging.info("Killed {} hypothesis_type {}, {}, {},\nException_counter={}".format(file_id, hypothesis_type,
+        logging.warning("Killed {} hypothesis_type {}, {}, {},\nException_counter={}".format(file_id, hypothesis_type,
                                                                                           err.args, err,
                                                                                           excep_counter.value))
         if file_id not in broken_files:  # TODO: list - to shared variable
