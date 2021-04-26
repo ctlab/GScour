@@ -6,7 +6,6 @@ import os
 import traceback
 import pandas as pd
 
-DEFAULT_PROJECT_NAME = os.getcwd().split('/')[-1]
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 """
 Form ortholog table from proteinortho.tsv file
@@ -14,16 +13,9 @@ Species named as a number
 """
 
 
-def main(project_name, poff, species, group, required):
-    if not poff:
-        proteinortho_file = '{}.proteinortho.tsv'.format(project_name)
-        proteinortho_data = pd.read_csv(proteinortho_file, sep='\t')
-        out_file_name = '{}_formed_table.ortho.tsv'.format(project_name)
-    else:
-        proteinortho_file = '{}.poff.tsv'.format(project_name)
-        proteinortho_data = pd.read_csv(proteinortho_file, sep='\t')
-        out_file_name = '{}_formed_table.ortho.poff.tsv'.format(project_name)
-
+def main(proteinortho_file, species, group, required):
+    out_file_name = "{}{}{}".format(os.path.split(proteinortho_file)[0], "/formed_", os.path.split(proteinortho_file)[1])
+    proteinortho_data = pd.read_csv(proteinortho_file, sep='\t')
     logging.info("Input file {}".format(proteinortho_file))
     species = int(species)
     group = int(group)
@@ -42,10 +34,7 @@ def main(project_name, poff, species, group, required):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--project', help='Project name', nargs='?',
-                        default=DEFAULT_PROJECT_NAME)
-    parser.add_argument('--poff', help='"y" if use synteny, otherwise empty', nargs='?',
-                        default="")
+    parser.add_argument('--ortho', help='Full path to the output file of Proteinortho', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?')
     parser.add_argument('--group', help='Minimal size of species group', nargs='?')
     # parser.add_argument('--genes', help='Maximal number of genes for species', nargs='?') # TODO: is it necessary?
@@ -53,8 +42,7 @@ if __name__ == "__main__":
                         nargs='?')  # TODO: multi required species?
     args = parser.parse_args()
     try:
-        main(args.project, args.poff, args.species, args.group, args.required)
+        main(args.project, args.ortho, args.species, args.group, args.required)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-
     logging.info("The orthologs table was recorded")

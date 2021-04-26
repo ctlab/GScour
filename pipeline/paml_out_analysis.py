@@ -13,7 +13,6 @@ and under purifying selection in the rest of the tree (0<dN/dS<1)
 Site class 2b: Codon sites evolving under positive selection in the selected branch (dN/dS>1),
 and under neutral evolution in the rest of the tree (dN/dS =1) 
 """
-pre_parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ln_np_pattern = re.compile(r"lnL\(ntime:\s+\d+\s+np:\s+(\d+)\):\s+(-\d+\.\d+)")
 # POSITIVE_PATTERN = re.compile(r"\s*(\d+)\s+(\w)\s+(\d+\.\d+)")
 pos_sites_string = re.compile(r"Positive\ssites\sfor\sforeground\slineages\sProb\(w>1\):")
@@ -93,7 +92,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
     broken_paml_outs_item = list()
     no_significance_item = 0
     positive_sites_number_item = 0
-    gene_protein_dict_item = dict()
+    gene_protein_dict = dict()
     np0, ln0, np1, ln1 = 0, 0., 0, 0.
     pos_sites = []
     if os.path.isdir(item):
@@ -128,7 +127,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
             species_folder_sheet['2b, Dn/Ds background'].append(background_2a)
             species_folder_sheet['P-value'].append(p_val)
             "the table is a main source of information, p-value and hence positive_sites_number_item, " \
-                "gene_protein_dict_item, no_significance_item can be customized"
+                "gene_protein_dict, no_significance_item can be customized"
             if p_val and p_val < 0.05:
                 number_pos = len(pos_sites)
                 child_logger.info("P.S: Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
@@ -142,8 +141,8 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
                     child_logger.info("{} Gene_name {} positive sites : position, acid, probability : {}, {}, {}".
                                       format(item_id, gene_name, pos, acid, probability))
 
-                if not gene_protein_dict_item.get(gene_name):
-                    gene_protein_dict_item[gene_name] = [protein_id, item_folder_name]
+                if not gene_protein_dict.get(gene_name):
+                    gene_protein_dict[gene_name] = protein_id
             else:
                 child_logger.info("Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
                                   "foreground (2b)={}\n\t\t\t\tDn/Ds background (2a)={} |"
@@ -155,13 +154,11 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
             child_logger.warning("Item {} lack of params: np0 {}, ln0 {}, np1 {}, ln1 {}, pos_sites {}".format(
                 item_id, np0, ln0, np1, ln1, pos_sites))
             broken_paml_outs_item.append(item_folder_name)
-    return broken_paml_outs_item, no_significance_item, positive_sites_number_item, gene_protein_dict_item
+    return broken_paml_outs_item, no_significance_item, positive_sites_number_item, gene_protein_dict
 
 
 def main(in_folder, ortho_logs, target_species):
     global common_pos_gene_dict
-    print(os.path.join(pre_parent_dir, 'common_sheet.xlsx'))
-    writer = pd.ExcelWriter(os.path.join(pre_parent_dir, 'common_sheet.xlsx'), engine='xlsxwriter')
     for species_folder in os.scandir(in_folder):
         species_folder_sheet = {
             'NCBI protein_id': [], 'Gene name': [], '0, proportion': [],
@@ -200,28 +197,25 @@ def main(in_folder, ortho_logs, target_species):
             child_logger.info("Species folder {}: number of positive sites {}".format(species_folder.name,
                                                                                       positive_sites_number))
             child_logger.info(
-                "Species folder {} Number of genes under P.S={}: gene_name : protein_id : item \n{}".format(
+                "Species folder {} Number of genes under P.S={}: gene_name : protein_id \n{}".format(
                     species_folder.name, len(genes_under_positive), repr(genes_under_positive)))
 
-            for key in genes_under_positive.keys():
-                if key not in common_pos_gene_dict.keys():
-                    common_pos_gene_dict[key] = list()
-                print("before common_pos_gene_dict", common_pos_gene_dict)
-                print("genes_under_positive", genes_under_positive)
-                common_pos_gene_dict[key] += genes_under_positive[key]
-                print("after common_pos_gene_dict", common_pos_gene_dict)
+            # for key in genes_under_positive.keys():
+            #     if key not in common_pos_gene_dict.keys():
+            #         common_pos_gene_dict[key] = list()
+            #     common_pos_gene_dict[key] += genes_under_positive[key]
+            common_pos_gene_dict.update(genes_under_positive)
+            df = pd.DataFrame(species_folder_sheet, columns=['NCBI protein_id', 'Gene name', '0, proportion',
+                                                             '0, Dn/Ds foreground', '0, Dn/Ds background',
+                                                             '1, proportion', '1, Dn/Ds foreground',
+                                                             '1, Dn/Ds background',
+                                                             '2a, proportion', '2a, Dn/Ds foreground',
+                                                             '2a, Dn/Ds background',
+                                                             '2b, proportion', '2b, Dn/Ds foreground',
+                                                             '2b, Dn/Ds background',
+                                                             'P-value'])
 
-        df = pd.DataFrame(species_folder_sheet, columns=['NCBI protein_id', 'Gene name', '0, proportion',
-                                                         '0, Dn/Ds foreground', '0, Dn/Ds background',
-                                                         '1, proportion', '1, Dn/Ds foreground', '1, Dn/Ds background',
-                                                         '2a, proportion', '2a, Dn/Ds foreground',
-                                                         '2a, Dn/Ds background',
-                                                         '2b, proportion', '2b, Dn/Ds foreground',
-                                                         '2b, Dn/Ds background',
-                                                         'P-value'])
-
-        df.to_excel(writer, sheet_name=species_folder.name)
-    writer.save()
+            df.to_excel(writer, sheet_name=species_folder.name)
 
 
 if __name__ == '__main__':
@@ -237,9 +231,15 @@ if __name__ == '__main__':
     print("Passed args: input directory {}, log folder {}, required species {}".format(in_dir, log_folder,
                                                                                        required_species))
     try:
+        writer = pd.ExcelWriter(os.path.join(in_dir, 'common_sheet.xlsx'), engine='xlsxwriter')
         main(in_dir, log_folder, required_species)
+        summary_sheet = {'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
+            list(common_pos_gene_dict.values())}
+        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id'])
+        df.to_excel(writer, sheet_name='summary')
+        writer.save()
     except BaseException as e:
         print("Unexpected error: {}".format(e))
-        # raise e
+        raise e
     print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n", common_pos_gene_dict)
     print("The work has been completed")
