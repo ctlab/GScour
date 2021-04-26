@@ -15,6 +15,9 @@ GUIDANCE allows using alignment (MAFFT, PRANK, CLUSTALW) as a subprocess.
 - Gblocks (http://gensoft.pasteur.fr/docs/gblocks/0.91b/)
 - SWAMP (https://github.com/peterwharrison/SWAMP)
 ## Steps
+See --help for help with arguments for any python script. 
+If there are any questions, errors, suggestions feel free to contact me via email
+lnfyodorova@gmail.com.
 ### 1. One-to-one orthologs
 Obtain one-to-one ortholog clusters for whole-genome sequences.
 #### 1.1 Finding orthologous proteins
@@ -24,15 +27,12 @@ Obtain one-to-one ortholog clusters for whole-genome sequences.
 Result file will be needed: project_name.proteinortho.tsv or project_name.poff.tsv if synteny;
 #### 1.2 Form ortologs table
 - Form a ortologs table with fulfillment of requirements: single-copy orthologs only, group (minimal
-number of species in group), required species (one target species in relation to which the analysis is made).
-Use --help for help with arguments. Result will be recorded to project_name_formed_orthologs_table.tsv;  
-`python get_orthologs_table.py --project project_name --species 8 --group 6 --required 6`
+number of species in group), required species (one target species in relation to which the analysis is made). Result will be recorded to the file with prefix 'formed', for example, formed_project_name.poff.tsv;  
+`python get_orthologs_table.py --ortho /path/tothe/project_name.poff.tsv --species 8 --group 6 --required 6`
 
 ### 2. Sequences
 #### 2.1. Get nucleotide sequences
-Annotation .gbff, genomes .fna and cds_from_genomic.fna are needed. Use --help for help with arguments.
-Firstly, try to extract sequences from cds_from_genomic.fna, else from .gbff. Result: .fna file with sequences and
-.log file with summary for every .fna. See log in "get_ortho_nuc_seqs.log".  
+Annotation .gbff, genomes .fna and cds_from_genomic.fna are needed. Firstly, try to extract sequences from cds_from_genomic.fna, else from .gbff. Result: .fna file with sequences and .log file with summary for every .fna. See log in "get_ortho_nuc_seqs.log".  
 `python get_ortho_nucleotides.py --ortho /abspath/to/thetable/project_name_formed_orthologs_table.tsv --gbff /abspath/tothe/gbff_folder/gbff/ --cds /abspath/tothe/cds/cds_refseq/ --genome /abspath/tothe/fnafiles/genomes/ --species 8 --group 6 --out /abspath/tothe/nuc_out_folder/`
 #### 2.2 Check duplicates
 Perform additional check to exclude duplicates  
@@ -42,14 +42,12 @@ Perform additional check to exclude duplicates
 Produce codon-based nucleotide sequence alignments for all the one-to-one ortholog clusters.
 #### 3.1 PRANK codon-based multiple alignment
 PRANK may be used separetly (recommended) or as a subprocess of GUIDANCE (therefore skip this step).
-See --help for arguments. Option --tree isn't adapted to work with groups, therefore it should be used if there is only
-one group (args in get_orthologs_table.py group==species).  
+Option --tree isn't adapted to work with groups, therefore it should be used if there is only one group (i.e args in get_orthologs_table.py group==species). Be careful with not multiple of three sequences on the 2.1 step, prank can't process it.<br /> 
 `python prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
 #### 3.2. GUIDANCE assessment and masking
 NOTE: this step takes a lot of computation time.
 If you use MAFFT or CLUSTAL (not PANK) as a subproces of GUIDANCE you should correct --msaProgram option
 in the line https://github.com/ctlab/search_for_positive_selection/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47  
-See --help for help with arguments.  
 `python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/ --exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`
 #### 3.3 Gblocks
 Adjust parameters b1-b5 to your needs in the code  
@@ -113,8 +111,8 @@ See 'fasta2paml.log' in working directory.
 Phylogenetic trees must be provided for every species group in format as required for PAML.  
 Name of tree should be the same as name of species folder ('12' -> '12.tree'). Put trees to separate folder. 
 #### 4.4 Test right order
-Test PAML (codeml) for know right order for sequences to exclude PAML's errors.
-Test can be perform with launch of one ratio PAML model with script 'paml_one_ratio_model.py',  
+Test PAML (codeml) for know right order for sequences to exclude PAML's errors (About tree file format from [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf): "The species can be represented using either their names or their indexes corresponding to the order of their occurrences in the sequence data file.", but there may be some nuances)
+Test can be perform with launch of the one ratio PAML model with script 'paml_one_ratio_model.py',  
 see --help for arguments: option --e can be skipped if use codeml from biopython (Bio.Phylo.PAML).  
 `python paml_one_ratio_model.py --i /abspath/tothe/nuc_out_prank/ --tree /abspath/folder_trees/ --threads 22`  
 This script writes .ctl file and launch one ratio model.  
@@ -169,4 +167,14 @@ For files without masking:
 See --help for help with arguments. See log file "paml_branch_site.log" or "paml_branch_site_masked.log": errors by keyword  
 "WARNING".
 ### 5. Analysing PAML's results  
-`python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`
+`python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`<br />
+Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also in every species folder 'name_of_species_folder.result'.
+* common_sheet.xlsx, sheet for every species group: 
+dN/dS (w) for site classes (K=4) (see [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf))<br />
+site class 0 1 2a 2b <br />
+proportion (proportion of sites that have those omega values, for each site class) <br />
+background w (omega values on the background, for each site class) <br />
+foreground w (omega values on the foreground, for each site class) <br />
+P-value, likelihood from positive vs lokelihood from neutral model. <br />
+* summary sheet with genes under positive selection (p-value < 0.05). P-value can be adjusted here: <br />
+https://github.com/ctlab/search_for_positive_selection/blob/a2145a12a754e94b6306dce69bfcd7b173d8a898/pipeline/paml_out_analysis.py#L131  
