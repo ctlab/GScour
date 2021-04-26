@@ -169,7 +169,7 @@ See --help for help with arguments. See log file "paml_branch_site.log" or "paml
 ### 5. Analysing PAML's results  
 `python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`<br />
 Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also in every species folder 'name_of_species_folder.result'.
-* common_sheet.xlsx, sheet for every species group: 
+* common_sheet.xlsx, sheet for every species group:<br />
 dN/dS (w) for site classes (K=4) (see [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf))<br />
 site class 0 1 2a 2b <br />
 proportion (proportion of sites that have those omega values, for each site class) <br />
