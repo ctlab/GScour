@@ -40,20 +40,22 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
     log_file = os.path.join("{}.{}".format(os.path.abspath(outfile_path_without_extension), 'log'))
     if os.path.isfile(final_file_path):
         raise Exception('final_file_path {} already exists'.format(final_file_path))
-    if tree and format_out:
-        launch = 'prank -d={0} -o={1} -t={2} -codon -f={3} > {4}'.format(infile, outfile_path_without_extension,
-                                                                         tree, format_out, log_file)
+    if tree and format_out:  # -translate (standard code); codon alignment with the option -codon (in -codon case
+        # be careful about not multiple of three sequences)
+        launch = 'prank -d={0} -o={1} -t={2} -translate -f={3} > {4}'.format(infile, outfile_path_without_extension,
+                                                                             tree, format_out, log_file)
     elif tree:
-        launch = 'prank -d={0} -o={1} -t={2} -codon > {3}'.format(infile, outfile_path_without_extension,
-                                                                  tree, log_file)
+        launch = 'prank -d={0} -o={1} -t={2} -translate > {3}'.format(infile, outfile_path_without_extension,
+                                                                      tree, log_file)
     elif format_out and not tree:
-        launch = 'prank -d={0} -o={1} -showtree -codon -f={2} > {3}'.format(infile,
-                                                                            outfile_path_without_extension, format_out,
-                                                                            log_file)
+        launch = 'prank -d={0} -o={1} -showtree -translate -f={2} > {3}'.format(infile,
+                                                                                outfile_path_without_extension,
+                                                                                format_out,
+                                                                                log_file)
     else:
-        launch = 'prank -d={0} -o={1} -showtree -codon > {2}'.format(infile,
-                                                                     outfile_path_without_extension,
-                                                                     log_file)
+        launch = 'prank -d={0} -o={1} -showtree -translate > {2}'.format(infile,
+                                                                         outfile_path_without_extension,
+                                                                         log_file)
     return launch
 
 

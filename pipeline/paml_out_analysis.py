@@ -200,10 +200,6 @@ def main(in_folder, ortho_logs, target_species):
                 "Species folder {} Number of genes under P.S={}: gene_name : protein_id \n{}".format(
                     species_folder.name, len(genes_under_positive), repr(genes_under_positive)))
 
-            # for key in genes_under_positive.keys():
-            #     if key not in common_pos_gene_dict.keys():
-            #         common_pos_gene_dict[key] = list()
-            #     common_pos_gene_dict[key] += genes_under_positive[key]
             common_pos_gene_dict.update(genes_under_positive)
             df = pd.DataFrame(species_folder_sheet, columns=['NCBI protein_id', 'Gene name', '0, proportion',
                                                              '0, Dn/Ds foreground', '0, Dn/Ds background',
@@ -234,12 +230,11 @@ if __name__ == '__main__':
         writer = pd.ExcelWriter(os.path.join(in_dir, 'common_sheet.xlsx'), engine='xlsxwriter')
         main(in_dir, log_folder, required_species)
         summary_sheet = {'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
-            list(common_pos_gene_dict.values())}
+                         list(common_pos_gene_dict.values())}
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id'])
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:
         print("Unexpected error: {}".format(e))
-        raise e
     print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n", common_pos_gene_dict)
     print("The work has been completed")

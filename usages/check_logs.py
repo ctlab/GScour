@@ -28,25 +28,25 @@ def get_item_by_gene_name(gene_name, log_folder_path, target_species, logger):
     return gene_name
 
 
-def main(excep_file_path, log_folder_path, target_species, child_logger):
+def main(excel_file_path, log_folder_path, target_species, logger):
     absent_genes = []
     genes_items = []
-    df = pd.io.excel.read_excel(excep_file_path)
+    df = pd.io.excel.read_excel(excel_file_path)
     child_logger.info("genes to check of length {}".format(len(df)))
     for gene_name_tuple in df.itertuples():
         gene_name = gene_name_tuple[1]
-        returned = get_item_by_gene_name(gene_name, log_folder_path, target_species, child_logger)
+        returned = get_item_by_gene_name(gene_name, log_folder_path, target_species, logger)
         if returned == gene_name:
             absent_genes.append(gene_name)
         else:
             genes_items.append((gene_name, returned[1], returned[0]))
-    child_logger.info("absent genes in ortho log files {}:\n{}".format(len(absent_genes), absent_genes))
-    child_logger.info("genes which was found in items {}:\n{}".format(len(genes_items), genes_items))
+    logger.info("absent genes in ortho log files {}:\n{}".format(len(absent_genes), absent_genes))
+    logger.info("genes which was found in items {}:\n{}".format(len(genes_items), genes_items))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='The full path to the .xlsx file with column of gene names to check', nargs='?')
+    parser.add_argument('--i', help='The full path to the .xlsx file with one column of gene names to check', nargs='?')
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
     parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?')
     args = parser.parse_args()

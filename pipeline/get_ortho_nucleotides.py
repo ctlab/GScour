@@ -4,8 +4,6 @@ import argparse
 import logging
 import os
 import re
-import traceback
-
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -504,6 +502,8 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
         annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(species_numerating, 'gbff'))
         cds_from_genomic_path = os.path.join(cds_from_genomic, "{}.{}".format(species_numerating, 'fna'))
         logging.info('Working with species number {}'.format(species_numerating))
+        """ define broken_list as a global var for re-extracting (post-processing) seqs from list ['item1', 'item2'..],
+         e.g ['3557', '5781', '1503'] """
         if BROKEN_LIST:
             broken_list_int_convert = list()
             for number in BROKEN_LIST:
