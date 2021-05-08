@@ -4,12 +4,12 @@ import multiprocessing
 import subprocess
 import sys
 import traceback
-from subprocess import TimeoutExpired, SubprocessError
-from subprocess import Popen, PIPE
+import subprocess
 from Bio.Phylo.PAML import codeml
 import logging
 import os
 import re
+
 """
 Under this model, the relationship holds that ω = dN/dS, the ratio of
 nonsynonymous/synonymous substitution rates. This basic model is fitted by specifying model = 0
@@ -68,9 +68,9 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
     cml.set_options(aaDist=0)
     cml.set_options(model=0)  # models for codons: 0:one, 1:b, 2:2 or more dN/dS ratios for branches
     cml.set_options(NSsites=[0])  # * 0:one w;1:neutral;2:selection; 3:discrete;4:freqs;
-                   # 5:gamma;6:2gamma;7:beta;8:beta&w;9:beta&gamma;
-                   # 10:beta&gamma+1; 11:beta&normal>1; 12:0&2normal>1;
-                   # 13:3normal>0
+    # 5:gamma;6:2gamma;7:beta;8:beta&w;9:beta&gamma;
+    # 10:beta&gamma+1; 11:beta&normal>1; 12:0&2normal>1;
+    # 13:3normal>0
     cml.set_options(icode=0)
     cml.set_options(Mgene=0)
     cml.set_options(fix_kappa=0)  # 1: kappa fixed, 0: kappa to be estimated
@@ -136,7 +136,7 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
                         BROKEN_FILES.append(file_number)
                         logging.info("BAD file {}".format(file_number))
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
-    except TimeoutExpired as err:
+    except subprocess.TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
         logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, counter.value))

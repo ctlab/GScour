@@ -57,7 +57,7 @@ def get_order(folder_in, species_folder):
                 return order_string.rstrip()
 
 
-def get_infile_order(folder_in, folder_order):
+def get_infile_and_order(folder_in, folder_order):
     """ parse directory with files out of Gblocks
         'fas-gb' can be change just to .fas"""
     for species_folder in os.scandir(folder_in):
@@ -185,8 +185,8 @@ def replace_broken_files(directory_out):
 
 
 def main(folder_in, folder_order, folder_out, species, group):
-    for personal_folder, infile, order_string in get_infile_order(folder_in, folder_order):
-        fasta2phylip(personal_folder, infile, order_string, folder_in, folder_out)
+    for species_folder, infile, order_string in get_infile_and_order(folder_in, folder_order):
+        fasta2phylip(species_folder, infile, order_string, folder_in, folder_out)
     for species_folder, phylip_file in parse_phylip_dir(folder_out):
         phylip2paml(folder_out, species_folder, phylip_file, species, group)
         seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)

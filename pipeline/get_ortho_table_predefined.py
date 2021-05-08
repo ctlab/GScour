@@ -69,7 +69,7 @@ def main(ortho_file, gb_file_path, predefined_genes_path, required_species):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ortho', help='Full path to the output file of proteinortho (will be modified,'
+    parser.add_argument('--ortho', help='Full path to the output file of some ortho finder (will be modified,'
                                         'do a copy is recommended)', nargs='?')
     parser.add_argument('--gbff', help='Path to the .gbff annotation file for target species', nargs='?')
     parser.add_argument('--predefined', help='Path to the .xlsx file with one 1st column - \'Gene symbol\'',

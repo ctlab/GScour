@@ -2,8 +2,6 @@
 import logging
 import os
 import argparse
-import traceback
-
 from Bio import SeqIO
 import re
 
