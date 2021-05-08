@@ -42,7 +42,8 @@ Perform additional check to exclude duplicates
 Produce codon-based nucleotide sequence alignments for all the one-to-one ortholog clusters.
 #### 3.1 PRANK codon-based multiple alignment
 PRANK may be used separetly (recommended) or as a subprocess of GUIDANCE (therefore skip this step).
-Option --tree isn't adapted to work with groups, therefore it should be used if there is only one group (i.e args in get_orthologs_table.py group==species). Be careful with not multiple of three sequences on the 2.1 step, prank can't process it.<br /> 
+Option --tree isn't adapted to work with groups, therefore it should be used if there is only one group (i.e args in get_orthologs_table.py group==species). By default we use option -translate for prank, but you can change it for -codon: codon alignment produces more accurate alignments than alignment of translated protein sequences. Whether you use tree or set output format this change can be made in 
+https://github.com/ctlab/search_for_positive_selection/blob/5f1a4463ee29b0f4ef9f80cefc8d74c73e324868/pipeline/prank_alignment.py#L45 or lines 48, 51, 56.<br />
 `python prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
 #### 3.2. GUIDANCE assessment and masking
 NOTE: this step takes a lot of computation time.
