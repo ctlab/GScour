@@ -287,6 +287,7 @@ def wright_order_file(folder_in, species_folder, order_list):
 
 def main(folder_in, folder_order, folder_trees, exec_path, folder_out, species, group):
     for species_folder, infile, order_list in get_infile_and_order(folder_in, folder_order):
+        list_of_orders = list(permutations(order_list))
         guess = False
         while not guess:
             logging.info("in while")
@@ -299,7 +300,7 @@ def main(folder_in, folder_order, folder_trees, exec_path, folder_out, species, 
             item_folder, infile, tree_path = get_input_items(folder_out, folder_trees, species_folder)
             logging.info("run codeml")
             if not run_codeml(folder_out, species_folder, item_folder, infile, tree_path, exec_path):
-                list_of_orders = list(permutations(order_list))
+                logging.info('FAIL!Wrong order for species folder {}={}'.format(species_folder, order_list))
                 list_of_orders.pop(0)
                 order_list = list_of_orders[0]
             else:
