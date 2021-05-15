@@ -80,7 +80,19 @@ $ ls */
  ```                              
 So, there will be a folder for every combination of species (for every group).  
 `python sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`  
-#### 4.2 Preprocessing, convert fasta to paml format  
+#### 4.1 Provide trees
+Phylogenetic trees must be provided for every species group in format as required for PAML.  
+Name of tree should be the same as name of species folder ('12' -> '12.tree'). Put trees to separate folder. 
+#### 4.2 Preprocessing, set right order for paml
+Step can be skipped to 4.3.1 if the order is known.
+##### 4.2.1 Replace files for test order
+`python usages/replace_for_test_order.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/test_order/` 
+##### 4.2.2 Set right order
+--i /abspath/tothe/test_order/ for `fasta2paml_guess_order.py`, see --help for args, folder with .order files can be empty. 
+Order will be guessing and set automaticaly.
+#### 4.3 Preprocessing, convert fasta to paml format  
+##### 4.3.1 fasta2paml.py
+Skip if right order was set in the step 4.2.
 The script (fasta2paml.py) consists of two stage:  
 1. Converting fasta format nucleotide codon sequences (from input directory) to philip-sequential format (to output 
 directory)  
@@ -108,25 +120,22 @@ In --i and out --o folders can be the same. Making a backups is recommended and 
 `python fasta2paml.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/nuc_out_prank/  
 --species 8 --group 6`  
 See 'fasta2paml.log' in working directory.  
-#### 4.3 Provide trees
-Phylogenetic trees must be provided for every species group in format as required for PAML.  
-Name of tree should be the same as name of species folder ('12' -> '12.tree'). Put trees to separate folder. 
-#### 4.4 Test right order
+###### 4.3.1.1 Test right order manually
 Test PAML (codeml) for know right order for sequences to exclude PAML's errors (About tree file format from [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf): "The species can be represented using either their names or their indexes corresponding to the order of their occurrences in the sequence data file.", but there may be some nuances)
 Test can be perform with launch of the one ratio PAML model with script 'paml_one_ratio_model.py',  
 see --help for arguments: option --e can be skipped if use codeml from biopython (Bio.Phylo.PAML).  
 `python paml_one_ratio_model.py --i /abspath/tothe/nuc_out_prank/ --tree /abspath/folder_trees/ --threads 22`  
 This script writes .ctl file and launch one ratio model.  
 See "paml_one_ratio.log", further testing may be continued in separate item's folders just from command line.
-#### 4.5 Ordering
+##### 4.3.2 Ordering
 - After known the right orders, files .order for every group of species should be placed to separate folder.  
 Name of .order file should be the same as name of species folder ('12' -> '12.order')
 - Launch fasta2paml_ordering.py (can be launched on the backup folder)  
 `python fasta2paml_ordering.py --i /abspath/tothe/nuc_out_prank/ --order /abspath/folder_orders/ --o /abspath/tothe/nuc_out_prank/ 
---species 8 --group 6`  
+--species 8 --group 6` 
 See 'fasta2paml_ordering.log' in working directory.  
 #### 4.6 One ratio model  
-See launch example above.  
+See launch example above in the step 4.3.1.1.
 #### 4.7 SWAMP masking  
 - Construct branchnames for every species group  
 - Launch SWAMP  
