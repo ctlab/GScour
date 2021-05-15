@@ -45,7 +45,7 @@ def parse_dir_out_gblocks(in_dir):
     for personal_folder in os.scandir(in_dir):
         if os.path.isdir(personal_folder):
             for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'fas-gb':
+                if infile.split('.')[-1] == 'fas-gb' or infile.split('.')[-1] == 'fas':
                     yield personal_folder.name, infile
 
 

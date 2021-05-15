@@ -8,16 +8,20 @@ import shutil
 def parse_input_dir(in_folder):
     for species_folder in os.scandir(in_folder):
         if os.path.isdir(species_folder):
-            for item_folder in os.scandir(species_folder):
-                if os.path.isdir(item_folder):
-                    yield species_folder.name, item_folder.name
+            for item in os.scandir(species_folder):
+                yield species_folder.name, item.name
                 break
 
 
 def main(in_folder, out_folder):
-    for species_folder, item_folder in parse_input_dir(in_folder):
-        shutil.copytree(os.path.join(in_folder, species_folder, item_folder),
-                        os.path.join(out_folder, species_folder, item_folder))
+    for species_folder, item in parse_input_dir(in_folder):
+        source_folder = os.path.join(in_folder, species_folder)
+        target_folder = os.path.join(out_folder, species_folder)
+        if not os.path.isdir(target_folder):
+            os.makedirs(target_folder)
+        shutil.copy2(os.path.join(source_folder, item),
+                     os.path.join(target_folder, item))
+        print("copied {}/{} to {}/{}".format(source_folder, item, target_folder, item))
 
 
 if __name__ == '__main__':

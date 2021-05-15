@@ -55,7 +55,7 @@ def main(proteinortho_file, gbff_path):
                     proteinortho_data[target_column] = proteinortho_data[target_column].replace([proteins],
                                                                                                 longest_protein)
                     proteinortho_data['Genes'].iloc[idx] = proteinortho_data['Genes'].iloc[idx] \
-                                                           - len(list_of_proteins) - 1
+                                                           - len(list_of_proteins) + 1
             # elif isinstance(proteins, str):  # just for information
             #     protein = [proteins]
             #     get_longest_protein(gbff_path, target_column, protein, gene_name)

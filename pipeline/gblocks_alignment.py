@@ -24,16 +24,16 @@ def parse_dir(in_dir):
             yield os.path.join(in_dir, infile)
 
 
-def launch_gblocks(infile, exec_path):
+def launch_gblocks(infile, exec_path, child_logger):
     global counter_file
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
-    launch = '{} {} -t=c -b1=5 -b2=5 -b3=7 -b4=2 -b5=h ' \
+    launch = '{} {} -t=c -b1=3 -b2=4 -b3=8 -b4=10 -b5=n ' \
              '-p=Yes >> {}'.format(exec_path, infile, LOG_FILE)  # TODO: > LOG_FILE: to do multiprocessing
     os.system(launch)
-    logging.info("Gblocks processed file {} with params {}".format(file_number, '-t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h'))
+    child_logger.info("Gblocks processed file {} with params {}".format(file_number, '-t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h'))
     with counter_file.get_lock():
         counter_file.value += 1
-        logging.info("Counter (processed files) = {}".format(counter_file.value))
+        child_logger.info("Counter (processed files) = {}".format(counter_file.value))
 
 
 if __name__ == '__main__':
@@ -47,21 +47,22 @@ if __name__ == '__main__':
     try:
         counter_file = multiprocessing.Value('i', 0)
         multiprocessing.log_to_stderr()
-        logger = multiprocessing.get_logger()
+        logger = multiprocessing.get_logger(__name__)
+        logger.addHandler(logging.FileHandler(LOG_FILE))
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter_file,))
         in_dir = args.i
         executable_path = args.exec
         inputs = list(parse_dir(in_dir))
         len_inputs = len(inputs)
-        logging.info("Path to the folder with input files for Gblocks: {}\nExecutable path: {}".
+        logger.info("Path to the folder with input files for Gblocks: {}\nExecutable path: {}".
                      format(in_dir, executable_path))
-        i = pool.starmap_async(launch_gblocks, zip(inputs, len_inputs * [executable_path]))
+        i = pool.starmap_async(launch_gblocks, zip(inputs, len_inputs * [executable_path], len_inputs * [logger]))
         i.wait()
         i.get()
     except BaseException as e:
-        logging.exception("Unexpected error: {}".format(e))
-        logging.info("Number of processed files = {}".format(counter_file.value))
+        logger.exception("Unexpected error: {}".format(e))
+        logger.info("Number of processed files = {}".format(counter_file.value))
 
-    logging.info("Number of processed files = {}".format(counter_file.value))
-    logging.info("The work has been completed")
+    logger.info("Number of processed files = {}".format(counter_file.value))
+    logger.info("The work has been completed")

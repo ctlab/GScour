@@ -18,7 +18,7 @@ BROKEN_STOP_CODON = dict()
 BROKEN_START_CODON = dict()
 ABSENT_IN_CDS = dict()
 NUMBER_OF_NEED_TO_BE_WRITTEN = 0
-LOG_FILE = "get_ortho_nuc_seqs.log"
+LOG_FILE = "get_ortho_nucleotides.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 BROKEN_LIST = []  # broken_list for re-extracting seqs from list ['item1', 'item2'..], e.g ['3557', '5781', '1503']
 
@@ -323,6 +323,7 @@ def get_seq_from_gbff(gb_file, ortho_protein_ids):
     if not os.path.isfile(gb_file):
         logging.info("There is no such file path: {}\nReturn".format(gb_file))
         return
+    logging.info("Starting to get sequence from .gbff file")
     for record in SeqIO.parse(gb_file, "genbank"):
         for feature in record.features:
             if feature.type == "CDS":
@@ -346,7 +347,8 @@ def get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numeratin
             if "gene=" in record.description:
                 gene_name = re.search(r'gene=([A-Za-z0-9]+)', record.description).group(1)
             seq_record = SeqRecord(record.seq, id=species_numerating, description="")
-            return seq_record, gene_name
+            break
+    return seq_record, gene_name
 
 
 def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_numerating, directory_out, seq_store):
@@ -495,7 +497,10 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
     global BROKEN_LIST
     if not os.path.isdir(directory_out):
         os.makedirs(directory_out)
-    ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
+    try:
+        ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
+    except ValueError:
+        ortho_data = pd.read_csv(orthodata_filepath, sep=',', usecols=range(3, 3 + species))
     for column_number, _ in enumerate(ortho_data.columns):
         NUMBER_OF_NEED_TO_BE_WRITTEN = 0
         species_numerating = str(column_number + 1)
@@ -512,7 +517,7 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
         else:
             ortho_protein_ids = ortho_data.iloc[:, column_number].values
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
-        logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} : {}".format(species_numerating,
+        logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} = {}".format(species_numerating,
                                                                                NUMBER_OF_NEED_TO_BE_WRITTEN))
         get_and_write_nucleotide_seq(annotation_gbff_path, cds_from_genomic_path, ortho_protein_ids, directory_out,
                                      species_numerating, initfna_filepath)
