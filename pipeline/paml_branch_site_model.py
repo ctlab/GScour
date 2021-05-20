@@ -100,7 +100,7 @@ def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
     cml.set_options(fix_kappa=0)
     cml.set_options(kappa=2)
     cml.set_options(fix_omega=0)
-    cml.set_options(omega=1.5)
+    cml.set_options(omega=2)
     cml.set_options(getSE=0)
     cml.set_options(RateAncestor=0)
     cml.set_options(Small_Diff=.45e-6)

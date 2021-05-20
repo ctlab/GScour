@@ -77,7 +77,6 @@ def get_infile_and_order(folder_in, folder_order, logger):
                 return
             for infile in os.listdir(species_folder):
                 if infile.split('.')[-1] == 'fas-gb':
-                    logger.info("returning file {}".format(infile))
                     yield species_folder.name, infile, order_string.split(',')
 
 
@@ -87,7 +86,6 @@ def get_phylip_file(in_folder, folder_name, logger):
         if os.path.isdir(species_folder) and species_folder.name == folder_name:
             for infile in os.listdir(species_folder):
                 if infile.split('.')[-1] == 'phylip':
-                    logger.info("returning phylip file {}".format(infile))
                     return infile
 
 
@@ -111,7 +109,6 @@ def fasta2phylip(personal_folder, infile, order_list, folder_in, folder_out, log
                             ordering_alignments.append(align)
                             break
                 SeqIO.write(ordering_alignments, output_file, "phylip-sequential")
-        logger.info('phylip-sequential format file {} has been recorded'.format(outfile_path))
     except BaseException as e:
         logger.error("BaseException: {} for file {}".format(e, infile))
 
@@ -267,7 +264,7 @@ def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_pa
     os.chdir(item_folder_path)
     logger.info("Codeml: working with {}".format(file_number))
     infile_path = os.path.join(item_folder_path, infile)
-    file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
+    set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
     p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         return_code = p.wait(timeout=time_out)  # Timeout in seconds
@@ -284,7 +281,7 @@ def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_pa
     except subprocess.TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
-        logger.info("Killed {}, {}, try to increase timeout or launch codeml manually and check".format(file_id,
+        logger.warning("Killed {}, {}, try to increase timeout or launch codeml manually and check".format(file_id,
                                                                                                         err.args))
 
 
@@ -317,11 +314,15 @@ def main(folder_in, folder_order, folder_trees, exec_path, time_out, folder_out,
                     list_of_orders.pop(0)
                     order_list = list_of_orders[0]
                 except IndexError:
-                    logger.info("list of orders is {} empty, try to check codeml manually".format(list_of_orders))
+                    logger.warning("list of orders is {} empty, try to check codeml manually".format(list_of_orders))
+                    guess = True
             else:
                 guess = True
                 logger.info('GUESS!Right order for species folder {}={}'.format(species_folder, order_list))
                 wright_order_file(folder_order, species_folder, order_list, logger)
+                input_dir = os.path.join(folder_in, species_folder)
+                shutil.rmtree(input_dir)
+                logging.info("Input dir {} with fasta file deleted".format(input_dir))
 
 
 if __name__ == '__main__':

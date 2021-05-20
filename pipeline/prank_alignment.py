@@ -73,7 +73,7 @@ def launch_prank(infile, folder_out, tree, format_out):
                 PROCESSED_FILES.append(file_number)
                 with counter.get_lock():
                     counter.value += 1
-                    logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value))
+                    # logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value)) # TODO: multiprocessing
     except BaseException as err:
         global EXCEPTION_NUMBER
         logging.exception("Unexpected error with outfile number {}: {}, \ntraceback: {}".

@@ -66,7 +66,8 @@ def get_statistics(infile):
 def calc_p_value(np0, ln0, np1, ln1):
     delta_ll_twice = 2 * (float(ln1) - (float(ln0)))  # twice the difference (ll from positive vs ll from neutral model)
     n = np1 - np0  # degree of freedom - difference in the number of parameters
-    p_val = 1 - stats.chi2.cdf(delta_ll_twice, n)
+    p_val = 1 - stats.chi2.cdf(delta_ll_twice, n)  # or stats.chisqprob(delta_ll_twice, n)
+    print("n=", n, "chi2=", stats.chi2.cdf(delta_ll_twice, n), "p_val=", p_val)
     return p_val
 
 
@@ -142,7 +143,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
                                       format(item_id, gene_name, pos, acid, probability))
 
                 if not gene_protein_dict.get(gene_name):
-                    gene_protein_dict[gene_name] = protein_id
+                    gene_protein_dict[gene_name] = (protein_id, p_val)
             else:
                 child_logger.info("Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
                                   "foreground (2b)={}\n\t\t\t\tDn/Ds background (2a)={} |"
@@ -229,12 +230,17 @@ if __name__ == '__main__':
     try:
         writer = pd.ExcelWriter(os.path.join(in_dir, 'common_sheet.xlsx'), engine='xlsxwriter')
         main(in_dir, log_folder, required_species)
+        values = list(common_pos_gene_dict.values())
+        # print("value[0],\n", values[0], "value[1],\n", values[1],
+        #       "\nentire keys\n", common_pos_gene_dict.keys())
         summary_sheet = {'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
-                         list(common_pos_gene_dict.values())}
-        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id'])
+                         [i[0] for i in values], 'p-value':
+                         [i[1] for i in values]}
+        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value'])
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:
         print("Unexpected error: {}".format(e))
+        raise e
     print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n", common_pos_gene_dict)
     print("The work has been completed")
