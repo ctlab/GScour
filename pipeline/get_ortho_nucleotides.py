@@ -280,15 +280,16 @@ def anti_repeat_check_with_comparing(anti_repeat_store, protein_id, nucleotide_s
                 return nucleotide_seq
 
 
-def write_fasta_file(directory_out, file_out_number, seq, species_numerating):
+def write_fasta_file(directory_out, file_out_number, seq_record, species_numerating):
     global PROCESSED_FILES
     with open(os.path.join(directory_out, file_out_number + ".fna"), "a") as ofile:
-        SeqIO.write(seq, ofile, "fasta")
+        SeqIO.write(seq_record, ofile, "fasta")
         logging.info("Sequence corresponding to the species number {} has been added to the file {}".format(
             species_numerating, file_out_number))
         if not PROCESSED_FILES.get(file_out_number):
-            PROCESSED_FILES[file_out_number] = 0
-        PROCESSED_FILES[file_out_number] += 1
+            PROCESSED_FILES[file_out_number] = ["", 0]
+        PROCESSED_FILES[file_out_number][0] += seq_record.id
+        PROCESSED_FILES[file_out_number][1] += 1
 
 
 def write_log_file(log_file, gene, protein_id, seq_length,
@@ -478,25 +479,17 @@ def conv_string(val):
 
 def replace_broken_files(directory_out):
     broken_species_folder = "broken_species_files"
-    broken_multiple_folder = "broken_multiple_files"
     os.makedirs(broken_species_folder)
     for file_number in BROKEN_SPECIES:
         os.replace(os.path.join(directory_out, file_number + ".fna"),
                    os.path.join(broken_species_folder, file_number + ".fna"))
         os.replace(os.path.join(directory_out, file_number + ".log"),
                    os.path.join(broken_species_folder, file_number + ".log"))
-    for file_number in BROKEN_MULTIPLE_THREE:
-        os.replace(os.path.join(directory_out, file_number + ".fna"),
-                   os.path.join(broken_multiple_folder, file_number + ".fna"))
-        os.replace(os.path.join(directory_out, file_number + ".log"),
-                   os.path.join(broken_multiple_folder, file_number + ".log"))
 
 
 def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath, species, directory_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
     global BROKEN_LIST
-    if not os.path.isdir(directory_out):
-        os.makedirs(directory_out)
     try:
         ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
     except ValueError:
@@ -543,19 +536,32 @@ if __name__ == '__main__':
     group = int(args.group)
 
     try:
-        main(args.ortho, args.gbff, args.cds, args.genome, int(args.species), args.out)
+        directory_out = args.out
+        if not os.path.isdir(directory_out):
+            os.makedirs(directory_out)
+        main(args.ortho, args.gbff, args.cds, args.genome, int(args.species), directory_out)
         written_files_number = len(PROCESSED_FILES)
         delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
         if delta == 0:
             logging.info("All files are written")
-
         logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN = {},  WRITTEN_FILES = {}, where {} in BROKEN_SPECIES list: {}"
                      .format(NUMBER_OF_NEED_TO_BE_WRITTEN, written_files_number, len(BROKEN_SPECIES),
                              repr(BROKEN_SPECIES)))
-        for file, written_species in PROCESSED_FILES.items():
-            if written_species < group:
+
+        for file, species_info in PROCESSED_FILES.items():
+            if species_info[1] < group:
                 if file not in BROKEN_SPECIES:
                     BROKEN_SPECIES.append(file)
+            else:
+                "sort by folders-groups"
+                list_of_species = list(species_info[0])
+                list_of_species.sort()
+                group_folder_name = "".join(list_of_species)
+                group_folder_path = os.path.join(directory_out, group_folder_name)
+                if not os.path.isdir(group_folder_path):
+                    os.makedirs(group_folder_path)
+                os.replace(os.path.join(directory_out, file + ".fna"), os.path.join(group_folder_path, file + ".fna"))
+
         if BROKEN_SPECIES:
             replace_broken_files(args.out)
             residue = written_files_number - len(BROKEN_SPECIES)

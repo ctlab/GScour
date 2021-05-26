@@ -68,11 +68,11 @@ def launch_prank(infile, folder_out, tree, format_out):
         global PROCESSED_FILES
         launch_command = get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out)
         if not os.system(launch_command):
-            logging.info("prank completed task for file {}".format(file_number))
+            # logging.info("prank completed task for file {}".format(file_number))
             if file_number not in PROCESSED_FILES:
                 PROCESSED_FILES.append(file_number)
                 with counter.get_lock():
-                    counter.value += 1
+                    counter.value += 1  # TODO: wrong number
                     # logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value)) # TODO: multiprocessing
     except BaseException as err:
         global EXCEPTION_NUMBER
@@ -114,8 +114,8 @@ if __name__ == '__main__':
         i.get()
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-        logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
-        logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
-    logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
-    logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
+    #     logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
+    #     logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
+    # logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
+    # logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
     logging.info("The work has been completed")

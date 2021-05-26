@@ -6,9 +6,9 @@ def main(data_sheet_path, adjust_sheet_path, out_sheet_path):
     adjust_sheet = pd.io.excel.read_excel(adjust_sheet_path, sheet_name=None, engine='openpyxl')
     data_sheet = pd.io.excel.read_excel(data_sheet_path, sheet_name=None, engine='openpyxl')
     writer = pd.ExcelWriter(out_sheet_path, engine='openpyxl')
-    full_out_table = pd.DataFrame()
     for name_data, sheet_data in data_sheet.items():
-        if name_data == 'Datasheet S6':
+        if name_data == 'Datasheet S6' or name_data == 'Datasheet S5a':
+            full_out_table = pd.DataFrame()
             for name_adjust, sheet_adjust in adjust_sheet.items():
                 merged = pd.merge(sheet_data, sheet_adjust, how='inner', on=['Gene name'],
                                   suffixes=("_article", "_new"), indicator=True)
@@ -18,7 +18,10 @@ def main(data_sheet_path, adjust_sheet_path, out_sheet_path):
                     }
                 merged['_merge'] = merged['_merge'].map(d)
                 full_out_table = full_out_table.append(merged)
-    full_out_table.to_excel(writer, sheet_name='Datasheet S6', index=False)
+            if name_data == 'Datasheet S6':
+                full_out_table.to_excel(writer, sheet_name='Datasheet S6', index=False)
+            elif name_data == 'Datasheet S5a':
+                full_out_table.to_excel(writer, sheet_name='Datasheet S5a', index=False)
     writer.save()
 
 

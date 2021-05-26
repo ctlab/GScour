@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import argparse
+import math
 import multiprocessing
 import os
 import logging
@@ -18,19 +19,32 @@ def init_counter(args):
     counter_file = args
 
 
-def parse_dir(in_dir):
-    for infile in os.listdir(in_dir):
-        if infile.split('.')[-1] == 'fas':
-            yield os.path.join(in_dir, infile)
+def parse_dir(input_dir):
+    for species_folder in os.scandir(input_dir):
+        if os.path.isdir(species_folder):
+            for infile in os.scandir(species_folder):
+                if infile.split('.')[-1] == 'fas':
+                    yield input_dir, species_folder, infile
 
 
-def launch_gblocks(infile, exec_path, child_logger):
+def launch_gblocks(input_tuple, auto_flag, exec_path, child_logger):
     global counter_file
-    file_number = re.search(r'\/(\d+)\.', infile).group(1)
-    launch = '{} {} -t=c -b1=3 -b2=4 -b3=8 -b4=10 -b5=n ' \
-             '-p=Yes >> {}'.format(exec_path, infile, LOG_FILE)  # TODO: > LOG_FILE: to do multiprocessing
+    input_dir, species_folder, infile = input_tuple
+    infile_path = os.path.join(input_dir, species_folder, infile)
+    if auto_flag == 'n':
+        params_string = '-t=c -b1=3 -b2=4 -b3=8 -b4=10 -b5=n -p=y'
+    else:
+        if len(species_folder) <= 9:
+            number_of_species = len(species_folder)
+        else:
+            number_of_species = (len(species_folder) - 9) / 2 + 9
+        b1 = math.ceil(number_of_species / 2 + 1)
+        b2 = math.ceil(number_of_species * 0.85)
+        params_string = '-t=c -b1={} -b2={} -b3=8 -b4=9 -b5=n -p=y'.format(b1, b2)
+
+    launch = '{} {} {} >> {}'.format(exec_path, infile_path, params_string, LOG_FILE)  # TODO: > LOG_FILE: to do multiprocessing
     os.system(launch)
-    child_logger.info("Gblocks processed file {} with params {}".format(file_number, '-t=c -b1=3 -b2=4 -b3=7 -b4=6 -b5=h'))
+    child_logger.info("Gblocks processed file {} with params {}".format(infile, params_string))
     with counter_file.get_lock():
         counter_file.value += 1
         child_logger.info("Counter (processed files) = {}".format(counter_file.value))
@@ -41,6 +55,8 @@ if __name__ == '__main__':
     parser.add_argument('--i', help='Path to the folder with input files for Gblocks'
                                     'FASTA formats are accepted', nargs='?')
     parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?')
+    parser.add_argument('--auto', help='\'y\' or \'n\': automatic selection of basic parameters according to group size',
+                        nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')
     args = parser.parse_args()
     threads = int(args.threads)
@@ -53,16 +69,16 @@ if __name__ == '__main__':
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter_file,))
         in_dir = args.i
         executable_path = args.exec
-        inputs = list(parse_dir(in_dir))
-        len_inputs = len(inputs)
+        input_tuples = list(parse_dir(in_dir))
+        len_inputs = len(input_tuples)
         logger.info("Path to the folder with input files for Gblocks: {}\nExecutable path: {}".
-                     format(in_dir, executable_path))
-        i = pool.starmap_async(launch_gblocks, zip(inputs, len_inputs * [executable_path], len_inputs * [logger]))
+                    format(in_dir, executable_path))
+        i = pool.starmap_async(launch_gblocks, zip(input_tuples, len_inputs * [executable_path], len_inputs * [logger]))
         i.wait()
         i.get()
     except BaseException as e:
         logger.exception("Unexpected error: {}".format(e))
         logger.info("Number of processed files = {}".format(counter_file.value))
-
+        raise e
     logger.info("Number of processed files = {}".format(counter_file.value))
     logger.info("The work has been completed")

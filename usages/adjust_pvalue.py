@@ -27,16 +27,6 @@ def main(sheet_path, out_path):
         sheet['Significance_FDR'] = sheet.apply(lambda row: get_FDR_significance(row), axis=1)
         sheet.to_excel(writer, sheet_name=name)
     writer.save()
-    # new_sheet = {'Gene name': list(), '2a, Dn/Ds foreground': list(), 'P-value': list()}
-    # for row in sheet.iterrows():
-    #     if row[1]['Gene name'] in target_list:
-    #         print(name)
-    #         print(row[1]['Gene name'])
-    #         new_sheet['Gene name'].append(row[1]['Gene name'])
-    #         new_sheet['2a, Dn/Ds foreground'].append(row[1]['2a, Dn/Ds foreground'])
-    #         new_sheet['P-value'].append(row[1]['P-value'])
-    # full_table = full_table.append(sheet)
-    # df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value'])
 
 
 if __name__ == '__main__':

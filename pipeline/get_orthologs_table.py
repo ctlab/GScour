@@ -14,7 +14,7 @@ Species named as a number
 
 def main(proteinortho_file, species, required):
     out_file_name = "{}{}{}".format(os.path.split(proteinortho_file)[0], "/formed_", os.path.split(proteinortho_file)[1])
-    proteinortho_data = pd.read_csv(proteinortho_file, sep='\t')
+    proteinortho_data = pd.read_csv(proteinortho_file, sep=',')
     logging.info("Input file {}\nOutput file {}".format(proteinortho_file, out_file_name))
     result = []
     for species in species.split(','):
@@ -52,4 +52,5 @@ if __name__ == "__main__":
         main(args.ortho, args.species, args.required)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
+        raise e
     logging.info("The orthologs table was recorded")
