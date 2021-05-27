@@ -15,7 +15,8 @@ GUIDANCE allows using alignment (MAFFT, PRANK, CLUSTALW) as a subprocess.
 - Gblocks (http://gensoft.pasteur.fr/docs/gblocks/0.91b/)
 - SWAMP (https://github.com/peterwharrison/SWAMP)
 ## Steps
-See --help for help with arguments for any python script. 
+See --help for help with arguments for any python script, logs are named as scripts with .log extension or just standard output. 
+Errors can be found by keyword "WARNING" in logs.<br />
 If there are any questions, errors, suggestions feel free to contact me via email
 lnfyodorova@gmail.com.
 ### 1. One-to-one orthologs
@@ -34,6 +35,28 @@ number of species in group), required species (one target species in relation to
 #### 2.1. Get nucleotide sequences
 Annotation .gbff, genomes .fna and cds_from_genomic.fna are needed. Firstly, try to extract sequences from cds_from_genomic.fna, else from .gbff. Result: .fna file with sequences and .log file with summary for every .fna. See log in "get_ortho_nuc_seqs.log".  
 `python get_ortho_nucleotides.py --ortho /abspath/to/thetable/project_name_formed_orthologs_table.tsv --gbff /abspath/tothe/gbff_folder/gbff/ --cds /abspath/tothe/cds/cds_refseq/ --genome /abspath/tothe/fnafiles/genomes/ --species 8 --group 6 --out /abspath/tothe/nuc_out_folder/`
+
+Sequences will be sorted to subfolders with unique names (group names)
+corresponding to set of species in fasta file (sorted in increasing order). For example:  
+```bash
+$ cd /abspath/tothe/nuc_out_prank/  
+$ ls  
+1.fasta 2.fasta 3.fasta  
+$ less 1.fasta    $ less 25.fasta    $ less 34.fasta  
+>1                >2                >3  
+ATG...            ATG...            ATG...  
+>2                >3                >2      
+ATG...            ATG...            ATG...
+```
+
+Result:  
+```bash
+$ cd /abspath/tothe/nuc_out_prank/  
+$ ls */  
+12/:            23/:  
+1.fasta         25.fasta    
+                34.fasta  
+ ```                              
 #### 2.2 Check duplicates
 Perform additional check to exclude duplicates  
 `python check_duplicates.py --i /abspath/tothe/nuc_out_folder(from_step2.1)/`
@@ -51,35 +74,11 @@ If you use MAFFT or CLUSTAL (not PANK) as a subproces of GUIDANCE you should cor
 in the line https://github.com/ctlab/search_for_positive_selection/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47  
 `python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/ --exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`
 #### 3.3 Gblocks
-Adjust parameters b1-b5 to your needs in the code  
-https://github.com/ctlab/search_for_positive_selection/blob/4d8b21788f315c2d8a00a92b2bdfb3c0063d45ee/pipeline/gblocks_alignment.py#L30  
-`python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --exec /abspath/Gblocks_0.91b/Gblocks --threads 2`
+Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
+https://github.com/ctlab/search_for_positive_selection/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
+`python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks --threads 2`
 
 ### 4. Evolutionary analysis
-#### 4.1 Preprocessing, sort by groups.
-Sort fasta files from one folder to child subfolders with unique names 
-corresponding to set of species in fasta file (sorted in increasing order). For example:  
-```bash
-$ cd /abspath/tothe/nuc_out_prank/  
-$ ls  
-1.fasta 2.fasta 3.fasta  
-$ less 1.fasta    $ less 2.fasta    $ less 3.fasta  
->1                >2                >3  
-ATG...            ATG...            ATG...  
->2                >3                >2      
-ATG...            ATG...            ATG...
-```
-
-Result of the script:  
-```bash
-$ cd /abspath/tothe/nuc_out_prank/  
-$ ls */  
-12/:            23/:  
-1.fasta         2.fasta    
-                3.fasta  
- ```                              
-So, there will be a folder for every combination of species (for every group).  
-`python sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`  
 #### 4.1 Provide trees
 Phylogenetic trees must be provided for every species group in format as required for PAML.  
 Name of tree should be the same as name of species folder ('12' -> '12.tree'). Put trees to separate folder. 
@@ -173,9 +172,8 @@ For masking files (after SWAMP) launch, for example:
 
 For files without masking:  
 `python paml_branch_site_model.py --i /abspath/tothe/for_paml/  
---tree /abspath/folder_trees/ --threads 10`
-See --help for help with arguments. See log file "paml_branch_site.log" or "paml_branch_site_masked.log": errors by keyword  
-"WARNING".
+--tree /abspath/folder_trees/ --threads 10` 
+
 ### 5. Analysing PAML's results  
 `python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`<br />
 Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also in every species folder 'name_of_species_folder.result'.
