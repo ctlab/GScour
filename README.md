@@ -1,4 +1,4 @@
-# Genome-scale detection of positive selection
+# Genome-wide detection of positive selection
 ## Requirements
 - Biopython
 - PAML (Phylogenetic Analysis by Maximum Likelihood)
@@ -63,17 +63,17 @@ Perform additional check to exclude duplicates
 
 ### 3. Alignments
 Produce codon-based nucleotide sequence alignments for all the one-to-one ortholog clusters.
-#### 3.1 PRANK codon-based multiple alignment
-PRANK may be used separetly (recommended) or as a subprocess of GUIDANCE (therefore skip this step).
+#### 3.1 PRANK multiple alignment
+PRANK may be used separetly or as a subprocess of GUIDANCE.
 Option --tree isn't adapted to work with groups, therefore it should be used if there is only one group (i.e args in get_orthologs_table.py group==species). By default we use option -translate for prank, but you can change it for -codon: codon alignment produces more accurate alignments than alignment of translated protein sequences. Whether you use tree or set output format this change can be made in 
 https://github.com/ctlab/search_for_positive_selection/blob/5f1a4463ee29b0f4ef9f80cefc8d74c73e324868/pipeline/prank_alignment.py#L45 or lines 48, 51, 56.<br />
 `python prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
-#### 3.2. GUIDANCE assessment and masking
+#### 3.2. GUIDANCE, masking of inconsistent residues
 NOTE: this step takes a lot of computation time.
 If you use MAFFT or CLUSTAL (not PANK) as a subproces of GUIDANCE you should correct --msaProgram option
 in the line https://github.com/ctlab/search_for_positive_selection/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47  
 `python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/ --exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`
-#### 3.3 Gblocks
+#### 3.3 Gblocks, select conserved blocks of sequence
 Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/search_for_positive_selection/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
 `python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks --threads 2`
@@ -135,7 +135,8 @@ Name of .order file should be the same as name of species folder ('12' -> '12.or
 See 'fasta2paml_ordering.log' in working directory.  
 #### 4.6 One ratio model  
 See launch example above in the step 4.3.1.1.
-#### 4.7 SWAMP masking  
+#### 4.7 SWAMP masking
+Sliding window approach SWAMP to mask regions of the alignment with excessive amino acid changes.
 - Construct branchnames for every species group  
 - Launch SWAMP  
 "swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment.
