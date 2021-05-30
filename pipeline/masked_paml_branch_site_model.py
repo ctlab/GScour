@@ -20,7 +20,7 @@ PROCESSED_FILES_ALTER = list()
 processed_null_counter = None
 processed_alter_counter = None
 
-LOG_FILE = "paml_branch_site_masked.log"
+LOG_FILE = "masked_paml_branch_site_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 """There are two hypothesis:
@@ -269,6 +269,7 @@ if __name__ == '__main__':
         main(infolder, tree_folder, executable_path, threads, rework)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
+        raise e
         # if BROCKEN_FILES_NULL:
         #     logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
         # if BROCKEN_FILES_ALTER:

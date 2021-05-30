@@ -20,10 +20,12 @@ def init_counter(counter_args):
     counter = counter_args
 
 
-def parse_dir(folder_in):
-    for infile in os.listdir(folder_in):
-        if infile.split('.')[-1] == 'fna':
-            yield os.path.join(folder_in, infile)
+def parse_dir(input_dir):
+    for species_folder in os.scandir(input_dir):
+        if os.path.isdir(species_folder):
+            for infile in os.scandir(species_folder):
+                if infile.name.split('.')[-1] == 'fna':
+                    yield input_dir, species_folder.name, infile.name
 
 
 def get_final_file_path(outfile_path_without_extension, format_out):
@@ -59,14 +61,16 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
     return launch
 
 
-def launch_prank(infile, folder_out, tree, format_out):
+def launch_prank(input_tuple, folder_out, tree, format_out):
     global counter
-    outfile_path_without_extension = os.path.join(folder_out, re.search(r'\/(\d+)\.', infile).group(1))
+    input_dir, species_folder, infile = input_tuple
+    infile_path = os.path.join(input_dir, species_folder, infile)
+    outfile_path_without_extension = os.path.join(folder_out, re.search(r'(\d+)\.', infile).group(1))
     file_number = re.search(r'\/(\d+)\.', infile).group(1)
     final_file_path = get_final_file_path(outfile_path_without_extension, format_out)
     try:
         global PROCESSED_FILES
-        launch_command = get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out)
+        launch_command = get_launch_command(infile_path, final_file_path, outfile_path_without_extension, tree, format_out)
         if not os.system(launch_command):
             # logging.info("prank completed task for file {}".format(file_number))
             if file_number not in PROCESSED_FILES:
@@ -76,14 +80,14 @@ def launch_prank(infile, folder_out, tree, format_out):
                     # logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value)) # TODO: multiprocessing
     except BaseException as err:
         global EXCEPTION_NUMBER
-        logging.exception("Unexpected error with outfile number {}: {}, \ntraceback: {}".
-                          format(outfile_path_without_extension, err.args, traceback.print_tb(err.__traceback__)))
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile, err))
         EXCEPTION_NUMBER += 1
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the folder with input files (.fna) for prank', nargs='?')
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files (.fna) for prank',
+                        nargs='?')
     parser.add_argument('--o', help='Path to the folder with output files of prank', nargs='?')
     parser.add_argument('--tree', help='Path to the tree, exclude if there is no tree', nargs='?', default="")
     parser.add_argument('--f', help='Output format: ["fasta" (default, exclude option --f if left by default),'
@@ -98,8 +102,8 @@ if __name__ == '__main__':
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter,))
         in_dir = args.i
-        inputs = list(parse_dir(in_dir))
-        len_inputs = len(inputs)
+        input_tuples = list(parse_dir(in_dir))
+        len_inputs = len(input_tuples)
         out_dir = args.o
         logging.info("Path to the folder with input files for prank: {}\n"
                      "Path to the folder with output files of prank: {}".format(in_dir, out_dir))
@@ -108,14 +112,11 @@ if __name__ == '__main__':
         output_format = args.f
         if output_format not in ["fasta", "phylipi", "phylips", "paml", "nexus", ""]:
             raise SyntaxError("Not valid output format, check option --f, -h for help")
-        i = pool.starmap_async(launch_prank, zip(inputs, len_inputs * [out_dir], len_inputs * [args.tree],
+        i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir], len_inputs * [args.tree],
                                                  len_inputs * [output_format]))
         i.wait()
         i.get()
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-    #     logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
-    #     logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
-    # logging.info("Number of PROCESSED_FILES = {}".format(counter.value))
-    # logging.info("Number of prank exceptions = {}".format(EXCEPTION_NUMBER))
+        raise e
     logging.info("The work has been completed")

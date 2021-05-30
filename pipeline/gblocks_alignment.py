@@ -23,8 +23,8 @@ def parse_dir(input_dir):
     for species_folder in os.scandir(input_dir):
         if os.path.isdir(species_folder):
             for infile in os.scandir(species_folder):
-                if infile.split('.')[-1] == 'fas':
-                    yield input_dir, species_folder, infile
+                if infile.name.split('.')[-1] == 'fas':
+                    yield input_dir, species_folder.name, infile.name
 
 
 def launch_gblocks(input_tuple, auto_flag, exec_path, child_logger):
@@ -52,7 +52,7 @@ def launch_gblocks(input_tuple, auto_flag, exec_path, child_logger):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the folder with input files for Gblocks'
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for Gblocks'
                                     'FASTA formats are accepted', nargs='?')
     parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?')
     parser.add_argument('--auto', help='\'y\' or \'n\': automatic selection of basic parameters according to group size',
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     try:
         counter_file = multiprocessing.Value('i', 0)
         multiprocessing.log_to_stderr()
-        logger = multiprocessing.get_logger(__name__)
+        logger = logging.getLogger(__name__)
         logger.addHandler(logging.FileHandler(LOG_FILE))
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter_file,))
@@ -73,7 +73,8 @@ if __name__ == '__main__':
         len_inputs = len(input_tuples)
         logger.info("Path to the folder with input files for Gblocks: {}\nExecutable path: {}".
                     format(in_dir, executable_path))
-        i = pool.starmap_async(launch_gblocks, zip(input_tuples, len_inputs * [executable_path], len_inputs * [logger]))
+        i = pool.starmap_async(launch_gblocks, zip(input_tuples, len_inputs * [args.auto],
+                                                   len_inputs * [executable_path], len_inputs * [logger]))
         i.wait()
         i.get()
     except BaseException as e:

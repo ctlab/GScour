@@ -20,7 +20,7 @@ The ω ratio is a measure of natural selection acting on the protein. Simplistic
 BROKEN_FILES = list()
 PROCESSED_FILES = list()
 WRITE_CTL_FILE = 0
-LOG_FILE = "paml_one_ratio.log"
+LOG_FILE = "paml_one_ratio_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 counter = None
 

@@ -3,7 +3,6 @@ import argparse
 import multiprocessing
 import re
 import subprocess
-import traceback
 from subprocess import SubprocessError, TimeoutExpired
 from Bio.Phylo.PAML import codeml
 import os
@@ -18,7 +17,7 @@ PROCESSED_FILES_ALTER = list()
 processed_null_counter = None
 processed_alter_counter = None
 
-LOG_FILE = "paml_branch_site.log"
+LOG_FILE = "paml_branch_site_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 """There are two hypothesis:

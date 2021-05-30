@@ -101,7 +101,7 @@ def fasta2phylip(personal_folder, infile, order_string, folder_in, folder_out):
                 SeqIO.write(ordering_alignments, output_file, "phylip-sequential")
         logging.info('phylip-sequential format file {} has been recorded'.format(outfile_path))
     except BaseException as e:
-        logging.error("BaseException: {} for file {}".format(e, infile))
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile, e))
 
 
 def chunks(s, n):

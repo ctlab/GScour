@@ -9,8 +9,9 @@ def parse_input_dir(in_folder):
     for species_folder in os.scandir(in_folder):
         if os.path.isdir(species_folder):
             for item in os.scandir(species_folder):
-                yield species_folder.name, item.name
-                break
+                if item.name.split('.')[-1] == 'fas-gb':
+                    yield species_folder.name, item.name
+                    break
 
 
 def main(in_folder, out_folder):

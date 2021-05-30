@@ -14,7 +14,7 @@ BROKEN_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
 BROKEN_FILES = list()
-LOG_FILE = "fasta2paml_guess_order.log"
+LOG_FILE = "fasta2paml_get_order.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
 This strange script trying to guess right order of sequences for paml input file
@@ -80,7 +80,7 @@ def get_infile_and_order(folder_in, folder_order, logger):
                     yield species_folder.name, infile, order_string.split(',')
 
 
-def get_phylip_file(in_folder, folder_name, logger):
+def get_phylip_file(in_folder, folder_name):
     """ parse directory with .phylip files"""
     for species_folder in os.scandir(in_folder):
         if os.path.isdir(species_folder) and species_folder.name == folder_name:
@@ -201,12 +201,16 @@ def get_tree_path(trees_folder, species_folder_name):
             return tree.name
 
 
-def get_input_items(folder_in, trees_folder, folder_name):
+def get_input_items(folder_in, trees_folder, folder_name, logger):
     """ parse root folder with files for paml
-    parse tree_folder to get appropriate tree """
+    parse tree_folder to get appropriate tree
+    :param logger: """
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder) and species_folder.name == folder_name:
             tree_name = get_tree_path(trees_folder, species_folder.name)
+            if not tree_name:
+                logger.warning("There is no tree file for group {}".format(species_folder.name))
+                return
             tree_path = os.path.join(trees_folder, tree_name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
@@ -258,31 +262,38 @@ def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_pa
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     try:
         file_number = (re.search(r"(\d+).phy", infile)).group(1)
-    except AttributeError as e:
-        logger.info("Please check file .phy {}: cause an error {}".format(item_folder_path, e.args))
+    except AttributeError as err:
+        logger.info("Please check file .phy {}: cause an error {}".format(item_folder_path, err.args))
         return
     os.chdir(item_folder_path)
     logger.info("Codeml: working with {}".format(file_number))
     infile_path = os.path.join(item_folder_path, infile)
     set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
-    p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        return_code = p.wait(timeout=time_out)  # Timeout in seconds
-        stdout, stderr = p.communicate()
-        logger.info("Return code={} for file number {}, stderr: {}".format(return_code, file_number,
-                                                                                          stderr))
-    # infile_path_copy = os.path.join(item_folder_path, "{}_{}.{}".format(infile.split('.')[0], 'copy',
-    #                                                                     infile.split('.')[1]))
-    # shutil.copyfile(infile_path, infile_path_copy)
-        if return_code != 0:
-            return False
-        else:
-            return True
+        p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        #return_code = p.wait(timeout=time_out)  # Timeout in seconds
+        stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
+        # p.communicate(input='\n')
+        logger.info("OK paml for file number {}, stderr: {}".format(file_number, stderr))
+        # infile_path_copy = os.path.join(item_folder_path, "{}_{}.{}".format(infile.split('.')[0], 'copy',
+        #                                                                     infile.split('.')[1]))
+        # shutil.copyfile(infile_path, infile_path_copy)
+        # if return_code:
+        #     return False
+        # return True  # if return_code == 0
+    except subprocess.SubprocessError as err:
+        logger.info("SubprocessError: {}, \nerr.args, \nstderr: {}".format(err, err.args, stderr))
+    except subprocess.CalledProcessError as err:
+        logger.info("CalledProcessError: {}, \nerr.stderr: {}\nerr.args\n: {}, stderr {}".format(err, err.stderr,
+                                                                                                 err.args, stderr))
+            # exit(1)
     except subprocess.TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
-        logger.warning("Killed {}, {}, try to increase timeout or launch codeml manually and check".format(file_id,
-                                                                                                        err.args))
+        logger.warning("Killed {}, {}, try to increase timeout or launch codeml manually and check,"
+                       ", stderr {}".format(file_id, err.args, stderr))
+    else:
+        return True
 
 
 def wright_order_file(folder_in, species_folder, order_list, logger):
@@ -301,14 +312,17 @@ def main(folder_in, folder_order, folder_trees, exec_path, time_out, folder_out,
         guess = False
         while not guess:
             fasta2phylip(species_folder, infile_fasta, order_list, folder_in, folder_out, logger)
-            phylip_file = get_phylip_file(folder_out, species_folder, logger)
+            phylip_file = get_phylip_file(folder_out, species_folder)
             phylip2paml(folder_out, species_folder, phylip_file, species, group, logger)
             seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)
             os.remove(seq_philip_file)
             logger.info("remove {}".format(seq_philip_file))
-            item_folder, infile_phy, tree_path = get_input_items(folder_out, folder_trees, species_folder)
+            if not get_input_items(folder_out, folder_trees, species_folder, logger):
+                break
+            item_folder, infile_phy, tree_path = get_input_items(folder_out, folder_trees, species_folder, logger)
             logger.info("run codeml")
-            if not run_codeml(folder_out, species_folder, item_folder, infile_phy, tree_path, exec_path, time_out, logger):
+            if not run_codeml(folder_out, species_folder, item_folder, infile_phy, tree_path, exec_path, time_out,
+                              logger):
                 logger.info('FAIL!Wrong order for species folder {}={}'.format(species_folder, order_list))
                 try:
                     list_of_orders.pop(0)

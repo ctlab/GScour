@@ -42,12 +42,12 @@ def parse_fasta_dir(in_dir):
             dict_files[file_number] = list()
         dict_files[file_number].append(infile.name)
     for k, v in dict_files.items():
-        required_file_1 = "{}.{}.{}.{}".format(k, 'best', 'nuc', 'fas-gb')
+        # required_file_1 = "{}.{}.{}.{}".format(k, 'best', 'nuc', 'fas-gb')
         required_file_2 = "{}.{}.{}.{}".format(k, 'best', 'nuc', 'fas')
-        if required_file_1 in v:
-            logging.info("yield {}".format(required_file_1))
-            yield required_file_1
-        elif required_file_2 in v:
+        # if required_file_1 in v:
+        #     logging.info("yield {}".format(required_file_1))
+        #     yield required_file_1
+        if required_file_2 in v:
             logging.info("yield {}".format(required_file_2))
             yield required_file_2
 
