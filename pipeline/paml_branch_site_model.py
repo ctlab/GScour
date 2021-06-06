@@ -141,7 +141,7 @@ def set_null_hypothesis(infile, phylo_tree, personal_dir):
     return cml, file_out_path
 
 
-def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
+def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
     folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     infile_path = os.path.join(item_folder_path, infile)
@@ -179,12 +179,11 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                 if "Time used" in o_f.readlines()[-1]:
                     logging.info("The work has already been done for file {}...continue...".format(file_out_path))
                     return
-
-    p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        return_code = p.wait(timeout=500)  # Timeout in seconds
-        stdout, stderr = p.communicate()
-        logging.info("Return code={} for file number {}, stderr: {}".format(return_code, file_number, stderr))
+        p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        # return_code = p.wait(timeout=time_out)  # Timeout in seconds
+        stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
+        logging.info("OK paml for file number {}, stderr: {}".format(file_number, stderr))
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
                 if "Time used" in o_f.readlines()[-1]:
@@ -201,20 +200,23 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                     if file_number not in broken_files:
                         broken_files.append(file_number)
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
-    except TimeoutExpired as err:
+
+    except subprocess.SubprocessError as err:
+        logging.info("SubprocessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
+    except subprocess.CalledProcessError as err:
+        logging.info("CalledProcessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
+    except subprocess.TimeoutExpired as err:
         p.kill()
         with excep_counter.get_lock():
             excep_counter.value += 1
         file_id = "{}/{}".format(species_folder, item_folder)
-        logging.warning("Killed {} hypothesis_type {}, {}, {},\nException_counter={}".format(file_id, hypothesis_type,
-                                                                                          err.args, err,
-                                                                                          excep_counter.value))
+        logging.warning("Killed {} hypothesis_type {}, err.args: {}\nException_counter={}".
+                        format(file_id, hypothesis_type, err.args, excep_counter.value))
         if file_id not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_id)
-            # logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
 
 
-def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
+def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag, time_out):
     inputs = list(get_input_items(folder_in, trees_folder))
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
@@ -233,11 +235,11 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
                                 initargs=(null_processed_counter, alter_processed_counter, null_exception_counter,
                                           alter_exception_counter,))
     i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
-                                         len_inputs * ["null"], len_inputs * [overwrite_flag]))
+                                         len_inputs * ["null"], len_inputs * [overwrite_flag], len_inputs * [time_out]))
     i.wait()
     i.get()
     i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
-                                         len_inputs * ["alter"], len_inputs * [overwrite_flag]))
+                                         len_inputs * ["alter"], len_inputs * [overwrite_flag], len_inputs * [time_out]))
     i.wait()
     i.get()
     logging.info("Number of files should be analyzed: {}".format(len_inputs))
@@ -246,6 +248,7 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
+    parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=500', nargs='?', default='500')
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?')
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
@@ -256,15 +259,16 @@ if __name__ == '__main__':
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
+    timeout = int(args.timeout)
     if args.rework == 'y':
         rework = True
     else:
         rework = False
     logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
-                 "Threads to use = {}, rework = {}".
-                 format(in_folder, tree_folder, executable_path, threads, rework))
+                 "Threads to use = {}, rework = {}, timeout={}".
+                 format(in_folder, tree_folder, executable_path, threads, rework, timeout))
     try:
-        main(in_folder, tree_folder, executable_path, threads, rework)
+        main(in_folder, tree_folder, executable_path, threads, rework, timeout)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
         # logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))

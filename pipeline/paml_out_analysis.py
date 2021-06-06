@@ -228,14 +228,15 @@ if __name__ == '__main__':
     print("Passed args: input directory {}, log folder {}, required species {}".format(in_dir, log_folder,
                                                                                        required_species))
     try:
-        writer = pd.ExcelWriter(os.path.join(in_dir, 'common_sheet.xlsx'), engine='xlsxwriter')
+        common_sheet_path = os.path.join(in_dir, 'common_sheet.xlsx')
+        writer = pd.ExcelWriter(common_sheet_path, engine='xlsxwriter')
         main(in_dir, log_folder, required_species)
         values = list(common_pos_gene_dict.values())
         # print("value[0],\n", values[0], "value[1],\n", values[1],
         #       "\nentire keys\n", common_pos_gene_dict.keys())
+        print("Results are recorded in {}".format(common_sheet_path))
         summary_sheet = {'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
-                         [i[0] for i in values], 'p-value':
-                         [i[1] for i in values]}
+                         [i[0] for i in values], 'p-value': [i[1] for i in values]}
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value'])
         df.to_excel(writer, sheet_name='summary')
         writer.save()

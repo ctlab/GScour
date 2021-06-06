@@ -282,16 +282,15 @@ def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_pa
         #     return False
         # return True  # if return_code == 0
     except subprocess.SubprocessError as err:
-        logger.info("SubprocessError: {}, \nerr.args, \nstderr: {}".format(err, err.args, stderr))
+        logger.info("SubprocessError: {}, \nerr.args".format(err, err.args))
     except subprocess.CalledProcessError as err:
-        logger.info("CalledProcessError: {}, \nerr.stderr: {}\nerr.args\n: {}, stderr {}".format(err, err.stderr,
-                                                                                                 err.args, stderr))
+        logger.info("CalledProcessError: {}, \nerr.stderr: {}\nerr.args\n: {}".format(err, err.stderr, err.args))
             # exit(1)
     except subprocess.TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
         logger.warning("Killed {}, {}, try to increase timeout or launch codeml manually and check,"
-                       ", stderr {}".format(file_id, err.args, stderr))
+                       .format(file_id, err.args))
     else:
         return True
 
