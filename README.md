@@ -137,10 +137,13 @@ See 'fasta2paml_ordering.log' in working directory.
 See launch example above in the step 4.3.1.1.
 #### 4.7 SWAMP masking
 Sliding window approach SWAMP to mask regions of the alignment with excessive amino acid changes.
-- Construct branchnames for every species group;  
+- Construct branchcodes for every species group;  
 - Launch SWAMP;  
-"swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment.
-See stdout and 'swamp_log.log'.  
+"swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment. Use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.
+`python swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/ -b /abspath/tothe/branchcodes/ -t 2 -w 20`
+See stdout and 'swamp_log.log'. 
+Use global variable 'target_dict' in swamp_script.py if need to run on individual files:
+`target_dict[species_folder] = [item_folder1, item_folder2...]`
 #### 4.8 Perform maximum likelihood (ML) dN/dS analysis to infer positive selection of genes and codons, using codeml from the PAML software package.
 __Branch-site model__  
 There are two hypothesis:  
