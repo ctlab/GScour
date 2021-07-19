@@ -52,15 +52,18 @@ def get_target_input_items(folder_in, branch_name_folder):
                                     yield os.path.join(folder_in, species_folder.name, item.name), branch_name_path
 
 
-def get_input_items(folder_in, branch_name_folder):
+def get_input_items(folder_in, branchcode_folder):
     """ parse root folder with files for paml
     parse branch_names_folder to get appropriate branches code file
     return item folder and path to the file with branch codes"""
     for species_folder in scandir.scandir(folder_in):
         species_folder_path = os.path.join(folder_in, species_folder.name)
         if os.path.isdir(species_folder_path):
-            branch_name = get_branch_names_file_path(branch_name_folder, species_folder.name)
-            branch_name_path = os.path.join(branch_name_folder, branch_name)
+            branch_code_name = get_branch_names_file_path(branchcode_folder, species_folder.name)
+            if not branch_code_name:
+                logging.warning("No appropriate branchcode file for group {}".format(species_folder.name))
+                continue
+            branch_name_path = os.path.join(branchcode_folder, branch_code_name)
             for item in scandir.scandir(species_folder_path):
                 item_folder_path = os.path.join(folder_in, species_folder.name, item.name)
                 if os.path.isdir(item_folder_path):

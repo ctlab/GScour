@@ -204,6 +204,9 @@ def get_tree_path(trees_folder, species_folder_name):
 def get_input_items(folder_in, trees_folder, folder_name, logger):
     """ parse root folder with files for paml
     parse tree_folder to get appropriate tree
+    :param folder_name:
+    :param trees_folder:
+    :param folder_in: 
     :param logger: """
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder) and species_folder.name == folder_name:
@@ -271,7 +274,7 @@ def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_pa
     set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
     try:
         p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-        #return_code = p.wait(timeout=time_out)  # Timeout in seconds
+        # return_code = p.wait(timeout=time_out)  # Timeout in seconds
         stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
         # p.communicate(input='\n')
         logger.info("OK paml for file number {}, stderr: {}".format(file_number, stderr))

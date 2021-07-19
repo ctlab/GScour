@@ -18,20 +18,23 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 target_dict = {}
 
 
-def get_branch_names_file_path(branch_names_folder, species_folder_name):
+def get_branchcode_file_path(branch_names_folder, species_folder_name):
     for branch_name_file in os.scandir(branch_names_folder):
         if branch_name_file.name.split('.')[0] == species_folder_name:
             return branch_name_file.name
 
 
-def get_input_items(folder_in, branch_name_folder):
+def get_input_items(folder_in, branchcode_folder):
     """ parse root folder with files for paml
     parse branch_names_folder to get appropriate branches code file
     return item folder and path to the branch_code file """
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder):
-            branch_name = get_branch_names_file_path(branch_name_folder, species_folder.name)
-            branch_name_path = os.path.join(branch_name_folder, branch_name)
+            branch_code_name = get_branchcode_file_path(branchcode_folder, species_folder.name)
+            if not branch_code_name:
+                logging.warning("No appropriate branchcode file for group {}".format(species_folder.name))
+                continue
+            branch_name_path = os.path.join(branchcode_folder, branch_code_name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
                     for infile in os.listdir(item):
@@ -39,25 +42,25 @@ def get_input_items(folder_in, branch_name_folder):
                             yield os.path.join(folder_in, species_folder.name, item.name), branch_name_path
 
 
-def get_target_input_items(folder_in, branch_name_folder):
+def get_target_input_items(folder_in, branchcode_folder):
     """ parse root folder with files for paml
-    parse branch_names_folder to get appropriate branch_code file
-    return item folder and path to the branch_code file
+    parse branchcode folder to get appropriate branchcode file
+    return item folder and path to the branchcode file
     return item folder if it's in the target_dict """
     global target_dict
     for species_folder in os.scandir(folder_in):
         species_folder_path = os.path.join(folder_in, species_folder.name)
         if os.path.isdir(species_folder_path):
             if target_dict.get(species_folder.name):
-                branch_name = get_branch_names_file_path(branch_name_folder, species_folder.name)
-                branch_name_path = os.path.join(branch_name_folder, branch_name)
+                branchcode_path = get_branchcode_file_path(branchcode_folder, species_folder.name)
+                branchcode_full_path = os.path.join(branchcode_folder, branchcode_path)
                 for item in os.scandir(species_folder_path):
                     item_folder_path = os.path.join(folder_in, species_folder.name, item.name)
                     if os.path.isdir(item_folder_path):
                         if item.name in target_dict[species_folder.name]:
                             for in_file in os.scandir(item_folder_path):
                                 if in_file.name.split('.')[-1] == 'phy':
-                                    yield os.path.join(folder_in, species_folder.name, item.name), branch_name_path
+                                    yield os.path.join(folder_in, species_folder.name, item.name), branchcode_full_path
 
 
 def run_swamp(items_folder, executable_path, branch_codes, threshold, windows_size):
