@@ -200,3 +200,5 @@ https://github.com/ctlab/GScour/blob/a2145a12a754e94b6306dce69bfcd7b173d8a898/pi
 * Take into account the information from (Yang, 2007):
 "The branch-site test requires a priori specification of the foreground branches. When multiple branches on the tree are tested for positive selection using the same data set, a correction for multiple testing is required (Anisimova and Yang 2007). A simple and slightly conservative procedure is Bonferroni's correction, which means that the individual test for any branch is considered significant at the level α only if the p-value is <α/m, where m is the number of branches being tested using the same data."
 * Use "adjust_pvalue.py" script, see --help for args and adjust the denominator if necessarily in lines:
+https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/usages/adjust_pvalue.py#L24
+https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/usages/adjust_pvalue.py#L26
