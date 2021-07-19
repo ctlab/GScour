@@ -17,13 +17,12 @@ BROKEN_FILES = list()
 LOG_FILE = "fasta2paml_get_order.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
-This strange script trying to guess right order of sequences for paml input file
+This script trying to get right order of sequences for paml input file
 ------------------------------------------------
 The script consists of two stage:
 1. Converting fasta format nucleotide codon sequences (from input directory) to philip-sequential format (to output 
-directory)
-in accordance with specific order (which is searched in the file in_dir/species_folder/species_folder_name.order) 
-required for the paml
+directory) in accordance with specific order 
+(which is searched in the file in_dir/species_folder/species_folder_name.order) required for the paml
 2. Converting philip-sequential format to specific philip format required by PAML:
 In resulting out_dir:  directory "group_id" with folders "file_name" with file_name.phy file for PAML.
 

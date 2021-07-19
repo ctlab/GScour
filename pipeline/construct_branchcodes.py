@@ -61,7 +61,7 @@ def get_branchcodes(tree_string, codes_string):
     return "\n".join(branchcodes_list)
 
 
-def find(name, path):
+def find_file(name, path):
     for root, dirs, files in os.walk(path):
         if name in files:
             return os.path.join(root, name)
@@ -73,7 +73,7 @@ def main(input_folder, branchcodes_folder):
             logger.info("species folder {}".format(species_folder))
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
-                    rst_file_path = find('rst', os.path.join(input_folder, species_folder.name, item.name))
+                    rst_file_path = find_file('rst', os.path.join(input_folder, species_folder.name, item.name))
                     if rst_file_path:
                         logger.info("rst_file_path found {}".format(rst_file_path))
                         phylogenetic_tree, codes_for_branches = get_tree_and_codes(rst_file_path)

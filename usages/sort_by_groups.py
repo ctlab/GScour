@@ -3,11 +3,13 @@
 import argparse
 import logging
 import os
-import re
 import traceback
 from Bio import SeqIO
 
 """
+Deprecated. get_ortho_nucleotides.py already sort sequences by groups (folders)
+according to its contents
+
 This script sorts fasta files from one folder to child folders with unique names 
 corresponding to set of species in fasta file. For example:
 $ cd parent_dir

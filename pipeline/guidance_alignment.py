@@ -5,7 +5,7 @@ import multiprocessing
 import os
 import logging
 import re
-import traceback
+import shutil
 
 PROCESSED_FILES = list()
 EXCEPTION_NUMBER = 0
@@ -20,20 +20,33 @@ def init_counter(args_counter):
     counter = args_counter
 
 
-def parse_dir(folder_in):
-    for infile in os.listdir(folder_in):
-        if infile.split('.')[-1] == 'fna':
-            yield os.path.join(folder_in, infile)
+def parse_dir(input_dir):
+    for species_folder in os.scandir(input_dir):
+        if os.path.isdir(species_folder):
+            for infile in os.scandir(species_folder):
+                if infile.name.split('.')[-1] == 'fna':
+                    yield input_dir, species_folder.name, infile.name
 
 
-def launch_guidance(infile, folder_out, number_of_threads, executable_path):
+def find_file(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
+
+
+def launch_guidance(input_tuple, folder_out, number_of_threads, executable_path):
     global counter
     global PROCESSED_FILES
     global EXCEPTION_NUMBER
-    file_number = re.search(r'\/(\d+)\.', infile).group(1)
-    personal_dir_out = os.path.join(folder_out, file_number)
-    if not os.path.isdir(personal_dir_out):
-        os.makedirs(personal_dir_out)
+    input_dir, species_folder_name, infile_name = input_tuple
+    infile_path = os.path.join(input_dir, species_folder_name, infile_name)
+    file_number = re.search(r'(\d+)\.', infile_name).group(1)
+    personal_dir_full_out = os.path.join(folder_out, species_folder_name, file_number)
+    if not os.path.isdir(personal_dir_full_out):
+        os.makedirs(personal_dir_full_out)
+    if not os.path.isdir(os.path.join(folder_out, "cleansed", species_folder_name)):
+        os.makedirs(os.path.join(folder_out, "cleansed", species_folder_name))
+    cleansed_file_path = os.path.join(folder_out, "cleansed", species_folder_name, "{}.{}".format(file_number, 'fna'))
     """
     Required parameters:
     --seqFile: Input sequence file in FASTA format
@@ -44,10 +57,17 @@ def launch_guidance(infile, folder_out, number_of_threads, executable_path):
     --bootstraps: Number of bootstrap iterations (only for GUIDANCE). Default=100
     --prank: path to prank executable. Default=prank
     """
-    launch = 'perl {} --seqFile {} --msaProgram PRANK ' \
+    msaProgram = 'PRANK'
+    launch = 'perl {} --seqFile {} --msaProgram {} ' \
              '--seqType nuc ' \
-             '--proc_num {} --outDir {} --bootstraps 20'.format(executable_path, infile, number_of_threads,
-                                                                personal_dir_out)
+             '--proc_num {} --outDir {} --bootstraps 30 --outOrder as_input'.format(executable_path, infile_path,
+                                                                                    msaProgram,
+                                                                                    number_of_threads,
+                                                                                    personal_dir_full_out)
+    print("launch", launch)
+    """
+    final result will be recorded in file MSA.{msaProgram_name}.Without_low_SP_Col.With_Names
+    """
 
     os.system(launch)
     logging.info("Guidance completed task for file {}".format(file_number))
@@ -57,11 +77,17 @@ def launch_guidance(infile, folder_out, number_of_threads, executable_path):
             counter.value += 1
             logging.info("Counter (PROCESSED_FILES) = {}\nList of PROCESSED_FILES: {}".
                          format(counter.value, PROCESSED_FILES))
+    resulting_file_name = 'MSA.{}.Without_low_SP_Col.With_Names'.format(msaProgram)
+    resulting_file_path = find_file(resulting_file_name, personal_dir_full_out)
+    if resulting_file_path:
+        shutil.copy(resulting_file_path, cleansed_file_path)
+        logging.info("File {} recorded".format(cleansed_file_path))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the folder with input files (.fna) for guidance', nargs='?')
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files (.fna) for guidance',
+                        nargs='?')
     parser.add_argument('--o', help='Path to the folder with output files of guidance', nargs='?')
     parser.add_argument('--exec', help='Path to the guidance executable "guidance.pl"', nargs='?')
     parser.add_argument('--threads', help='Number of threads', nargs='?')
@@ -77,9 +103,9 @@ if __name__ == '__main__':
         logger = multiprocessing.get_logger()
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter,))
-        inputs = list(parse_dir(in_dir))
-        len_inputs = len(inputs)
-        i = pool.starmap_async(launch_guidance, zip(inputs, len_inputs * [out_dir], len_inputs * [threads],
+        input_tuples = list(parse_dir(in_dir))
+        len_inputs = len(input_tuples)
+        i = pool.starmap_async(launch_guidance, zip(input_tuples, len_inputs * [out_dir], len_inputs * [threads],
                                                     len_inputs * [args.exec]))
         i.wait()
         i.get()
