@@ -1,9 +1,9 @@
 # Genome-wide detection of positive selection
 ## Requirements
 - Biopython
-- PAML (Phylogenetic Analysis by Maximum Likelihood)
 - Numpy
 - Pandas
+### Finding orthologs
 - Proteinortho (https://gitlab.com/paulklemm_PHD/proteinortho)
 ### Aligners and alignment analysis tools
 - PRANK
@@ -14,14 +14,17 @@ export PATH="$PATH:/path/to/dir/prank/bin/"
 GUIDANCE allows using alignment (MAFFT, PRANK, CLUSTALW) as a subprocess.
 - Gblocks (http://gensoft.pasteur.fr/docs/gblocks/0.91b/)
 - SWAMP (https://github.com/peterwharrison/SWAMP)
+### Phylogenetic Analysis
+- PAML (Phylogenetic Analysis by Maximum Likelihood)
 ## Steps
 See --help for help with arguments for any python script, logs are named as scripts with .log extension or just standard output. 
+Output directory (with --o or --out option) will be created automatically and hold all output files [please provid full (and not relative) path]<br />
 Errors can be found by keyword "WARNING" in logs.<br />
 If there are any questions, errors, suggestions feel free to contact me via email
 lnfyodorova@gmail.com.
 ### 1. One-to-one orthologs
 Obtain one-to-one ortholog clusters for whole-genome sequences.
-#### 1.1 Finding orthologous proteins
+#### 1.1 Finding orthologs proteins
 - It is necessary for futher analysis to name the species in numbers (1,2,3,...) and to name all associated files in numbers  
 (1.faa, 2.faa..., 1.gbff, 2.gbff...)
 - Launch proteinortho. For example, launch_proteinortho.sh or launch_proteinortho_synteny.sh.
@@ -70,11 +73,13 @@ https://github.com/ctlab/GScour/blob/5f1a4463ee29b0f4ef9f80cefc8d74c73e324868/pi
 or lines 48, 51, 56.<br />
 `python prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
 #### 3.2. GUIDANCE, masking of inconsistent residues
-NOTE: this step takes a lot of computation time.
+NOTE: this step can take a lot of computation time.
 If you use MAFFT or CLUSTAL (not PANK) as a subproces of GUIDANCE you should correct --msaProgram option
 in the line 
 https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47
 `python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/ --exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`
+The resulting files stored in cleansed folder like `/abspath/tothe/guidance_out/cleansed/`.
+
 #### 3.3 Gblocks, select conserved blocks of sequence
 Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/GScour/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
@@ -89,8 +94,7 @@ Step can be skipped to 4.3.1 if the order is known.
 ##### 4.2.1 Replace files for test order
 `python usages/replace_for_test_order.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/test_order/` 
 ##### 4.2.2 Set right order
---i /abspath/tothe/test_order/ for `fasta2paml_get_order.py`, see --help for args, folder with .order files can be empty. 
-
+`fasta2paml_get_order.py`, see --help for args. Folder with .order files can be empty, files with right order will be recorded to that folder. 
 #### 4.3 Preprocessing, convert fasta to paml format  
 ##### 4.3.1 fasta2paml.py
 Skip if right order was set in the step 4.2.
@@ -138,8 +142,9 @@ See launch example above in the step 4.3.1.1.
 #### 4.7 SWAMP masking
 Sliding window approach SWAMP to mask regions of the alignment with excessive amino acid changes.
 - Construct branchcodes for every species group;  
-- Launch SWAMP;  
-"swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment. Use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.
+- Launch SWAMP:
+  - "swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment;
+  -  use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.
 `python swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/ -b /abspath/tothe/branchcodes/ -t 2 -w 20`
 See stdout and 'swamp_log.log'. 
 Use global variable 'target_dict' in swamp_script.py if need to run on individual files:
@@ -179,8 +184,9 @@ For files without masking:
 --tree /abspath/folder_trees/ --threads 10` 
 
 ### 5. Analysing PAML's results  
+#### 5.1 Tabulation
 `python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`<br />
-Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also in every species folder 'name_of_species_folder.result'.
+Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also will be written in every species folder to file named 'name_of_species_folder.result' and summary to stdout.
 * common_sheet.xlsx, sheet for every species group:<br />
 dN/dS (w) for site classes (K=4) (see [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf))<br />
 site class 0 1 2a 2b <br />
@@ -189,4 +195,8 @@ background w (omega values on the background, for each site class) <br />
 foreground w (omega values on the foreground, for each site class) <br />
 P-value, likelihood from positive vs lokelihood from neutral model. <br />
 * summary sheet with genes under positive selection (p-value < 0.05). P-value can be adjusted here: <br />
-https://github.com/ctlab/search_for_positive_selection/blob/a2145a12a754e94b6306dce69bfcd7b173d8a898/pipeline/paml_out_analysis.py#L131  
+https://github.com/ctlab/GScour/blob/a2145a12a754e94b6306dce69bfcd7b173d8a898/pipeline/paml_out_analysis.py#L131  
+#### 5.2 Bonferroni and FDR correction
+* Take into account the information from (Yang, 2007):
+"The branch-site test requires a priori specification of the foreground branches. When multiple branches on the tree are tested for positive selection using the same data set, a correction for multiple testing is required (Anisimova and Yang 2007). A simple and slightly conservative procedure is Bonferroni's correction, which means that the individual test for any branch is considered significant at the level α only if the p-value is <α/m, where m is the number of branches being tested using the same data."
+* Use "adjust_pvalue.py" script, see --help for args and adjust the denominator if necessarily in lines:
