@@ -49,9 +49,9 @@ def main(folder_in):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with .fas files to sort', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with .fas files to sort', nargs='?')
     args = parser.parse_args()
     try:
-        main(args.infolder)
+        main(args.i)
     except BaseException as e:
         logging.info("Unexpected error: {}".format(e))

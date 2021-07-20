@@ -106,6 +106,7 @@ if __name__ == '__main__':
     except BaseException as e:
         logger.warning("Unexpected error: {}".format(e))
         raise e
+    logger.info("The work has been completed")
 
 
 

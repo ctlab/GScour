@@ -128,18 +128,16 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
                     if file_number not in PROCESSED_FILES:
                         PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
                         logging.info("OK file {}".format(file_number))
-                        # logging.info("PROCESSED_FILES list of length {}: {}".format(len(PROCESSED_FILES),
-                        # PROCESSED_FILES))
                 else:
                     logging.info("The work has not been finished for file number {}".format(file_number))
                     if file_number not in BROKEN_FILES:
                         BROKEN_FILES.append(file_number)
-                        logging.info("BAD file {}".format(file_number))
+                        logging.warning("BAD file {}".format(file_number))
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except subprocess.TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
-        logging.info("Killed {}, {}\nException_counter={}".format(file_id, err.args, counter.value))
+        logging.warning("Killed {}, {}\nException_counter={}".format(file_id, err.args, counter.value))
         if file_id not in BROKEN_FILES:  # TODO: list - to shared variable
             BROKEN_FILES.append(file_id)
             # logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
@@ -148,6 +146,7 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
 def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):
     inputs = list(get_input_items(folder_in, trees_folder))  # list of tuples
     len_inputs = len(inputs)
+    logging.info("Number of files should be analyzed = {}".format(len_inputs))
     multiprocessing.log_to_stderr()
     logger = multiprocessing.get_logger()
     logger.setLevel(logging.INFO)
@@ -157,7 +156,6 @@ def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):
     i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [exec_path], len_inputs * [overwrite_flag]))
     i.wait()
     i.get()
-    logging.info("Number of files should be analyzed = {}".format(len_inputs))
 
 
 if __name__ == '__main__':
@@ -184,8 +182,4 @@ if __name__ == '__main__':
         main(in_folder, executable_path, tree_folder, threads, rework)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-
-    # logging.info("Number of BROCKEN_FILES {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
-    # logging.info("Counter of processed files {}".format(counter.value))
-    # logging.info("WRITE_CTL_FILE {}".format(WRITE_CTL_FILE))
     logging.info("The work has been completed")

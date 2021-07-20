@@ -32,8 +32,8 @@ def main(sheet_path, out_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sheet', help='Path to the common_sheet.xlsx (with removed last sheet \'summary\')'
-                                        ' - result of \'paml_out_analysis.py\'', nargs='?', default="codeml")
-    parser.add_argument('--out', help='Path to the output.xlsx file', nargs='?', default="codeml")
+                                        ' - result of \'paml_out_analysis.py\'', nargs='?')
+    parser.add_argument('--out', help='Path to the output.xlsx file', nargs='?')
     args = parser.parse_args()
     try:
         main(args.sheet, args.out)
