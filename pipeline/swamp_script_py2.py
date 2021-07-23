@@ -80,7 +80,7 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, window_siz
     try:
         if os.system(launch_swamp): # TODO: catching full swamp stderr
             raise ValueError
-    except ValueError as err:
+    except ValueError:
         file_number = items_folder.split('/')[-1]
         logging.exception("File {} \nTraceback: {}".format(items_folder, traceback.print_exception(*sys.exc_info())))
 
@@ -90,12 +90,12 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, window_siz
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-e', help='Path to the SWAMP executable', nargs='?')
+    parser.add_argument('-e', help='Path to the SWAMP executable', nargs='?', required=True)
     parser.add_argument('-i', help='Provide the full path to an INFOLDER that contain multiple subfolders',
-                        nargs='?')
-    parser.add_argument('-b', help='Path to the folder with BRANCHNAMESFILEs', nargs='?')
-    parser.add_argument('-t', help='THRESHOLD', nargs='?', default="")
-    parser.add_argument('-w', help='WINDOWSIZE', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('-b', help='Path to the folder with BRANCHNAMESFILEs', nargs='?', required=True)
+    parser.add_argument('-t', help='THRESHOLD', nargs='?', default="", required=True)
+    parser.add_argument('-w', help='WINDOWSIZE', nargs='?', required=True)
     args = parser.parse_args()
     try:
         if target_dict:

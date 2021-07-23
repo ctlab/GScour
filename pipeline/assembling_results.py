@@ -25,7 +25,7 @@ def main(input_folder):
                                                engine='openpyxl')
         summary_sheets.append(summary_sheet)
     common_summary = pd.concat(summary_sheets)
-    common_summary.drop_duplicates(subset='Gene name', inplace=True, ignore_index=True)
+    common_summary.drop_duplicates(subset='Gene name', inplace=True, ignore_index=True)  # TODO: filtering by groups
     writer = pd.ExcelWriter(os.path.join(input_folder, '{}.xlsx'.format("assembled_results")), engine='openpyxl')
     common_summary.to_excel(writer, sheet_name='assembled')
     writer.save()
@@ -34,7 +34,7 @@ def main(input_folder):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', help='Path to the folder with final common sheets with sheet \'summary\'',
-                        nargs='?')
+                        nargs='?', required=True)
     args = parser.parse_args()
     logger.info("Passed args: input directory with data {}".format(args.data))
     try:

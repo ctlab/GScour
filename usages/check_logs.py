@@ -46,9 +46,11 @@ def main(excel_file_path, log_folder_path, target_species, logger):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='The full path to the .xlsx file with one column of gene names to check', nargs='?')
-    parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
-    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?')
+    parser.add_argument('--i', help='The full path to the .xlsx file with one column of gene names to check',
+                        nargs='?', required=True)
+    parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', required=True)
+    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?',
+                        required=True)
     args = parser.parse_args()
     in_file = args.i
     log_folder = args.log

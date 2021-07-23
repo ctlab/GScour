@@ -518,8 +518,8 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ortho', help='Path to the _formed_orthologs_table.tsv', nargs='?')
-    parser.add_argument('--gbff', help='Path to the folder with annotation .gbff files from '
+    parser.add_argument('--ortho', help='Path to the _formed_orthologs_table.tsv', nargs='?', required=True)
+    parser.add_argument('--gbff', help='Path to the folder with annotation .gbff files from '  # TODO: test necessity
                                        'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     parser.add_argument('--cds', help='Path to the folder with refseq annotated files !.fna!'
                                       '_cds_from_genomic.fna or other source fasta format of'
@@ -529,9 +529,10 @@ if __name__ == '__main__':
     #                                  'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     parser.add_argument('--genome', help='Path to the folder with reference genome'
                                          'in FASTA format', nargs='?')
-    parser.add_argument('--species', help='Number of species', nargs='?')
-    parser.add_argument('--group', help='Minimal size of species group', nargs='?')
-    parser.add_argument('--out', help='Path to the folder for result write out', nargs='?')
+    parser.add_argument('--species', help='Number of species', nargs='?', required=True)
+    parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
+    parser.add_argument('--out', help='Path to the folder for result write out, if it does not exist,'
+                                      ' it will be created automatically', nargs='?', required=True)
     args = parser.parse_args()
     group = int(args.group)
 

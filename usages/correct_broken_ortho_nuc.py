@@ -438,15 +438,15 @@ def main(orthodata_filepath, annotation_gbff, annotation_csv, initfna_filepath, 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ortho', help='Path to the single_copy_orthologs.tsv', nargs='?')
+    parser.add_argument('--ortho', help='Path to the single_copy_orthologs.tsv', nargs='?', required=True)
     parser.add_argument('--gbff', help='Path to the folder with annotation .gbff files from '
                                        'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
                                       'www.ncbi.nlm.nih.gov/genome/', nargs='?')
     parser.add_argument('--genome', help='Path to the folder with reference genome'
                                          'in FASTA format', nargs='?')
-    parser.add_argument('--species', help='Number of species', nargs='?')
-    parser.add_argument('--out', help='Path to the folder for result write out', nargs='?')
+    parser.add_argument('--species', help='Number of species', nargs='?', required=True)
+    parser.add_argument('--out', help='Path to the folder for result write out', nargs='?', required=True)
     parser.add_argument('--broken', help='Path to the folder with broken files of previous launch', nargs='?',
                         default=PREVIOUS_BROKEN)
     args = parser.parse_args()

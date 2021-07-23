@@ -218,9 +218,10 @@ def main(in_folder, ortho_logs, target_species):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
-                        nargs='?')
-    parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?')
-    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', required=True)
+    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?',
+                        required=True)
     args = parser.parse_args()
     in_dir = args.i
     log_folder = args.log
@@ -237,7 +238,7 @@ if __name__ == '__main__':
         print("Results are recorded in {}".format(common_sheet_path))
         summary_sheet = {'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
                          [i[0] for i in values], 'p-value': [i[1] for i in values]}
-        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value'])
+        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value']) # TODO: add groups column
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:

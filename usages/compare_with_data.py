@@ -27,10 +27,10 @@ def main(data_sheet_path, adjust_sheet_path, out_sheet_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', help='Path to the data.xlsx file', nargs='?')
+    parser.add_argument('--data', help='Path to the data.xlsx file', nargs='?', required=True)
     parser.add_argument('--adjust', help='Path to the common_sheet_adjust.xlsx'
-                                         '-result of \'adjust_pvalue.py\'', nargs='?')
-    parser.add_argument('--out', help='Path to the output.xlsx file', nargs='?')
+                                         '-result of \'adjust_pvalue.py\'', nargs='?', required=True)
+    parser.add_argument('--out', help='Path to the output.xlsx file', nargs='?', required=True)
     args = parser.parse_args()
     try:
         main(args.data, args.adjust, args.out)

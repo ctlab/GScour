@@ -87,10 +87,11 @@ def launch_guidance(input_tuple, folder_out, number_of_threads, executable_path)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='The full path to the folder contains folders with input files (.fna) for guidance',
-                        nargs='?')
-    parser.add_argument('--o', help='Path to the folder with output files of guidance', nargs='?')
-    parser.add_argument('--exec', help='Path to the guidance executable "guidance.pl"', nargs='?')
-    parser.add_argument('--threads', help='Number of threads', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('--o', help='Path to the folder with output files of guidance, if it does not exist,'
+                                    ' it will be created automatically', nargs='?', required=True)
+    parser.add_argument('--exec', help='Path to the guidance executable "guidance.pl"', nargs='?', required=True)
+    parser.add_argument('--threads', help='Number of threads', nargs='?',required=True)
     args = parser.parse_args()
     threads = int(args.threads)
     in_dir = args.i

@@ -68,9 +68,12 @@ def find_file(name, path):
 
 
 def main(input_folder, branchcodes_folder):
+    positive_result = []
+    list_of_folders = []
     for species_folder in os.scandir(input_folder):
         if os.path.isdir(species_folder):
             logger.info("species folder {}".format(species_folder))
+            list_of_folders.append(species_folder.name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
                     rst_file_path = find_file('rst', os.path.join(input_folder, species_folder.name, item.name))
@@ -86,15 +89,20 @@ def main(input_folder, branchcodes_folder):
                                 f.write(branchcodes)
                                 logger.info("Branchcode for species_folder {} recorded:\n{}".
                                             format(species_folder, branchcodes))
+                                positive_result.append(species_folder.name)
                                 break
+    lack_of_codes = list(set(list_of_folders) - set(positive_result))
+    if lack_of_codes:
+        logger.warning("Phylogenetic tree and codes for branches has not been found for species folders {}".
+                       format(lack_of_codes))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
-                        nargs='?')
+                        nargs='?', required=True)
     parser.add_argument('--b', help='The full path to a folder for recording branchcodes',
-                        nargs='?')
+                        nargs='?', required=True)
     args = parser.parse_args()
     input_dir = args.i
     branchcodes_dir = args.b

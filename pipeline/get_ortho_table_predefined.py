@@ -70,12 +70,12 @@ def main(ortho_file, gb_file_path, predefined_genes_path, required_species):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--ortho', help='Full path to the output file of some ortho finder (will be modified,'
-                                        'do a copy is recommended)', nargs='?')
-    parser.add_argument('--gbff', help='Path to the .gbff annotation file for target species', nargs='?')
+                                        'do a copy is recommended)', nargs='?', required=True)
+    parser.add_argument('--gbff', help='Path to the .gbff annotation file for target species', nargs='?', required=True)
     parser.add_argument('--predefined', help='Path to the .xlsx file with one 1st column - \'Gene symbol\'',
-                        nargs='?')
+                        nargs='?', required=True)
     parser.add_argument('--required', help='One required, number of target species in relation to which the analysis'
-                                           ' is made', nargs='?')
+                                           ' is made', nargs='?', required=True)
     args = parser.parse_args()
     try:
         main(args.ortho, args.gbff, args.predefined, args.required)

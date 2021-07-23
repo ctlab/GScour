@@ -129,10 +129,10 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
                         PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
                         logging.info("OK file {}".format(file_number))
                 else:
-                    logging.info("The work has not been finished for file number {}".format(file_number))
+                    logging.warning("The work has not been finished for file number {}".format(file_number))
                     if file_number not in BROKEN_FILES:
                         BROKEN_FILES.append(file_number)
-                        logging.warning("BAD file {}".format(file_number))
+                        # logging.warning("BAD file {}".format(file_number))
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except subprocess.TimeoutExpired as err:
         p.kill()
@@ -162,9 +162,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml')
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
-                        nargs='?')
-    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
-    parser.add_argument('--threads', help='Number of threads to use', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
+    parser.add_argument('--threads', help='Number of threads to use', nargs='?', required=True)
     parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
     in_folder = args.i

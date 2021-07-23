@@ -165,10 +165,12 @@ def main(folder_in, folder_out, species, group):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the folder with fasta files sorted by separated folders', nargs='?')
-    parser.add_argument('--o', help='Path to the folder with result philip files', nargs='?')
-    parser.add_argument('--species', help='Number of species', nargs='?')
-    parser.add_argument('--group', help='Minimal size of species group', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with fasta files sorted by separated folders', nargs='?',
+                        required=True)
+    parser.add_argument('--o', help='Path to the folder with result philip files, if it does not exist, it will be'
+                                    ' created automatically', nargs='?', required=True)
+    parser.add_argument('--species', help='Number of species', nargs='?', required=True)
+    parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     args = parser.parse_args()
     out_dir = args.o
     if not os.path.isdir(out_dir):

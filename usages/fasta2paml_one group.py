@@ -144,19 +144,19 @@ def main(folder_in, folder_out, species, group):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--infolder', help='Path to the folder with fasta files', nargs='?')
-    parser.add_argument('--outfolder', help='Path to the folder with result philip files', nargs='?')
-    parser.add_argument('--species', help='Number of species', nargs='?')
-    parser.add_argument('--group', help='Minimal size of species group', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with fasta files', nargs='?', required=True)
+    parser.add_argument('--o', help='Path to the folder with result philip files', nargs='?', required=True)
+    parser.add_argument('--species', help='Number of species', nargs='?', required=True)
+    parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     args = parser.parse_args()
-    outfolder = args.outfolder
-    if not os.path.isdir(outfolder):
-        os.makedirs(outfolder)
+    out_folder = args.o
+    if not os.path.isdir(out_folder):
+        os.makedirs(out_folder)
     try:
-        main(args.infolder, outfolder, int(args.species), int(args.group))
+        main(args.i, out_folder, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES or BROKEN_SPECIES:
-            replace_broken_files(outfolder)
+            replace_broken_files(out_folder)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
         logging.warning("NOT_NEEDED_SPECIES {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))

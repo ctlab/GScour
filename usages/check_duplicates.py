@@ -27,7 +27,7 @@ def main(in_dir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the folder with .log files to analyze', nargs='?')
+    parser.add_argument('--i', help='Path to the folder with .log files to analyze', nargs='?', required=True)
     args = parser.parse_args()
     try:
         main(args.i)

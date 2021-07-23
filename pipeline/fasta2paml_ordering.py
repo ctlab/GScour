@@ -61,19 +61,20 @@ def get_infile_and_order(folder_in, folder_order):
     """ parse directory with files out of Gblocks
         'fas-gb' can be change just to .fas"""
     for species_folder in os.scandir(folder_in):
-        if os.path.isdir(species_folder):
+        print("get_infile_and_order {}{}".format(folder_in, species_folder))
+        if os.path.isdir(species_folder) and species_folder.name.isdigit():
             order_string = get_order(folder_order, species_folder.name)
             if not order_string:
                 logging.warning("Please check .order file for {}{}".format(folder_in, species_folder.name))
-                yield
+                return
             for infile in os.listdir(species_folder):
                 if infile.split('.')[-1] == 'fas-gb':
                     yield species_folder.name, infile, order_string
 
 
-def parse_phylip_dir(infolder):
+def parse_phylip_dir(input_folder):
     """ parse directory with .phylip files"""
-    for personal_folder in os.scandir(infolder):
+    for personal_folder in os.scandir(input_folder):
         if os.path.isdir(personal_folder):
             for infile in os.listdir(personal_folder):
                 if infile.split('.')[-1] == 'phylip':
@@ -121,7 +122,7 @@ def check_lengths(lengths, species_folder, file_number, species, group):
         replace completely broken files to BROKEN_FOLDER
     """
     if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
-        logging.info("all seq lengths are equal, confirm of number of species")
+        logging.info("Check length OK: all seq lengths are equal, multiple of 3")
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_number))
@@ -185,8 +186,10 @@ def replace_broken_files(directory_out):
 
 
 def main(folder_in, folder_order, folder_out, species, group):
-    for species_folder, infile, order_string in get_infile_and_order(folder_in, folder_order):
-        fasta2phylip(species_folder, infile, order_string, folder_in, folder_out)
+    for input_tuple in get_infile_and_order(folder_in, folder_order):
+        if input_tuple:
+            species_folder, infile, order_string = input_tuple
+            fasta2phylip(species_folder, infile, order_string, folder_in, folder_out)
     for species_folder, phylip_file in parse_phylip_dir(folder_out):
         phylip2paml(folder_out, species_folder, phylip_file, species, group)
         seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)
@@ -195,11 +198,14 @@ def main(folder_in, folder_order, folder_out, species, group):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='Path to the input folder with fasta files sorted by separated folders', nargs='?')
-    parser.add_argument('--order', help='Path to the folder with .order files for each folder in input', nargs='?')
-    parser.add_argument('--o', help='Path to the folder with result philip files', nargs='?')
-    parser.add_argument('--species', help='Number of species', nargs='?')
-    parser.add_argument('--group', help='Minimal size of species group', nargs='?')
+    parser.add_argument('--i', help='Path to the input folder with fasta files sorted by separated folders', nargs='?',
+                        required=True)
+    parser.add_argument('--order', help='Path to the folder with .order files for each folder in input', nargs='?',
+                        required=True)
+    parser.add_argument('--o', help='Path to the output folder with result philip files, if it does not exist,'
+                                    ' it will be created automatically', nargs='?', required=True)
+    parser.add_argument('--species', help='Number of species', nargs='?', required=True)
+    parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     args = parser.parse_args()
     out_dir = args.o
     if not os.path.isdir(out_dir):

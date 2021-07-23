@@ -250,9 +250,9 @@ if __name__ == '__main__':
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
     parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=500', nargs='?', default='500')
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
-                        nargs='?')
-    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
-    parser.add_argument('--threads', help='Number of threads to use', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
+    parser.add_argument('--threads', help='Number of threads to use', nargs='?', required=True)
     parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
     in_folder = args.i

@@ -87,12 +87,13 @@ def launch_prank(input_tuple, folder_out, tree, format_out):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='The full path to the folder contains folders with input files (.fna) for prank',
-                        nargs='?')
-    parser.add_argument('--o', help='Path to the folder with output files of prank', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('--o', help='Path to the folder with output files of prank, if it does not exist, it will be'
+                                    ' created automatically', nargs='?', required=True)
     parser.add_argument('--tree', help='Path to the tree, exclude if there is no tree', nargs='?', default="")
     parser.add_argument('--f', help='Output format: ["fasta" (default, exclude option --f if left by default),'
                                     '"phylipi", "phylips", "paml", "nexus"]', nargs='?', default="")
-    parser.add_argument('--threads', help='Number of threads', nargs='?')
+    parser.add_argument('--threads', help='Number of threads', nargs='?', required=True)
     args = parser.parse_args()
     threads = int(args.threads)
     try:

@@ -53,11 +53,11 @@ def launch_gblocks(input_tuple, auto_flag, exec_path, child_logger):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for Gblocks'
-                                    'FASTA formats are accepted', nargs='?')
-    parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?')
+                                    'FASTA formats are accepted', nargs='?', required=True)
+    parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?', required=True)
     parser.add_argument('--auto', help='\'y\' or \'n\': automatic selection of basic parameters according to group size',
-                        nargs='?')
-    parser.add_argument('--threads', help='Number of threads', nargs='?')
+                        nargs='?', required=True)
+    parser.add_argument('--threads', help='Number of threads', nargs='?', required=True)
     args = parser.parse_args()
     threads = int(args.threads)
     try:

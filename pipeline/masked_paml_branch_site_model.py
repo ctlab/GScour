@@ -248,13 +248,13 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
-    parser.add_argument('--infolder', help='The full path to the folder contains folders with input files for paml',
-                        nargs='?')
-    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?')
-    parser.add_argument('--threads', help='Number of threads to use', nargs='?')
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
+                        nargs='?', required=True)
+    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
+    parser.add_argument('--threads', help='Number of threads to use', nargs='?', required=True)
     parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
-    infolder = args.infolder
+    in_folder = args.i
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
@@ -264,9 +264,9 @@ if __name__ == '__main__':
         rework = False
     logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
                  "Threads to use = {}, rework = {}".
-                 format(infolder, tree_folder, executable_path, threads, rework))
+                 format(in_folder, tree_folder, executable_path, threads, rework))
     try:
-        main(infolder, tree_folder, executable_path, threads, rework)
+        main(in_folder, tree_folder, executable_path, threads, rework)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
         raise e

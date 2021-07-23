@@ -39,14 +39,14 @@ def main(proteinortho_file, species, required):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ortho', help='Full path to the output file of Proteinortho', nargs='?')
+    parser.add_argument('--ortho', help='Full path to the output file of Proteinortho', nargs='?', required=True)
     parser.add_argument('--species', help='Int values for column \'# Species\' separated by comma are equal '
                                           'Int values for column \'Genes\', assuming one-to-one '
                                           'relationship between species and genes, because of searching one-to-one '
-                                          'orthologs', nargs='?')
+                                          'orthologs', nargs='?', required=True)
     # parser.add_argument('--genes', help='Int values for column \'Genes\' separated by comma', nargs='?')
     parser.add_argument('--required', help='One required, number of target species in relation to which the analysis'
-                                           ' is made', nargs='?')  # TODO: multi required species?
+                                           ' is made', nargs='?', required=True)  # TODO: multi required species?
     args = parser.parse_args()
     try:
         main(args.ortho, args.species, args.required)

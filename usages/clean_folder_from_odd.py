@@ -72,8 +72,8 @@ def main(broken_folder, cleaning_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--broken', help='Path to the folder with broken files', nargs='?')
-    parser.add_argument('--clean', help='Path to the folder for cleaning', nargs='?')
+    parser.add_argument('--broken', help='Path to the folder with broken files', nargs='?', required=True)
+    parser.add_argument('--clean', help='Path to the folder for cleaning', nargs='?', required=True)
     args = parser.parse_args()
     try:
         main(args.broken, args.clean)

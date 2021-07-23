@@ -68,8 +68,9 @@ def main(proteinortho_file, gbff_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--ortho', help='Full path to the output file of Proteinortho, will be overwritten do the copy'
-                                        'is recommended', nargs='?')
-    parser.add_argument('--gbff', help='Path to the folder with .gbff annotation files for every species', nargs='?')
+                                        'is recommended', nargs='?', required=True)
+    parser.add_argument('--gbff', help='Path to the folder with .gbff annotation files for every species', nargs='?',
+                        required=True)
     args = parser.parse_args()
     try:
         main(args.ortho, args.gbff)  # TODO: multiprocessing
