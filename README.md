@@ -202,3 +202,6 @@ https://github.com/ctlab/GScour/blob/a2145a12a754e94b6306dce69bfcd7b173d8a898/pi
 * Use "adjust_pvalue.py" script, see --help for args and adjust the denominator if necessarily in lines:
 https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/usages/adjust_pvalue.py#L24
 https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/usages/adjust_pvalue.py#L26
+#### 5.3 Assembling results
+Script "assembling_results.py" collects final data from sheets "summary" for every result common sheet: concatenate and remove duplicates. 
+
