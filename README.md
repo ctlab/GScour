@@ -141,7 +141,12 @@ See 'fasta2paml_ordering.log' in working directory.
 See launch example above in the step 4.3.1.1.
 #### 4.7 SWAMP masking
 Sliding window approach SWAMP to mask regions of the alignment with excessive amino acid changes.
-- Construct branchcodes for every species group;  
+- Construct branchcodes for every species group:  
+  - required tree view for automatic build branchcode: '(1, ((2, 3), ((6), 8, 4)));'
+  - if you have folder with marked trees for paml, you can clean it and insert spaces with sed stream editor:<br />
+  `sed -i 's/ #1//' *` <br />
+  `sed -i 's/,/, /g' *`
+  - `python construct_branchcodes.py --i /abspath/tothe/nuc_out_prank/ --t /abspath/folder_trees_clean/ --b /abspath/folder_for_branchcodes/`
 - Launch SWAMP:
   - "swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment;
   -  use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.
