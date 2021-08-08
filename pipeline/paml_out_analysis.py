@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import sys
 from scipy import stats
 import os
 import logging
@@ -107,8 +106,8 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
                 np1, ln1, sites_tuple = get_statistics(os.path.join(in_folder, species_folder.name,
                                                                     item_folder_name, infile))
                 pos_sites, proportion_0, proportion_1, proportion_2a, proportion_2b, \
-                    background_0, background_1, background_2a, background_2b, \
-                    foreground_0, foreground_1, foreground_2a, foreground_2b = sites_tuple
+                background_0, background_1, background_2a, background_2b, \
+                foreground_0, foreground_1, foreground_2a, foreground_2b = sites_tuple
         gene_name, protein_id = get_gene_name_protein_id(item_folder_name, ortho_logs, target_species, child_logger)
         if all([np0, np1, ln0, ln1]):
             p_val = calc_p_value(np0, ln0, np1, ln1)
@@ -128,8 +127,8 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
             species_folder_sheet['2b, Dn/Ds background'].append(background_2a)
             species_folder_sheet['P-value'].append(p_val)
             "the table is a main source of information, p-value and hence positive_sites_number_item, " \
-                "gene_protein_dict, no_significance_item can be customized"
-            if p_val and p_val < 0.05:
+            "gene_protein_dict, no_significance_item can be customized"
+            if p_val and p_val < 2: #0.05:
                 number_pos = len(pos_sites)
                 child_logger.info("P.S: Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
                                   "foreground (2b)={}\n\t\t\t\tDn/Ds background (2a)={} |"
@@ -143,7 +142,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
                                       format(item_id, gene_name, pos, acid, probability))
 
                 if not gene_protein_dict.get(gene_name):
-                    gene_protein_dict[gene_name] = (protein_id, p_val)
+                    gene_protein_dict[gene_name] = (protein_id, p_val, species_folder.name)
             else:
                 child_logger.info("Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
                                   "foreground (2b)={}\n\t\t\t\tDn/Ds background (2a)={} |"
@@ -156,6 +155,26 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
                 item_id, np0, ln0, np1, ln1, pos_sites))
             broken_paml_outs_item.append(item_folder_name)
     return broken_paml_outs_item, no_significance_item, positive_sites_number_item, gene_protein_dict
+
+
+def choose_the_lowest_p_value(joint_dict, sub_dict):
+    keys_for_adding = []
+    if joint_dict.keys():
+        for j_key in joint_dict.keys():
+            for s_key in sub_dict.keys():
+                if j_key == s_key:
+                    if sub_dict[s_key][1] < joint_dict[s_key][1]:
+                        joint_dict[s_key] = (sub_dict[s_key][0], sub_dict[s_key][1],
+                                             "{},{}".format(sub_dict[s_key][2], joint_dict[s_key][2]))
+                    else:
+                        joint_dict[j_key] = (joint_dict[j_key][0], joint_dict[j_key][1],
+                                             "{},{}".format(joint_dict[j_key][2], sub_dict[j_key][2]))
+                else:
+                    keys_for_adding.append(s_key)
+        for key in keys_for_adding:
+            joint_dict[key] = (sub_dict[key][0], sub_dict[key][1], sub_dict[key][2])
+    else:
+        joint_dict.update(sub_dict)
 
 
 def main(in_folder, ortho_logs, target_species):
@@ -183,13 +202,16 @@ def main(in_folder, ortho_logs, target_species):
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
                     broken_paml_outs_item, no_significance_item, positive_sites_number_item, \
-                        gene_protein_dict = count_sites(in_folder, species_folder, item, child_logger,
-                                                        ortho_logs, target_species, species_folder_sheet)
+                    gene_protein_dict = count_sites(in_folder, species_folder, item, child_logger,
+                                                    ortho_logs, target_species, species_folder_sheet)
 
                     broken_paml_outs += broken_paml_outs_item
                     no_significance += no_significance_item
                     positive_sites_number += positive_sites_number_item
-                    genes_under_positive.update(gene_protein_dict)
+
+                    choose_the_lowest_p_value(genes_under_positive, gene_protein_dict)
+                    print("genes_under_positive", genes_under_positive)
+                    # genes_under_positive.update(gene_protein_dict)
 
             child_logger.warning("Species folder {}: broken_paml_outs : {} : {}".
                                  format(species_folder.name, len(broken_paml_outs), broken_paml_outs))
@@ -201,7 +223,9 @@ def main(in_folder, ortho_logs, target_species):
                 "Species folder {} Number of genes under P.S={}: gene_name : protein_id \n{}".format(
                     species_folder.name, len(genes_under_positive), repr(genes_under_positive)))
 
-            common_pos_gene_dict.update(genes_under_positive)
+            choose_the_lowest_p_value(common_pos_gene_dict, genes_under_positive)
+            print("common_pos_gene_dict", common_pos_gene_dict)
+            # common_pos_gene_dict.update(genes_under_positive)
             df = pd.DataFrame(species_folder_sheet, columns=['NCBI protein_id', 'Gene name', '0, proportion',
                                                              '0, Dn/Ds foreground', '0, Dn/Ds background',
                                                              '1, proportion', '1, Dn/Ds foreground',
@@ -236,9 +260,12 @@ if __name__ == '__main__':
         # print("value[0],\n", values[0], "value[1],\n", values[1],
         #       "\nentire keys\n", common_pos_gene_dict.keys())
         print("Results are recorded in {}".format(common_sheet_path))
-        summary_sheet = {'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
-                         [i[0] for i in values], 'p-value': [i[1] for i in values]}
-        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value']) # TODO: add groups column
+        summary_sheet = {
+            'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
+                [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species groups': [i[2] for i in values]
+            }
+        print("summary_sheet", summary_sheet)
+        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species groups'])
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:

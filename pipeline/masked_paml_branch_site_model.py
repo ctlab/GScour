@@ -3,13 +3,10 @@ import argparse
 import multiprocessing
 import re
 import subprocess
-import traceback
-from subprocess import TimeoutExpired, SubprocessError
-import sys
+from subprocess import SubprocessError, TimeoutExpired
 from Bio.Phylo.PAML import codeml
-import logging
 import os
-
+import logging
 
 BROCKEN_FILES_NULL = list()
 BROCKEN_FILES_ALTER = list()
@@ -30,23 +27,22 @@ H0 (The null model for Branch-site model A):
     kappa = 2   * initial or fixed kappa
     fix_omega = 1   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
-H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ):
+H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ): 
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
-    
-in paml_out_analysis.py:
-For analysis performs: ln0, np0 from H0; ln1, np1 from H1; 
-                       ΔLRT = 2×(lnL1 - lnL0)
-                       n = np1 - np0
-                       p_val = 1 - stats.chi2.cdf(ΔLRT, n)
-                       
-Launch this script for files masked with SWAMP:
-1. paml, one-ratio model
-2. SWAMP
-3. paml, branch-site model
 
+From readme of paml example lysozymeLarge.ctl:
+Alternative hypothesis (branch site model A, with w2 estimated):
+model = 2    NSsites = 2   fix_omega = 0   omega = 1.5 (or any value > 1)
+
+As the branch-site model is
+known to cause computational difficulties for the numer-
+ical optimization algorithm in PAML, each analysis is con-
+ducted three times with different starting values to ensure
+that the global peak is found (Statistical Properties of the Branch-Site Test of Positive
+Selection, Ziheng Yang and Mario dos Reis)
 """
 
 
@@ -61,6 +57,7 @@ def get_input_items(folder_in, trees_folder):
     parse tree_folder to get appropriate tree """
     for species_folder in os.scandir(folder_in):
         if os.path.isdir(species_folder):
+            logging.info("working with species folder {}".format(species_folder.name))
             tree_name = get_tree_path(trees_folder, species_folder.name)
             tree_path = os.path.join(trees_folder, tree_name)
             for item in os.scandir(species_folder):
@@ -80,11 +77,11 @@ def init_indicators(null_args, alter_args, excep_null, excep_alt):
     excep_alter_counter = excep_alt
 
 
-def set_alternative_hypothesis(infile, phylogeny_tree, personal_dir):
-    file_out_path = infile.replace('_masked.phy', '_alter1_masked.out')
+def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
+    file_out_path = infile.replace('.phy', '_alter1_masked.out')
     cml = codeml.Codeml(
         alignment=infile,
-        tree=phylogeny_tree,
+        tree=phylo_tree,
         out_file=file_out_path,
         working_dir=personal_dir,
         )
@@ -102,7 +99,7 @@ def set_alternative_hypothesis(infile, phylogeny_tree, personal_dir):
     cml.set_options(fix_kappa=0)
     cml.set_options(kappa=2)
     cml.set_options(fix_omega=0)
-    cml.set_options(omega=1)
+    cml.set_options(omega=2)
     cml.set_options(getSE=0)
     cml.set_options(RateAncestor=0)
     cml.set_options(Small_Diff=.45e-6)
@@ -112,11 +109,11 @@ def set_alternative_hypothesis(infile, phylogeny_tree, personal_dir):
     return cml, file_out_path
 
 
-def set_null_hypothesis(infile, phylogeny_tree, personal_dir):
-    file_out_path = infile.replace('_masked.phy', '_null1_masked.out')
+def set_null_hypothesis(infile, phylo_tree, personal_dir):
+    file_out_path = infile.replace('.phy', '_null1_masked.out')
     cml = codeml.Codeml(
         alignment=infile,
-        tree=phylogeny_tree,
+        tree=phylo_tree,
         out_file=file_out_path,
         working_dir=personal_dir,
         )
@@ -144,7 +141,7 @@ def set_null_hypothesis(infile, phylogeny_tree, personal_dir):
     return cml, file_out_path
 
 
-def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
+def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
     folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
     infile_path = os.path.join(item_folder_path, infile)
@@ -182,12 +179,11 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                 if "Time used" in o_f.readlines()[-1]:
                     logging.info("The work has already been done for file {}...continue...".format(file_out_path))
                     return
-
-    p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        return_code = p.wait(timeout=500)  # Timeout in seconds
-        stdout, stderr = p.communicate()
-        logging.info("Return code={} for file number {}, stderr: {}".format(return_code, file_number, stderr))
+        p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        # return_code = p.wait(timeout=time_out)  # Timeout in seconds
+        stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
+        logging.info("OK paml for file number {}, stderr: {}".format(file_number, stderr))
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
                 if "Time used" in o_f.readlines()[-1]:
@@ -199,24 +195,28 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag):
                         processed_files.append(file_number)  # TODO: list - to shared variable
                         # logging.info(
                         #     "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
-
                 else:
                     logging.warning("The work has not been finished for file number {}".format(file_number))
                     if file_number not in broken_files:
                         broken_files.append(file_number)
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
-    except TimeoutExpired as err:
+
+    except subprocess.SubprocessError as err:
+        logging.info("SubprocessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
+    except subprocess.CalledProcessError as err:
+        logging.info("CalledProcessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
+    except subprocess.TimeoutExpired as err:
         p.kill()
         with excep_counter.get_lock():
             excep_counter.value += 1
         file_id = "{}/{}".format(species_folder, item_folder)
-        logging.warning("Killed {}, {}\nException_counter={}".format(file_id, err.args, excep_counter.value))
+        logging.warning("Killed {} hypothesis_type {}, err.args: {}\nException_counter={}".
+                        format(file_id, hypothesis_type, err.args, excep_counter.value))
         if file_id not in broken_files:  # TODO: list - to shared variable
             broken_files.append(file_id)
-            # logging.info("BROKEN_FILES of length {}: {}".format(len(broken_files), broken_files))
 
 
-def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
+def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag, time_out):
     inputs = list(get_input_items(folder_in, trees_folder))
     len_inputs = len(inputs)
     multiprocessing.log_to_stderr()
@@ -225,21 +225,22 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
 
     null_processed_counter = multiprocessing.Value('i', 0)
     alter_processed_counter = multiprocessing.Value('i', 0)
-    null_excep_counter = multiprocessing.Value('i', 0)
-    alter_excep_counter = multiprocessing.Value('i', 0)
+    null_exception_counter = multiprocessing.Value('i', 0)
+    alter_exception_counter = multiprocessing.Value('i', 0)
     # PROCESSED_FILES = multiprocessing.Array('i', range(5900))
     # PROCESSED_FILES = multiprocessing.Array(c_wchar_p, 6000)
     # manager = multiprocessing.Manager()
     # pr = manager.list()
     pool = multiprocessing.Pool(processes=number_of_threads, initializer=init_indicators,
-                                initargs=(null_processed_counter, alter_processed_counter, null_excep_counter,
-                                          alter_excep_counter,))
+                                initargs=(null_processed_counter, alter_processed_counter, null_exception_counter,
+                                          alter_exception_counter,))
     i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
-                                         len_inputs * ["null"], len_inputs * [overwrite_flag]))
+                                         len_inputs * ["null"], len_inputs * [overwrite_flag], len_inputs * [time_out]))
     i.wait()
     i.get()
     i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
-                                         len_inputs * ["alter"], len_inputs * [overwrite_flag]))
+                                         len_inputs * ["alter"], len_inputs * [overwrite_flag],
+                                         len_inputs * [time_out]))
     i.wait()
     i.get()
     logging.info("Number of files should be analyzed: {}".format(len_inputs))
@@ -248,6 +249,7 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default="codeml")
+    parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=500', nargs='?', default='500')
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?', required=True)
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
@@ -258,18 +260,19 @@ if __name__ == '__main__':
     executable_path = args.e
     tree_folder = args.tree
     threads = int(args.threads)
+    timeout = int(args.timeout)
     if args.rework == 'y':
         rework = True
     else:
         rework = False
     logging.info("Path to the folder with input files for paml: {}\nPath to the tree: {}\nExecutable path: {}\n"
-                 "Threads to use = {}, rework = {}".
-                 format(in_folder, tree_folder, executable_path, threads, rework))
+                 "Threads to use = {}, rework = {}, timeout={}".
+                 format(in_folder, tree_folder, executable_path, threads, rework, timeout))
     try:
-        main(in_folder, tree_folder, executable_path, threads, rework)
+        main(in_folder, tree_folder, executable_path, threads, rework, timeout)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-        raise e
+        # logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
         # if BROCKEN_FILES_NULL:
         #     logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
         # if BROCKEN_FILES_ALTER:
