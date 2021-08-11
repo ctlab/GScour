@@ -202,9 +202,9 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
 
     except subprocess.SubprocessError as err:
-        logging.info("SubprocessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
+        logging.warning("SubprocessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
     except subprocess.CalledProcessError as err:
-        logging.info("CalledProcessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
+        logging.warning("CalledProcessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
     except subprocess.TimeoutExpired as err:
         p.kill()
         with excep_counter.get_lock():

@@ -25,7 +25,19 @@ def main(input_folder):
                                                engine='openpyxl')
         summary_sheets.append(summary_sheet)
     common_summary = pd.concat(summary_sheets)
-    common_summary.drop_duplicates(subset='Gene name', inplace=True, ignore_index=True)  # TODO: filtering by groups
+    common_summary.drop_duplicates(subset=['Gene name', 'p-value', 'NCBI protein_id', 'Species group'], inplace=True,
+                                   ignore_index=True)
+    """
+    there are variants:
+    common_summary.drop_duplicates(subset=['Gene name', 'Species group'], inplace=True,
+                                   ignore_index=True)
+    common_summary.drop_duplicates(subset=['Gene name', 'NCBI protein_id', 'Species group'], inplace=True,
+                                   ignore_index=True)
+    """
+    # common_summary = common_summary.groupby('Gene name').agg({'p-value': list, 'NCBI protein_id': list,
+    #                                                           'Species group': list}).reset_index()
+    # common_summary['Species group'] = common_summary['Species group'].astype(str)
+    # common_summary = common_summary.groupby('Gene name').agg({'Species group': ', '.join}).reset_index()
     writer = pd.ExcelWriter(os.path.join(input_folder, '{}.xlsx'.format("assembled_results")), engine='openpyxl')
     common_summary.to_excel(writer, sheet_name='assembled')
     writer.save()

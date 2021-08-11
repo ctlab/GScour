@@ -128,7 +128,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
             species_folder_sheet['P-value'].append(p_val)
             "the table is a main source of information, p-value and hence positive_sites_number_item, " \
             "gene_protein_dict, no_significance_item can be customized"
-            if p_val and p_val < 2: #0.05:
+            if p_val and p_val < 0.05:
                 number_pos = len(pos_sites)
                 child_logger.info("P.S: Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
                                   "foreground (2b)={}\n\t\t\t\tDn/Ds background (2a)={} |"
@@ -253,7 +253,7 @@ if __name__ == '__main__':
     print("Passed args: input directory {}, log folder {}, required species {}".format(in_dir, log_folder,
                                                                                        required_species))
     try:
-        common_sheet_path = os.path.join(in_dir, 'common_sheet.xlsx')
+        common_sheet_path = os.path.join(in_dir, 'masked_common_sheet.xlsx')
         writer = pd.ExcelWriter(common_sheet_path, engine='xlsxwriter')
         main(in_dir, log_folder, required_species)
         values = list(common_pos_gene_dict.values())
@@ -264,7 +264,6 @@ if __name__ == '__main__':
             'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
                 [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species groups': [i[2] for i in values]
             }
-        print("summary_sheet", summary_sheet)
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species groups'])
         df.to_excel(writer, sheet_name='summary')
         writer.save()
