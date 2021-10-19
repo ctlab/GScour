@@ -76,14 +76,15 @@ or lines 48, 51, 56.<br />
 NOTE: this step can take a lot of computation time.
 If you use MAFFT or CLUSTAL (not PANK) as a subproces of GUIDANCE you should correct --msaProgram option
 in the line 
-https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47
-`python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/ --exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`
-The resulting files stored in cleansed folder like `/abspath/tothe/guidance_out/cleansed/`.
+https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47<br />
+`python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/` <br />
+`--exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`<br />
+The resulting files stored in cleansed folder `/abspath/tothe/guidance_out/cleansed/`.
 
 #### 3.3 Gblocks, select conserved blocks of sequence
 Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/GScour/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
-`python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks --threads 2`
+`python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks`<br />`--threads 2`
 
 ### 4. Evolutionary analysis
 #### 4.1 Provide trees
@@ -134,7 +135,7 @@ See "paml_one_ratio.log", further testing may be continued in separate item's fo
 ##### 4.3.2 Ordering
 - After having known about the right orders, .order files should be placed to separate folder. Name of .order file should be the same as name of species folder ('12' -> '12.order');<br />
 - Launch fasta2paml_ordering.py (can be launched on the backup folder), right order will be set automaticaly:<br />
-`python fasta2paml_ordering.py --i /abspath/tothe/nuc_out_prank/ --order /abspath/folder_orders/ --o /abspath/tothe/nuc_out_prank/ 
+`python fasta2paml_ordering.py --i /abspath/tothe/nuc_out_prank/ --order /abspath/folder_orders/`<br />`--o /abspath/tothe/nuc_out_prank/ 
 --species 8 --group 6` 
 See 'fasta2paml_ordering.log' in working directory.  
 #### 4.6 One ratio model  
@@ -146,13 +147,13 @@ Sliding window approach SWAMP to mask regions of the alignment with excessive am
   - if you have folder with marked trees for paml, you can clean it and insert spaces with sed stream editor:<br />
   `sed -i 's/ #1//' *` <br />
   `sed -i 's/,/, /g' *`
-  - `python construct_branchcodes.py --i /abspath/tothe/nuc_out_prank/ --t /abspath/folder_trees_clean/ --b /abspath/folder_for_branchcodes/`
+  - `python construct_branchcodes.py --i /abspath/tothe/nuc_out_prank/ --t /abspath/folder_trees_clean/`<br />`--b /abspath/folder_for_branchcodes/`
 - Launch SWAMP:
   - "swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment;
-  -  use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.
-`python swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/ -b /abspath/tothe/branchcodes/ -t 2 -w 20`
-See stdout and 'swamp_log.log'. 
-Use global variable 'target_dict' in swamp_script.py if need to run on individual files:
+  -  use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.<br />
+`python swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/`<br />` -b /abspath/tothe/branchcodes/ -t 2 -w 20`<br />
+See stdout and 'swamp_log.log'. <br />
+Use global variable 'target_dict' in swamp_script.py if need to run on individual files:<br />
 `target_dict[species_folder] = [item_folder1, item_folder2...]`
 #### 4.8 Perform maximum likelihood (ML) dN/dS analysis to infer positive selection of genes and codons, using codeml from the PAML software package.
 __Branch-site model__  
@@ -190,7 +191,7 @@ For files without masking:
 
 ### 5. Analysing PAML's results  
 #### 5.1 Tabulation
-`python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/ --log /abspath/tothe/nuc_out_folder/ --required 6`<br />
+`python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/` <br />`--log /abspath/tothe/nuc_out_folder/ --required 6`<br />
 Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also will be written in every species folder to file named 'name_of_species_folder.result' and summary to stdout.
 * common_sheet.xlsx, sheet for every species group:<br />
 dN/dS (w) for site classes (K=4) (see [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf))<br />
