@@ -262,9 +262,9 @@ if __name__ == '__main__':
         print("Results are recorded in {}".format(common_sheet_path))
         summary_sheet = {
             'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
-                [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species groups': [i[2] for i in values]
+                [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species group': [i[2] for i in values]
             }
-        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species groups'])
+        df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species group'])
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:
