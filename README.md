@@ -16,6 +16,8 @@ GUIDANCE allows using alignment (MAFFT, PRANK, CLUSTALW) as a subprocess.
 - SWAMP (https://github.com/peterwharrison/SWAMP)
 ### Phylogenetic Analysis
 - PAML (Phylogenetic Analysis by Maximum Likelihood)
+## GScour flow
+![GitHub Logo](https://github.com/ctlab/GScour/blob/master/Gscour_flow.png)
 ## Steps
 See --help for help with arguments for any python script, logs are named as scripts with .log extension or just standard output. 
 Output directory (with --o or --out option) will be created automatically and hold all output files [please provid full (and not relative) path]<br />
