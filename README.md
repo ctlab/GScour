@@ -82,8 +82,12 @@ https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pi
 `python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/` <br />
 `--exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`<br />
 The resulting files stored in cleansed folder `/abspath/tothe/guidance_out/cleansed/`.
-
-#### 3.3 Gblocks, select conserved blocks of sequence
+#### 3.3 Sort by groups
+For example:<br />
+`python usages/sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`<br />
+Format of input file can be adjusted here <br />
+https://github.com/ctlab/GScour/blob/a20f24a45a2a6163cbbb4834c726395d59438933/usages/sort_by_groups.py#L48
+#### 3.4 Gblocks, select conserved blocks of sequence
 Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/GScour/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
 `python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks`<br />`--threads 2`
