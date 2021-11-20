@@ -101,7 +101,7 @@ Step can be skipped to 4.3.1 if the order is known.
 ##### 4.2.1 Replace files for test order
 `python usages/replace_for_test_order.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/test_order/` 
 ##### 4.2.2 Set right order
-`fasta2paml_get_order.py`, see --help for args. Folder with .order files can be empty, files with right order will be recorded to that folder. 
+`usages/fasta2paml_get_order.py`, see --help for args. Folder with .order files can be empty, files with right order will be recorded to that folder. 
 #### 4.3 Preprocessing, convert fasta to paml format  
 ##### 4.3.1 fasta2paml.py
 Skip if right order was set in the step 4.2.
