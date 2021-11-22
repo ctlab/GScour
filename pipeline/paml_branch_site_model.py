@@ -56,7 +56,7 @@ def get_input_items(folder_in, trees_folder):
     """ parse root folder with files for paml
     parse tree_folder to get appropriate tree """
     for species_folder in os.scandir(folder_in):
-        if os.path.isdir(species_folder):
+        if os.path.isdir(species_folder) and species_folder.name.isdigit():
             logging.info("working with species folder {}".format(species_folder.name))
             tree_name = get_tree_path(trees_folder, species_folder.name)
             tree_path = os.path.join(trees_folder, tree_name)

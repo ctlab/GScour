@@ -69,6 +69,7 @@ def get_infile_and_order(folder_in, folder_order, logger):
     """ parse directory with files out of Gblocks
         'fas-gb' can be change just to .fas"""
     order_string = get_order(folder_order, folder_in)  # e.g 1,2,3,5,6
+    print("order string", order_string)
     if not order_string:
         logger.warning("Please check .order file for {}{}".format(folder_in.name))
         return
@@ -83,6 +84,7 @@ def get_phylip_file(in_folder, folder_name):
         if os.path.isdir(species_folder) and species_folder.name == folder_name:
             for infile in os.listdir(species_folder):
                 if infile.split('.')[-1] == 'phylip':
+                    print("return phylip", infile)
                     return infile
 
 
@@ -92,6 +94,7 @@ def fasta2phylip(personal_folder, infile, order_list, folder_in, folder_out, log
     file_number = re.search(r'(\d+)\.', infile).group(1)
     infile_path = os.path.join(folder_in, personal_folder, infile)
     outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_number, "phylip"))
+    print("outfile_path", outfile_path)
     if not os.path.isdir(os.path.join(folder_out, personal_folder)):
         os.makedirs(os.path.join(folder_out, personal_folder))
     try:
@@ -106,6 +109,7 @@ def fasta2phylip(personal_folder, infile, order_list, folder_in, folder_out, log
                             ordering_alignments.append(align)
                             break
                 SeqIO.write(ordering_alignments, output_file, "phylip-sequential")
+                return outfile_path
     except BaseException as e:
         logger.error("BaseException: {} for file {}".format(e, infile))
 
@@ -150,10 +154,11 @@ def write_target_phy_file(line_edited, target_file):
 def phylip2paml(folder_out, species_folder, source_file_name, species, group, logger):
     """ converting philip-sequential to specific philip format for paml """
     logging.info("start converting phylip2paml")
-    source_file_path = os.path.join(folder_out, species_folder, source_file_name)
-    print(source_file_path)
+    print("source_file_path:", folder_out, species_folder, source_file_name)
+    source_file_path = source_file_name # os.path.join(folder_out, species_folder, source_file_name)
     file_number = re.search(r'(\d+)\.', source_file_name).group(1)
     target_file_path = os.path.join(folder_out, species_folder, file_number, '{}.{}'.format(file_number, "phy"))
+    print("target_file_path", target_file_path)
     if not os.path.isdir(os.path.join(folder_out, species_folder, file_number)):
         os.makedirs(os.path.join(folder_out, species_folder, file_number))
     lengths = list()
@@ -178,6 +183,7 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group, lo
 
     check_lengths(lengths, species_folder, file_number, species, group, logger)
     logger.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
+    return target_file_path
 
 
 def replace_broken_files(directory_out):
@@ -206,8 +212,10 @@ def get_input_items(folder_in, trees_folder, folder_name, logger):
     :param folder_in: 
     :param logger: """
     for species_folder in os.scandir(folder_in):
+        print("folder_in", folder_in, "species_folder", species_folder.name,"folder_name", folder_name)
         if os.path.isdir(species_folder) and species_folder.name == folder_name:
             tree_name = get_tree_path(trees_folder, species_folder.name)
+            print("tree_name", tree_name)
             if not tree_name:
                 logger.warning("There is no tree file for group {}".format(species_folder.name))
                 return
@@ -314,19 +322,21 @@ def main(folder_in, folder_order, folder_trees, exec_path, time_out, folder_out,
                     break
                 list_of_orders = list(permutations(order_list))
                 while not guess:
-                    fasta2phylip(species_folder, infile_fasta, order_list, folder_in, folder_out, logger)
-                    phylip_file = get_phylip_file(folder_out, species_folder)
-                    phylip2paml(folder_out, species_folder, phylip_file, species, group, logger)
-                    seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)
+                    phylip_file = fasta2phylip(species_folder, infile_fasta, order_list, folder_in, folder_out, logger)
+                    # phylip_file = get_phylip_file(folder_out, species_folder)
+                    infile_phy = phylip2paml(folder_out, species_folder.name, phylip_file, species, group, logger)
+                    seq_philip_file = os.path.join(folder_out, species_folder.name, phylip_file)
                     os.remove(seq_philip_file)
                     logger.info("remove {}".format(seq_philip_file))
-                    if not get_input_items(folder_out, folder_trees, species_folder, logger):
+                    if not get_input_items(folder_out, folder_trees, species_folder.name, logger):
                         break
-                    item_folder, infile_phy, tree_path = get_input_items(folder_out, folder_trees, species_folder, logger)
+                    item_folder, infile_phy, tree_path = get_input_items(folder_out, folder_trees, species_folder.name,
+                                                                         logger)
                     logger.info("run codeml")
-                    if not run_codeml(folder_out, species_folder, item_folder, infile_phy, tree_path, exec_path, time_out,
+                    if not run_codeml(folder_out, species_folder.name, item_folder, infile_phy, tree_path, exec_path,
+                                      time_out,
                                       logger):
-                        logger.info('FAIL!Wrong order for species folder {}={}'.format(species_folder, order_list))
+                        logger.info('FAIL!Wrong order for species folder {}={}'.format(species_folder.name, order_list))
                         try:
                             list_of_orders.pop(0)
                             order_list = list_of_orders[0]
@@ -335,8 +345,9 @@ def main(folder_in, folder_order, folder_trees, exec_path, time_out, folder_out,
                             guess = True
                     else:
                         guess = True
-                        logger.info('GUESS!Right order for species folder {}={}'.format(species_folder, order_list))
-                        wright_order_file(folder_order, species_folder, order_list, logger)
+                        logger.info('GUESS!Right order for species folder {}={}'.format(species_folder.name,
+                                                                                        order_list))
+                        wright_order_file(folder_order, species_folder.name, order_list, logger)
                         input_dir = os.path.join(folder_in, species_folder)
                         shutil.rmtree(input_dir)
                         logging.info("Input dir {} with fasta file deleted".format(input_dir))
@@ -349,9 +360,8 @@ if __name__ == '__main__':
     parser.add_argument('--order', help='Path to the folder with .order files for each folder in input', nargs='?',
                         required=True)
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
-    parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml', required=True)
-    parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=120', nargs='?', default='120',
-                        required=True)
+    parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml')
+    parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=120', nargs='?', default='120')
     parser.add_argument('--o', help='Path to the folder with result philip files', nargs='?', required=True)
     parser.add_argument('--species', help='Number of species', nargs='?', required=True)
     parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)

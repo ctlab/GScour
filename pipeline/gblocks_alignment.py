@@ -32,7 +32,7 @@ def launch_gblocks(input_tuple, auto_flag, exec_path, child_logger):
     input_dir, species_folder, infile = input_tuple
     infile_path = os.path.join(input_dir, species_folder, infile)
     if auto_flag == 'n':
-        params_string = '-t=c -b1=3 -b2=4 -b3=8 -b4=10 -b5=n -p=y'
+        params_string = '-t=c -b1=3 -b2=4 -b3=8 -b4=9 -b5=n -p=y'
     else:
         if len(species_folder) <= 9:
             number_of_species = len(species_folder)
