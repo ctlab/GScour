@@ -102,7 +102,7 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
         logging.info("Please check file .phy {}: cause an error {}".format(item_folder_path, e.args))
         return
     os.chdir(item_folder_path)
-    logging.info("Working with {}".format(file_number))
+    logging.info("Working with {}/{}".format(species_folder, file_number))
     infile_path = os.path.join(item_folder_path, infile)
     file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
 
@@ -117,19 +117,20 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
     try:
         return_code = p.wait(timeout=120)  # Timeout in seconds
         stdout, stderr = p.communicate()
-        logging.info("Return code={} for file number {}, stderr: {}".format(return_code, file_number, stderr))
+        logging.info("Return code={} for file number {}/{}, stderr: {}".format(return_code, species_folder,
+                                                                               file_number, stderr))
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
                 if "Time used" in o_f.readlines()[-1]:
                     with counter.get_lock():
                         counter.value += 1
-                    logging.info("The work has been done for file {}\nCounter of processed files = {}".
-                                 format(file_number, counter.value))
+                    logging.info("The work has been done for file {}/{}\nCounter of processed files = {}".
+                                 format(species_folder, file_number, counter.value))
                     if file_number not in PROCESSED_FILES:
                         PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
-                        logging.info("OK file {}".format(file_number))
+                        logging.info("OK file {}/{}".format(species_folder, file_number))
                 else:
-                    logging.warning("The work has not been finished for file number {}".format(file_number))
+                    logging.warning("The work has not been finished for file {}/{}".format(species_folder, file_number))
                     if file_number not in BROKEN_FILES:
                         BROKEN_FILES.append(file_number)
                         # logging.warning("BAD file {}".format(file_number))

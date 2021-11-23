@@ -151,7 +151,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
         logging.info("There is no .phy for {}:\n{}".format(infile_path, err.args))
         return
     os.chdir(item_folder_path)
-    logging.info("Working with {}".format(file_number))
+    logging.info("Working with {}/{}".format(species_folder, file_number))
 
     if hypothesis_type == "null":
         global BROCKEN_FILES_NULL, PROCESSED_FILES_NULL
@@ -183,20 +183,20 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
         p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         # return_code = p.wait(timeout=time_out)  # Timeout in seconds
         stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
-        logging.info("OK paml for file number {}, stderr: {}".format(file_number, stderr))
+        logging.info("OK paml for file {}/{}, stderr: {}".format(species_folder, file_number, stderr))
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
                 if "Time used" in o_f.readlines()[-1]:
                     with processed_counter.get_lock():
                         processed_counter.value += 1
-                    logging.info("The work has been done for file {}\nCounter of processed files = {}".
-                                 format(file_number, processed_counter.value))
+                    logging.info("The work has been done for file {}/{}\nCounter of processed files = {}".
+                                 format(species_folder, file_number, processed_counter.value))
                     if file_number not in processed_files:
                         processed_files.append(file_number)  # TODO: list - to shared variable
                         # logging.info(
                         #     "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
                 else:
-                    logging.warning("The work has not been finished for file number {}".format(file_number))
+                    logging.warning("The work has not been finished for file {}/{}".format(species_folder, file_number))
                     if file_number not in broken_files:
                         broken_files.append(file_number)
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
