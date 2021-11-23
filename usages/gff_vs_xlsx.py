@@ -8,6 +8,7 @@ import pandas as pd
 
 in_file_gff = "/path_to/species.gff"
 in_file_xlsx = "/path_to/genes_to_find.xlsx"
+out_file_xlsx = "/path_to/intersection.xlsx"
 gff_genes = list()
 in_handle = open(in_file_gff)
 for rec in GFF.parse(in_handle):
@@ -21,6 +22,6 @@ df = pd.io.excel.read_excel(in_file_xlsx, engine='openpyxl')
 genes_immune = set(df['Gene symbol'])
 intersection = pd.Series(list(gff_genes_pd.intersection(genes_immune)))
 
-writer = pd.ExcelWriter("/home/alina_grf/progprojects/data/intersection.xlsx", engine='openpyxl')
+writer = pd.ExcelWriter(out_file_xlsx, engine='openpyxl')
 intersection.to_excel(writer, sheet_name='intersection')
 writer.save()
