@@ -29,18 +29,24 @@ Obtain one-to-one ortholog clusters for whole-genome sequences.
 #### 1.1 Finding orthologs proteins
 - It is necessary for futher analysis to name the species in numbers (1,2,3,...) and to name all associated files in numbers  
 (1.faa, 2.faa..., 1.gbff, 2.gbff...)
-- Launch proteinortho. For example, launch_proteinortho.sh or launch_proteinortho_synteny.sh.
-Result file will be needed: project_name.proteinortho.tsv or project_name.poff.tsv if synteny;
-#### 1.2 Form ortologs table
-- Form a ortologs table with fulfillment of requirements: single-copy orthologs only, group (minimal
+##### 1.1.1 Proteinortho
+ - launch_proteinortho
+For example, launch_proteinortho.sh or launch_proteinortho_synteny.sh.
+Result file will be needed for futher analysis: project_name.proteinortho.tsv or project_name.poff.tsv if use synteny;
+ - form ortologs table
+Form a ortologs table with fulfillment of requirements: single-copy orthologs only, group (minimal
 number of species in group), required species (one target species in relation to which the analysis is made). Result will be recorded to the file with prefix 'formed', for example, formed_project_name.poff.tsv;  
-`python get_orthologs_table.py --ortho /path/tothe/project_name.poff.tsv --species 8 --group 6 --required 6`
-
+`python pipeline/get_orthologs_table.py --ortho /path/tothe/project_name.poff.tsv --species 8 --group 6`<br />` --required 6`
+##### 1.1.2 Extract from ncbi
+If all of needed species have ncbi annotations, we can extract orthologs from it.<br />
+This requires defining variables in `pipeline/orthologs_from_annotation.py` script: <br />
+- annotation_path_folder (folder with .gff files for every species)<br />
+- result_file_path (path to the result .xlsx file that will be written)<br />
 ### 2. Sequences
 #### 2.1. Get nucleotide sequences
+##### 2.1.1 Extract sequences in accordance with proteinortho result file
 Annotation .gbff, genomes .fna and cds_from_genomic.fna are needed. Firstly, try to extract sequences from cds_from_genomic.fna, else from .gbff. Result: .fna file with sequences and .log file with summary for every .fna. See log in "get_ortho_nuc_seqs.log".  
-`python get_ortho_nucleotides.py --ortho /abspath/to/thetable/project_name_formed_orthologs_table.tsv`<br />`--gbff /abspath/tothe/gbff_folder/gbff/ --cds /abspath/tothe/cds/cds_refseq/`<br />`--genome /abspath/tothe/fnafiles/genomes/ --species 8 --group 6 --out /abspath/tothe/nuc_out_folder/`
-
+`python pipeline/get_ortho_nucleotides.py --ortho /abspath/to/thetable/project_name_formed_orthologs_table.tsv`<br />`--gbff /abspath/tothe/gbff_folder/gbff/ --cds /abspath/tothe/cds/cds_refseq/`<br />`--genome /abspath/tothe/fnafiles/genomes/ --species 8 --group 6 --out /abspath/tothe/nuc_out_folder/`<br />
 Sequences will be sorted to subfolders with unique names (group names)
 corresponding to set of species in fasta file (sorted in increasing order). For example:  
 ```bash
@@ -61,10 +67,12 @@ $ ls */
 12/:            23/:  
 1.fasta         25.fasta    
                 34.fasta  
- ```                              
+ ```                    
+ ##### 2.1.2 Extract sequences in accordance with some target gene names list
+`python pipeline/get_nucleotides_target_genes.py --t /path/to/orthologs.xlsx --gbff /path/to/folder/.gbff annotations <br /> --o /path/to/output_folder`
 #### 2.2 Check duplicates
-Perform additional check to exclude duplicates  
-`python check_duplicates.py --i /abspath/tothe/nuc_out_folder(from_step2.1)/`
+Perform additional check to exclude duplicates within one sample<br />
+`python usages/check_duplicates.py --i /abspath/tothe/nuc_out_folder(from_step2.1)/`
 
 ### 3. Alignments
 Produce codon-based nucleotide sequence alignments for all the one-to-one ortholog clusters.
@@ -73,13 +81,13 @@ PRANK may be used separetly or as a subprocess of GUIDANCE.
 Option --tree isn't adapted to work with groups, therefore it should be used if there is only one group (i.e args in get_orthologs_table.py group==species). By default we use option -translate for prank, but you can change it for -codon: codon alignment produces more accurate alignments than alignment of translated protein sequences. Whether you use tree or set output format this change can be made in 
 https://github.com/ctlab/GScour/blob/5f1a4463ee29b0f4ef9f80cefc8d74c73e324868/pipeline/prank_alignment.py#L45
 or lines 48, 51, 56.<br />
-`python prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
+`python pipeline/prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
 #### 3.2. GUIDANCE, masking of inconsistent residues
 NOTE: this step can take a lot of computation time.
 If you use MAFFT or CLUSTAL (not PANK) as a subproces of GUIDANCE you should correct --msaProgram option
 in the line 
 https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pipeline/guidance_alignment.py#L47<br />
-`python guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/` <br />
+`python pipeline/guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/` <br />
 `--exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`<br />
 The resulting files stored in cleansed folder `/abspath/tothe/guidance_out/cleansed/`.
 #### 3.3 Sort by groups
@@ -90,7 +98,7 @@ https://github.com/ctlab/GScour/blob/a20f24a45a2a6163cbbb4834c726395d59438933/us
 #### 3.4 Gblocks, select conserved blocks of sequence
 Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/GScour/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
-`python gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks`<br />`--threads 2`
+`python pipeline/gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks`<br />`--threads 2`
 
 ### 4. Evolutionary analysis
 #### 4.1 Provide trees
@@ -129,19 +137,19 @@ $ ls */
                 3010.phy        2.phy    
 ```
 In --i and out --o folders can be the same. Making backups is necessary for further analysis.  
-`python fasta2paml.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/nuc_out_prank/  
+`python pipeline/fasta2paml.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/nuc_out_prank/  
 --species 8 --group 6`  
 See 'fasta2paml.log' in working directory.  
 ###### 4.3.1.1 Test right order manually
 Test PAML (codeml) for knowing right order for sequences to exclude PAML's errors (Some reference to tree file format from [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf): "The species can be represented using either their names or their indexes corresponding to the order of their occurrences in the sequence data file.", but there may be some nuances here).
 Test can be performed with launching the one ratio PAML model with script 'paml_one_ratio_model.py',  
 see --help for arguments: option --e can be skipped if use codeml from biopython (Bio.Phylo.PAML), use option '--rework y' if want to overwrite existing paml files. This script writes .ctl file and launches one ratio model.<br />
-`python paml_one_ratio_model.py --i /abspath/tothe/nuc_out_prank/ --tree /abspath/folder_trees/ --threads 22`    
+`python pipeline/paml_one_ratio_model.py --i /abspath/tothe/nuc_out_prank/ --tree /abspath/folder_trees/ --threads 22`    
 See "paml_one_ratio.log", further testing may be continued in separate item's folders just from command line.
 ##### 4.3.2 Ordering
 - After having known about the right orders, .order files should be placed to separate folder. Name of .order file should be the same as name of species folder ('12' -> '12.order');<br />
 - Launch fasta2paml_ordering.py (can be launched on the backup folder), right order will be set automaticaly:<br />
-`python fasta2paml_ordering.py --i /abspath/tothe/nuc_out_prank/ --order /abspath/folder_orders/`<br />`--o /abspath/tothe/nuc_out_prank/ 
+`python pipeline/fasta2paml_ordering.py --i /abspath/tothe/nuc_out_prank/ --order /abspath/folder_orders/`<br />`--o /abspath/tothe/nuc_out_prank/ 
 --species 8 --group 6` 
 See 'fasta2paml_ordering.log' in working directory.  
 #### 4.6 One ratio model  
@@ -153,11 +161,11 @@ Sliding window approach SWAMP to mask regions of the alignment with excessive am
   - if you have folder with marked trees for paml, you can clean it and insert spaces with sed stream editor:<br />
   `sed -i 's/ #1//' *` <br />
   `sed -i 's/,/, /g' *`
-  - `python construct_branchcodes.py --i /abspath/tothe/nuc_out_prank/ --t /abspath/folder_trees_clean/`<br />`--b /abspath/folder_for_branchcodes/`
+  - `python pipeline/construct_branchcodes.py --i /abspath/tothe/nuc_out_prank/ --t /abspath/folder_trees_clean/`<br />`--b /abspath/folder_for_branchcodes/`
 - Launch SWAMP:
   - "swamp_script.py" for python3 environment, swamp_script_py2.py for python2 envoronment;
   -  use modified version of SWAMP executable GScour/"SWAMP_ordered.py" to conserve right order.<br />
-`python swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/`<br />` -b /abspath/tothe/branchcodes/ -t 2 -w 20`<br />
+`python pipeline/swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/`<br />` -b /abspath/tothe/branchcodes/ -t 2 -w 20`<br />
 See stdout and 'swamp_log.log'. <br />
 Use global variable 'target_dict' in swamp_script.py if need to run on individual files:<br />
 `target_dict[species_folder] = [item_folder1, item_folder2...]`
@@ -188,16 +196,16 @@ different starting values to ensure that the global peak is found (*Statistical 
 Selection, Ziheng Yang and Mario dos Reis*)
 
 For masking files (after SWAMP) launch, for example:  
-`python masked_paml_branch_site_model.py --i /abspath/tothe/for_paml/  
+`python pipeline/masked_paml_branch_site_model.py --i /abspath/tothe/for_paml/  
 --tree /abspath/folder_trees/ --threads 10`
 
 For files without masking:  
-`python paml_branch_site_model.py --i /abspath/tothe/for_paml/  
+`python pipeline/paml_branch_site_model.py --i /abspath/tothe/for_paml/  
 --tree /abspath/folder_trees/ --threads 10` 
 
 ### 5. Analysing PAML's results  
 #### 5.1 Tabulation
-`python paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/` <br />`--log /abspath/tothe/nuc_out_folder/ --required 6`<br />
+`python pipeline/paml_out_analysis.py (paml_out_analysis_masked.py) --i /abspath/tothe/for_paml/` <br />`--log /abspath/tothe/nuc_out_folder/ --required 6`<br />
 Results will be written to /abspath/tothe/for_paml/common_sheet.xlsx, also will be written in every species folder to file named 'name_of_species_folder.result' and summary to stdout.
 * common_sheet.xlsx, sheet for every species group:<br />
 dN/dS (w) for site classes (K=4) (see [PAML manual](http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf))<br />
