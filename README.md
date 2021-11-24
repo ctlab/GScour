@@ -195,13 +195,17 @@ ical optimization algorithm in PAML, each analysis is conducted three times with
 different starting values to ensure that the global peak is found (*Statistical Properties of the Branch-Site Test of Positive
 Selection, Ziheng Yang and Mario dos Reis*)
 
+- PAML launch
 For masking files (after SWAMP) launch, for example:  
-`python pipeline/masked_paml_branch_site_model.py --i /abspath/tothe/for_paml/  
---tree /abspath/folder_trees/ --threads 10`
+`python pipeline/masked_paml_branch_site_model.py --timeout 1000 --i /abspath/tothe/for_paml/ --tree /abspath/folder_trees/ --threads 64 --rework y` 
 
 For files without masking:  
-`python pipeline/paml_branch_site_model.py --i /abspath/tothe/for_paml/  
---tree /abspath/folder_trees/ --threads 10` 
+`python pipeline/paml_branch_site_model.py --timeout 1000 --i /abspath/tothe/for_paml/ --tree /abspath/folder_trees/ --threads 64 --rework y` 
+
+See help for args.
+
+- Additional check<br />
+Run `usages/count_correct_rst_files.py` to check number of correct auxiliary files required for paml analysis.<br />
 
 ### 5. Analysing PAML's results  
 #### 5.1 Tabulation
