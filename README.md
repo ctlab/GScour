@@ -157,8 +157,8 @@ See launch example above in the step 4.3.1.1.
 #### 4.7 SWAMP masking
 Sliding window approach SWAMP to mask regions of the alignment with excessive amino acid changes.
 - Construct branchcodes for every species group:  
-  - required tree view for automatic build branchcode: '(1, ((2, 3), ((6), 8, 4)));'
-  - if you have folder with marked trees for paml, you can clean it and insert spaces with sed stream editor:<br />
+  - required tree view for automatic build branchcode (items are separated by spaces): '(1, ((2, 3), ((6), 8, 4)));'
+  - if you have folder with marked trees for paml, you can clean it from label (#1) and insert spaces with sed stream editor:<br />
   `sed -i 's/ #1//' *` <br />
   `sed -i 's/,/, /g' *`
   - `python pipeline/construct_branchcodes.py --i /abspath/tothe/nuc_out_prank/ --t /abspath/folder_trees_clean/`<br />`--b /abspath/folder_for_branchcodes/`
