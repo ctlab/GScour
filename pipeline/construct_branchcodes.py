@@ -38,9 +38,11 @@ def get_tree_and_codes(rst_file_path, trees_folder, species_folder_name):
 
 def collect_previous_tree_items(tree_string, i):
     tree_items_list = []
+    print("tree_string", tree_string)
     for tree_item in tree_string.split()[i::-1]:
         numeric_species_name = re.search(r'\d+', tree_item).group(0)
         tree_items_list.append(numeric_species_name)
+        print("tree_items_list", tree_items_list)
         if re.search(r'\(', tree_item):
             removable_idx = str.find(tree_item, '(')
             new_tree_item = tree_item[0:removable_idx] + tree_item[removable_idx + 1:]

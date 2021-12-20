@@ -229,7 +229,9 @@ def main(in_folder, ortho_logs, target_species, required_p_value):
                     positive_sites_number += positive_sites_number_item
 
                     choose_the_lowest_p_value(genes_under_positive, gene_protein_dict)
-                    print("genes_under_positive", genes_under_positive)
+                    print("genes_under_positive for {} of len {}, {}".format(species_folder.name,
+                                                                             len(genes_under_positive),
+                                                                             genes_under_positive))
                     # genes_under_positive.update(gene_protein_dict)
 
             child_logger.warning("Species folder {}: broken_paml_outs : {} : {}".
@@ -267,8 +269,7 @@ if __name__ == '__main__':
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', required=True)
     parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?',
                         required=True)
-    parser.add_argument('--p', help='p-value level', nargs='?',
-                        required=True)
+    parser.add_argument('--p', help='p-value level', nargs='?', required=True)
     args = parser.parse_args()
     in_dir = args.i
     log_folder = args.log

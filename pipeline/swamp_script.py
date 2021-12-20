@@ -80,12 +80,12 @@ def run_swamp(items_folder, executable_path, branch_codes, threshold, windows_si
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-e', help='Path to the SWAMP executable', nargs='?', required=True)
-    parser.add_argument('-i', help='Provide the full path to an INFOLDER that contain multiple subfolders',
+    parser.add_argument('--e', help='Path to the SWAMP executable', nargs='?', required=True)
+    parser.add_argument('--i', help='Provide the full path to an INFOLDER that contain multiple subfolders',
                         nargs='?', required=True)
-    parser.add_argument('-b', help='Path to the folder with BRANCHNAMESFILEs', nargs='?', required=True)
-    parser.add_argument('-t', help='THRESHOLD', nargs='?', default="", required=True)
-    parser.add_argument('-w', help='WINDOWSIZE', nargs='?', required=True)
+    parser.add_argument('--b', help='Path to the folder with BRANCHNAMESFILEs', nargs='?', required=True)
+    parser.add_argument('--t', help='THRESHOLD', nargs='?', default="", required=True)
+    parser.add_argument('--w', help='WINDOWSIZE', nargs='?', required=True)
     args = parser.parse_args()
     try:
         if target_dict:

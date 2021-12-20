@@ -81,14 +81,23 @@ def get_gene_name_protein_id(item_folder_name, seq_log_folder, target_species, c
                 for line in f:
                     if re.search(r"-\s[{}]+$".format(target_species), line):
                         pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
-                        gene_name = (re.search(pattern, line)).group(1)
-                        protein_id = (re.search(pattern, line)).group(2)
+                        try:
+                            gene_name = (re.search(pattern, line)).group(1)
+                            protein_id = (re.search(pattern, line)).group(2)
+                        except AttributeError:
+                            if not gene_name:
+                                child_logger.error("Can't parse gene name from log")
+                                gene_name = "gene-{}".format(file_number)
+                            if not gene_name:
+                                child_logger.error("Can't parse protein id from log")
+                                gene_name = "protein_id-{}".format(file_number)
     if not pattern:
         child_logger.info("log pattern not found to get gene names")
     return gene_name, protein_id
 
 
-def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, target_species, species_folder_sheet):
+def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, target_species, species_folder_sheet,
+                required_p_value):
     broken_paml_outs_item = list()
     no_significance_item = 0
     positive_sites_number_item = 0
@@ -128,7 +137,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
             species_folder_sheet['P-value'].append(p_val)
             "the table is a main source of information, p-value and hence positive_sites_number_item, " \
             "gene_protein_dict, no_significance_item can be customized"
-            if p_val and p_val < 0.05:
+            if p_val and p_val < required_p_value:
                 number_pos = len(pos_sites)
                 child_logger.info("P.S: Item {} Gene_name {} Protein_id {} | Dn/Ds foreground (2a)={} | Dn/Ds "
                                   "foreground (2b)={}\n\t\t\t\tDn/Ds background (2a)={} |"
@@ -177,7 +186,7 @@ def choose_the_lowest_p_value(joint_dict, sub_dict):
         joint_dict.update(sub_dict)
 
 
-def main(in_folder, ortho_logs, target_species):
+def main(in_folder, ortho_logs, target_species, required_p_value):
     global common_pos_gene_dict
     for species_folder in os.scandir(in_folder):
         species_folder_sheet = {
@@ -203,14 +212,16 @@ def main(in_folder, ortho_logs, target_species):
                 if os.path.isdir(item):
                     broken_paml_outs_item, no_significance_item, positive_sites_number_item, \
                     gene_protein_dict = count_sites(in_folder, species_folder, item, child_logger,
-                                                    ortho_logs, target_species, species_folder_sheet)
+                                                    ortho_logs, target_species, species_folder_sheet, required_p_value)
 
                     broken_paml_outs += broken_paml_outs_item
                     no_significance += no_significance_item
                     positive_sites_number += positive_sites_number_item
 
                     choose_the_lowest_p_value(genes_under_positive, gene_protein_dict)
-                    print("genes_under_positive", genes_under_positive)
+                    print("genes_under_positive for {} of len {}, {}".format(species_folder.name,
+                                                                             len(genes_under_positive),
+                                                                             genes_under_positive))
                     # genes_under_positive.update(gene_protein_dict)
 
             child_logger.warning("Species folder {}: broken_paml_outs : {} : {}".
@@ -246,16 +257,20 @@ if __name__ == '__main__':
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', required=True)
     parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?',
                         required=True)
+    parser.add_argument('--p', help='p-value level', nargs='?', required=True)
     args = parser.parse_args()
     in_dir = args.i
     log_folder = args.log
     required_species = args.required
-    print("Passed args: input directory {}, log folder {}, required species {}".format(in_dir, log_folder,
-                                                                                       required_species))
+    p_value_required = float(args.p)
+    print("Passed args: input directory {}, log folder {}, required species {}, p-value {}".format(in_dir, log_folder,
+                                                                                                   required_species,
+                                                                                                   p_value_required))
+
     try:
         common_sheet_path = os.path.join(in_dir, 'masked_common_sheet.xlsx')
         writer = pd.ExcelWriter(common_sheet_path, engine='xlsxwriter')
-        main(in_dir, log_folder, required_species)
+        main(in_dir, log_folder, required_species, p_value_required)
         values = list(common_pos_gene_dict.values())
         # print("value[0],\n", values[0], "value[1],\n", values[1],
         #       "\nentire keys\n", common_pos_gene_dict.keys())
