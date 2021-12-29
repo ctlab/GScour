@@ -280,6 +280,7 @@ if __name__ == '__main__':
                 [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species group': [i[2] for i in values]
             }
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species group'])
+        df.sort_values('p-value')
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:

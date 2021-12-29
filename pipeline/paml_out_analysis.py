@@ -290,6 +290,7 @@ if __name__ == '__main__':
             }
         print("summary_sheet", summary_sheet)
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species group'])
+        df.sort_values('p-value')
         df.to_excel(writer, sheet_name='summary')
         writer.save()
     except BaseException as e:
