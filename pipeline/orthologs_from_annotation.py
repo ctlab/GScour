@@ -75,12 +75,8 @@ def get_genes_from_annotation(annotation_type):
     return gene_protein_for_species
 
 
-def pairwise_comparison(annotation_type):
+def pairwise_comparison():
     for i in range(1, len(species_names)):
-        # if annotation_type == 'gbff':
-        #     print("Smoke test, comparison: intersection of {} and {} = {}".
-        #           format(species_names[0], species_names[i], len(set.intersection(genes[species_names[0][0]],
-        #                                                                           genes[species_names[i][0]]))))
         print("Smoke test, comparison: intersection of {} and {} = {}".
               format(species_names[0], species_names[i], len(set.intersection(genes[species_names[0]],
                                                                               genes[species_names[i]]))))
@@ -95,22 +91,29 @@ def extract_orthologs():
 
 def write_result(result, result_file_path, gene_protein_dict):
     if gene_protein_dict:
-        orthologs = dict()
+        gene_names = dict()
+        proteins = dict()
         species_names = list()
         for species, vals in gene_protein_dict.items():
             species_names.append(species)
-            orthologs[species] = list()
+            gene_names[species] = list()
+            proteins[species] = list()
             for gene in result:
                 if vals.get(gene):
-                    orthologs[species].append((gene, vals[gene]['protein_id']))
+                    gene_names[species].append(gene)
+                    proteins[species].append(vals[gene]['protein_id'])
 
         # header = pd.MultiIndex.from_product([species_names,
         #                                      ['gene', 'protein_id']])
-        result = pd.DataFrame(data=orthologs)  #, columns=header)
+        df1 = pd.DataFrame(gene_names)
+        df2 = pd.DataFrame(proteins)
+        dfs = [df1, df2]
+        res = pd.concat(dfs, axis=1)
+        result = pd.DataFrame(res)
     else:
         result = pd.Series(list(result))
     writer = pd.ExcelWriter(result_file_path, engine='openpyxl')
-    result.to_excel(writer, sheet_name='orthologs')
+    result.to_excel(writer, sheet_name='orthologs', index=False)
     writer.save()
 
 
@@ -120,7 +123,7 @@ if __name__ == '__main__':
                         required=True, nargs='?')
     args = parser.parse_args()
     gene_protein_for_species = get_genes_from_annotation(args.f)
-    pairwise_comparison(args.f)
+    pairwise_comparison()
     orthologs = extract_orthologs()
     write_result(orthologs, result_xlsx_file_path, gene_protein_for_species)
     print("done")

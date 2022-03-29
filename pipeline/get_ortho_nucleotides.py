@@ -487,7 +487,7 @@ def replace_broken_files(directory_out):
                    os.path.join(broken_species_folder, file_number + ".log"))
 
 
-def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath, species, directory_out):
+def main(orthodata_filepath, annotation_gbff, cds_from_genomic, fna_filepath, species, dir_out):
     global NUMBER_OF_NEED_TO_BE_WRITTEN
     global BROKEN_LIST
     try:
@@ -512,8 +512,8 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, initfna_filepath
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
         logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} = {}".format(species_numerating,
                                                                                NUMBER_OF_NEED_TO_BE_WRITTEN))
-        get_and_write_nucleotide_seq(annotation_gbff_path, cds_from_genomic_path, ortho_protein_ids, directory_out,
-                                     species_numerating, initfna_filepath)
+        get_and_write_nucleotide_seq(annotation_gbff_path, cds_from_genomic_path, ortho_protein_ids, dir_out,
+                                     species_numerating, fna_filepath)
 
 
 if __name__ == '__main__':
@@ -527,8 +527,7 @@ if __name__ == '__main__':
                                       'features annotated on the assembly', nargs='?')
     # parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
     #                                  'www.ncbi.nlm.nih.gov/genome/', nargs='?')
-    parser.add_argument('--genome', help='Path to the folder with reference genome'
-                                         'in FASTA format', nargs='?')
+    parser.add_argument('--genome', help='Path to the folder with .fna files', nargs='?')
     parser.add_argument('--species', help='Number of species', nargs='?', required=True)
     parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     parser.add_argument('--out', help='Path to the folder for result write out, if it does not exist,'
