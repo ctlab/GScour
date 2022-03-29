@@ -153,7 +153,7 @@ def extract_seq_from_fasta(fna_file_path, feature, record_id, check_start, check
             return extracted_seq
 
 
-def check_translate(seq, protein_translation, initfna_filepath, feature, record_id,
+def check_translate(seq, protein_translation, fna_filepath, feature, record_id,
                     species_numerating, check_multiple, check_start, check_stop, check_accordance, protein_length_gbff):
     logging.info("start checking translate with : check_multiple - {}, check_start - {},"
                  " check_stop - {}, check_accordance - {}".format(check_multiple, check_start, check_stop,
@@ -190,7 +190,7 @@ def check_translate(seq, protein_translation, initfna_filepath, feature, record_
 
     protein_counted_length = len(protein)
     if protein_translation != protein:
-        fna_file_path = os.path.join(initfna_filepath, '{}.{}'.format(species_numerating, 'fna'))
+        fna_file_path = os.path.join(fna_filepath, '{}.{}'.format(species_numerating, 'fna'))
         if not os.path.isfile(fna_file_path):
             logging.info("From check_translate: File path {} does not exist\nReturn initial seq from .gbff".format(
                 fna_file_path))
@@ -357,7 +357,7 @@ def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, species_num
     logging.info("check for file cds_from_genomic: {}".format(cds_from_genomic_file))
     if os.path.isfile(cds_from_genomic_file):
         for idx, protein_id in np.ndenumerate(ortho_protein_ids):
-            if protein_id == '*' or not protein_id:
+            if protein_id == '*' or not protein_id or not isinstance(protein_id, str):
                 continue
             seq_record, gene_name = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
             file_out_number = str(idx[0] + 1)
@@ -491,15 +491,17 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, fna_filepath, sp
     global NUMBER_OF_NEED_TO_BE_WRITTEN
     global BROKEN_LIST
     try:
-        ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(3, 3 + species))
+        ortho_data = pd.read_csv(orthodata_filepath, sep='\t', usecols=range(species))
     except ValueError:
-        ortho_data = pd.read_csv(orthodata_filepath, sep=',', usecols=range(3, 3 + species))
-    for column_number, _ in enumerate(ortho_data.columns):
+        ortho_data = pd.read_csv(orthodata_filepath, sep=',', usecols=range(species))
+    # for column_number, column_name in enumerate(ortho_data.columns):
+    for column_name in ortho_data.columns:
         NUMBER_OF_NEED_TO_BE_WRITTEN = 0
-        species_numerating = str(column_number + 1)
-        annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(species_numerating, 'gbff'))
-        cds_from_genomic_path = os.path.join(cds_from_genomic, "{}.{}".format(species_numerating, 'fna'))
-        logging.info('Working with species number {}'.format(species_numerating))
+        # species_numerating = str(column_number + 1)
+        column_number = int(column_name)
+        annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(column_name, 'gbff'))
+        cds_from_genomic_path = os.path.join(cds_from_genomic, "{}.{}".format(column_name, 'fna'))
+        logging.info('Working with species number {}'.format(column_name))
         """ define broken_list as a global var for re-extracting (post-processing) seqs from list ['item1', 'item2'..],
          e.g ['3557', '5781', '1503'] """
         if BROKEN_LIST:
@@ -508,12 +510,12 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, fna_filepath, sp
                 broken_list_int_convert.append(int(number) - 1)
                 ortho_protein_ids = ortho_data.iloc[broken_list_int_convert, column_number].values
         else:
-            ortho_protein_ids = ortho_data.iloc[:, column_number].values
+            ortho_protein_ids = ortho_data.loc[:, column_name].values
         NUMBER_OF_NEED_TO_BE_WRITTEN = len(ortho_protein_ids)
-        logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} = {}".format(species_numerating,
+        logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN for species {} = {}".format(column_name,
                                                                                NUMBER_OF_NEED_TO_BE_WRITTEN))
         get_and_write_nucleotide_seq(annotation_gbff_path, cds_from_genomic_path, ortho_protein_ids, dir_out,
-                                     species_numerating, fna_filepath)
+                                     column_name, fna_filepath)
 
 
 if __name__ == '__main__':
