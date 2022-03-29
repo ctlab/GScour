@@ -3,7 +3,7 @@
 - Biopython
 - Numpy
 - Pandas
-### Finding orthologs
+### Find orthologs
 - Proteinortho (https://gitlab.com/paulklemm_PHD/proteinortho)
 ### Aligners and alignment analysis tools
 - PRANK
@@ -26,7 +26,7 @@ If there are any questions, errors, suggestions feel free to contact me via emai
 lnfyodorova@gmail.com.
 ### 1. One-to-one orthologs
 Obtain one-to-one ortholog clusters for whole-genome sequences.
-#### 1.1 Finding orthologs proteins
+#### 1.1 Find orthologs proteins
 - It is necessary for futher analysis to name the species in numbers (1,2,3,...) and to name all associated files in numbers  
 (1.faa, 2.faa..., 1.gbff, 2.gbff...)
 ##### 1.1.1 Proteinortho
@@ -42,10 +42,14 @@ If all of needed species have ncbi annotations, we can extract orthologs from it
 This requires defining variables in `pipeline/orthologs_from_annotation.py` script: <br />
 - annotation_path_folder (folder with .gff files for every species)<br />
 - result_file_path (path to the result .xlsx file that will be written)<br />
+##### 1.1.3 Combine the previous ways
+Merge or concatenate results, write paths and options into script and run
+`python utilities/merge_dfs.py'
 ### 2. Sequences
 #### 2.1. Get nucleotide sequences
-##### 2.1.1 Extract sequences in accordance with proteinortho result file
-Annotation .gbff, genomes .fna and cds_from_genomic.fna are needed. Firstly, try to extract sequences from cds_from_genomic.fna, else from .gbff. Result: .fna file with sequences and .log file with summary for every .fna. See log in "get_ortho_nuc_seqs.log".  
+##### 2.1.1 Extract sequences in accordance with orthologs result file
+See example of file data/orthologs_table.tsv. 
+Annotation .gbff or cds_from_genomic.fna are needed, genomes .fna are used for additional check. If you do not have one of these options, give path to empty folder. Result: .fna files with sequences and .log files with summary for every set of orthologs. See log in "get_ortho_nuc_seqs.log".  
 `python pipeline/get_ortho_nucleotides.py --ortho /abspath/to/thetable/project_name_formed_orthologs_table.tsv`<br />`--gbff /abspath/tothe/gbff_folder/gbff/ --cds /abspath/tothe/cds/cds_refseq/`<br />`--genome /abspath/tothe/fnafiles/genomes/ --species 8 --group 6 --out /abspath/tothe/nuc_out_folder/`<br />
 Sequences will be sorted to subfolders with unique names (group names)
 corresponding to set of species in fasta file (sorted in increasing order). For example:  
