@@ -76,7 +76,7 @@ $ ls */
 `python pipeline/get_nucleotides_target_genes.py --t /path/to/orthologs.xlsx --gbff /path/to/folder/.gbff annotations <br /> --o /path/to/output_folder`
 #### 2.2 Check duplicates
 Perform additional check to exclude duplicates within one sample<br />
-`python usages/check_duplicates.py --i /abspath/tothe/nuc_out_folder(from_step2.1)/`
+`python utilities/check_duplicates.py --i /abspath/tothe/nuc_out_folder(from_step2.1)/`
 
 ### 3. Alignments
 Produce codon-based nucleotide sequence alignments for all the one-to-one ortholog clusters.
@@ -96,9 +96,9 @@ https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pi
 The resulting files stored in cleansed folder `/abspath/tothe/guidance_out/cleansed/`.
 #### 3.3 Sort by groups
 For example:<br />
-`python usages/sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`<br />
+`python utilities/sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`<br />
 Format of input file can be adjusted here <br />
-https://github.com/ctlab/GScour/blob/a20f24a45a2a6163cbbb4834c726395d59438933/usages/sort_by_groups.py#L48
+https://github.com/ctlab/GScour/blob/a20f24a45a2a6163cbbb4834c726395d59438933/utilities/sort_by_groups.py#L48
 #### 3.4 Gblocks, select conserved blocks of sequence
 Use parameter --auto for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/GScour/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
@@ -111,9 +111,9 @@ Name of tree should be the same as name of species folder ('12' -> '12.tree'). P
 #### 4.2 Preprocessing, set right order for paml
 Step can be skipped to 4.3.1 if the order is known.
 ##### 4.2.1 Replace files for test order
-`python usages/replace_for_test_order.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/test_order/` 
+`python utilities/replace_for_test_order.py --i /abspath/tothe/nuc_out_prank/ --o /abspath/tothe/test_order/` 
 ##### 4.2.2 Set right order
-`usages/fasta2paml_get_order.py`, see --help for args. Folder with .order files can be empty, files with right order will be recorded to that folder. 
+`utilities/fasta2paml_get_order.py`, see --help for args. Folder with .order files can be empty, files with right order will be recorded to that folder. 
 #### 4.3 Preprocessing, convert fasta to paml format  
 ##### 4.3.1 fasta2paml.py
 Skip if right order was set in the step 4.2.
@@ -209,7 +209,7 @@ For files without masking:
 See help for args.
 
 - Additional check<br />
-Run `usages/count_correct_rst_files.py` to check number of correct auxiliary files required for paml analysis.<br />
+Run `utilities/count_correct_rst_files.py` to check number of correct auxiliary files required for paml analysis.<br />
 
 ### 5. Analysing PAML's results  
 #### 5.1 Tabulation
@@ -228,8 +228,8 @@ https://github.com/ctlab/GScour/blob/a2145a12a754e94b6306dce69bfcd7b173d8a898/pi
 * Take into account the information from (Yang, 2007):
 "The branch-site test requires a priori specification of the foreground branches. When multiple branches on the tree are tested for positive selection using the same data set, a correction for multiple testing is required (Anisimova and Yang 2007). A simple and slightly conservative procedure is Bonferroni's correction, which means that the individual test for any branch is considered significant at the level α only if the p-value is <α/m, where m is the number of branches being tested using the same data."
 * Use "adjust_pvalue.py" script, see --help for args and adjust the denominator if necessarily in lines:
-https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/usages/adjust_pvalue.py#L24
-https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/usages/adjust_pvalue.py#L26
+https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/utilities/adjust_pvalue.py#L24
+https://github.com/ctlab/GScour/blob/ea7787697646523899088ef94ccb1e5f3cb0e935/utilities/adjust_pvalue.py#L26
 #### 5.3 Assembling results
 Script "assembling_results.py" collects final data from sheets "summary" for every result common sheet: concatenate and remove duplicates. 
 
