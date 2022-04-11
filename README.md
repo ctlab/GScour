@@ -17,7 +17,7 @@ GUIDANCE allows using alignment (MAFFT, PRANK, CLUSTALW) as a subprocess.
 ### Phylogenetic Analysis
 - PAML (Phylogenetic Analysis by Maximum Likelihood)
 ## GScour flow
-![GitHub Logo](https://github.com/ctlab/GScour/blob/master/Gscour_flow.png)
+![GitHub Logo](https://github.com/ctlab/GScour/blob/master/GScour%20flow.jpg)
 ## Steps
 See --help for help with arguments for any python script, logs are named as scripts with .log extension or just standard output. 
 Output directory (with --o or --out option) will be created automatically and hold all output files [please provid full (and not relative) path]<br />
@@ -73,7 +73,8 @@ $ ls */
                 34.fasta  
  ```                    
  ##### 2.1.2 Extract sequences in accordance with some target gene names list
-`python pipeline/get_nucleotides_target_genes.py --t /path/to/orthologs.xlsx --gbff /path/to/folder/.gbff annotations <br /> --o /path/to/output_folder`
+`python pipeline/get_nucleotides_target_genes.py --t /path/to/orthologs.xlsx --gbff /path/to/folder_gbff_annotations` <br />
+`--o /path/to/output_folder`
 #### 2.2 Check duplicates
 Perform additional check to exclude duplicates within one sample<br />
 `python utilities/check_duplicates.py --i /abspath/tothe/nuc_out_folder(from_step2.1)/`
