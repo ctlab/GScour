@@ -362,7 +362,8 @@ if __name__ == '__main__':
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml')
     parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=120', nargs='?', default='120')
-    parser.add_argument('--o', help='Path to the folder with result philip files', nargs='?', required=True)
+    parser.add_argument('--o', help='Path to the folder with result philip files, can be created automatically',
+                        nargs='?', required=True)
     parser.add_argument('--species', help='Number of species', nargs='?', required=True)
     parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     args = parser.parse_args()

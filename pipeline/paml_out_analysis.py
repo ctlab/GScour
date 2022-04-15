@@ -288,7 +288,7 @@ if __name__ == '__main__':
             'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
                 [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species group': [i[2] for i in values]
             }
-        print("summary_sheet", summary_sheet)
+        # print("summary_sheet", summary_sheet)
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species group'])
         df.sort_values('p-value')
         df.to_excel(writer, sheet_name='summary')
@@ -296,5 +296,6 @@ if __name__ == '__main__':
     except BaseException as e:
         print("Unexpected error: {}".format(e))
         raise e
-    print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n", common_pos_gene_dict)
+    print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n",
+          repr(common_pos_gene_dict))
     print("The work has been completed")

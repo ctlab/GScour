@@ -33,3 +33,4 @@ if __name__ == '__main__':
         main(args.i)
     except BaseException as err:
         logging.info("Unexpected error: {}".format(err))
+    logging.info("done")

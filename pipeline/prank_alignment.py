@@ -5,10 +5,10 @@ import multiprocessing
 import os
 import logging
 import re
-import traceback
+
 
 PROCESSED_FILES = list()
-EXCEPTION_NUMBER = 0
+exception_number = 0
 counter = None
 LOG_FILE = "prank_alignment.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -31,7 +31,7 @@ def parse_dir(input_dir):
 def get_final_file_path(outfile_path_without_extension, format_out):
     if format_out in ["phylipi", "phylips", "paml"]:
         final_file_path = '{}.best.phy'.format(outfile_path_without_extension)
-    elif format_out in ["fasta", ""]:
+    elif format_out == "fasta":
         final_file_path = '{}.best.fas'.format(outfile_path_without_extension)
     else:
         final_file_path = '{}.best.nex'.format(outfile_path_without_extension)
@@ -63,14 +63,16 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
 
 def launch_prank(input_tuple, folder_out, tree, format_out):
     global counter
+    global exception_number
     input_dir, species_folder, infile = input_tuple
     infile_path = os.path.join(input_dir, species_folder, infile)
     outfile_path_without_extension = os.path.join(folder_out, re.search(r'(\d+)\.', infile).group(1))
-    file_number = re.search(r'\/(\d+)\.', infile).group(1)
     final_file_path = get_final_file_path(outfile_path_without_extension, format_out)
     try:
         global PROCESSED_FILES
-        launch_command = get_launch_command(infile_path, final_file_path, outfile_path_without_extension, tree, format_out)
+        file_number = re.search(r'(\d+)\.', infile).group(1)
+        launch_command = get_launch_command(infile_path, final_file_path, outfile_path_without_extension, tree,
+                                            format_out)
         if not os.system(launch_command):
             # logging.info("prank completed task for file {}".format(file_number))
             if file_number not in PROCESSED_FILES:
@@ -79,9 +81,9 @@ def launch_prank(input_tuple, folder_out, tree, format_out):
                     counter.value += 1  # TODO: wrong number
                     # logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value)) # TODO: multiprocessing
     except BaseException as err:
-        global EXCEPTION_NUMBER
         logging.exception("Infile {}, - Unexpected error: {}".format(infile, err))
-        EXCEPTION_NUMBER += 1
+        exception_number += 1
+        logging.info("exception number = {}".format(exception_number))
 
 
 if __name__ == '__main__':
@@ -91,11 +93,14 @@ if __name__ == '__main__':
     parser.add_argument('--o', help='Path to the folder with output files of prank, if it does not exist, it will be'
                                     ' created automatically', nargs='?', required=True)
     parser.add_argument('--tree', help='Path to the tree, exclude if there is no tree', nargs='?', default="")
-    parser.add_argument('--f', help='Output format: ["fasta" (default, exclude option --f if left by default),'
-                                    '"phylipi", "phylips", "paml", "nexus"]', nargs='?', default="")
+    parser.add_argument('--f', help='Output format: ["fasta" (default option for the pipeline, exclude option --f if '
+                                    'left by default),'
+                                    '"phylipi", "phylips", "paml", "nexus"]', nargs='?', default="fasta")
     parser.add_argument('--threads', help='Number of threads', nargs='?', required=True)
     args = parser.parse_args()
     threads = int(args.threads)
+    global exception_list
+    exception_list = list()
     try:
         counter = multiprocessing.Value('i', 0)
         multiprocessing.log_to_stderr()
@@ -106,13 +111,16 @@ if __name__ == '__main__':
         input_tuples = list(parse_dir(in_dir))
         len_inputs = len(input_tuples)
         out_dir = args.o
-        logging.info("Path to the folder with input files for prank: {}\n"
-                     "Path to the folder with output files of prank: {}".format(in_dir, out_dir))
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
         output_format = args.f
-        if output_format not in ["fasta", "phylipi", "phylips", "paml", "nexus", ""]:
+        if output_format not in ["fasta", "phylipi", "phylips", "paml", "nexus"]:
             raise SyntaxError("Not valid output format, check option --f, -h for help")
+        logging.info("Path to the folder with input files for prank: {}\n"
+                     "Path to the folder with output files of prank: {}\n"
+                     "tree: {}\noutput format: {}\nthreads: {}"
+                     "".format(in_dir, out_dir, args.tree, output_format, threads))
+
         i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir], len_inputs * [args.tree],
                                                  len_inputs * [output_format]))
         i.wait()

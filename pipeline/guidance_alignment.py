@@ -8,7 +8,7 @@ import re
 import shutil
 
 PROCESSED_FILES = list()
-EXCEPTION_NUMBER = 0
+exception_number = 0
 counter = None
 LOG_FILE = "guidance_alignment.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -37,7 +37,7 @@ def find_file(name, path):
 def launch_guidance(input_tuple, folder_out, number_of_threads, executable_path):
     global counter
     global PROCESSED_FILES
-    global EXCEPTION_NUMBER
+    global exception_number
     input_dir, species_folder_name, infile_name = input_tuple
     infile_path = os.path.join(input_dir, species_folder_name, infile_name)
     file_number = re.search(r'(\d+)\.', infile_name).group(1)
@@ -114,5 +114,5 @@ if __name__ == '__main__':
         logging.exception("Unexpected error: {}".format(e))
 
     logging.info("Number of ALIGNED_FILES = {}".format(counter.value))
-    logging.info("Number of exceptions = {}".format(EXCEPTION_NUMBER))
+    logging.info("Number of exceptions = {}".format(exception_number))
     logging.info("The work has been completed")
