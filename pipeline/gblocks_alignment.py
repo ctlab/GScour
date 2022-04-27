@@ -29,27 +29,30 @@ def parse_dir(input_dir):
 
 def launch_gblocks(input_tuple, auto_flag, exec_path, child_logger):
     global counter_file
-    input_dir, species_folder, infile = input_tuple
-    infile_path = os.path.join(input_dir, species_folder, infile)
-    if auto_flag == 'n':
-        params_string = '-t=c -b1=3 -b2=4 -b3=8 -b4=9 -b5=n -p=y'
-        logging.info("auto flag = 'n', custom parameter string is\n{}".format(params_string))
-    else:
-        if len(species_folder) <= 9:
-            number_of_species = len(species_folder)
+    try:
+        input_dir, species_folder, infile_name = input_tuple
+        infile_path = os.path.join(input_dir, species_folder, infile_name)
+        if auto_flag == 'n':
+            params_string = '-t=c -b1=3 -b2=4 -b3=8 -b4=9 -b5=n -p=y'
+            logging.info("auto flag = 'n', custom parameter string is\n{}".format(params_string))
         else:
-            number_of_species = (len(species_folder) - 9) / 2 + 9
-        b1 = math.ceil(number_of_species / 2 + 1)
-        b2 = math.ceil(number_of_species * 0.85)
-        params_string = '-t=c -b1={} -b2={} -b3=8 -b4=9 -b5=n -p=y'.format(b1, b2)
-        logging.info("auto flag = 'y', auto calculating parameter string is\n{}".format(params_string))
+            if len(species_folder) <= 9:
+                number_of_species = len(species_folder)
+            else:
+                number_of_species = (len(species_folder) - 9) / 2 + 9
+            b1 = math.ceil(number_of_species / 2 + 1)
+            b2 = math.ceil(number_of_species * 0.85)
+            params_string = '-t=c -b1={} -b2={} -b3=8 -b4=9 -b5=n -p=y'.format(b1, b2)
+            logging.info("auto flag = 'y', auto calculating parameter string is\n{}".format(params_string))
 
-    launch = '{} {} {} >> {}'.format(exec_path, infile_path, params_string, LOG_FILE)  # TODO: > LOG_FILE: to do multiprocessing
-    os.system(launch)
-    child_logger.info("Gblocks processed file {} with params {}".format(infile, params_string))
-    with counter_file.get_lock():
-        counter_file.value += 1
-        child_logger.info("Counter (processed files) = {}".format(counter_file.value))
+        launch = '{} {} {} >> {}'.format(exec_path, infile_path, params_string, LOG_FILE)  # TODO: > LOG_FILE: to do multiprocessing
+        os.system(launch)
+        child_logger.info("Gblocks processed file {} with params {}".format(infile_name, params_string))
+        with counter_file.get_lock():
+            counter_file.value += 1
+            child_logger.info("Counter (processed files) = {}".format(counter_file.value))
+    except BaseException as err:
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name, err))
 
 
 if __name__ == '__main__':

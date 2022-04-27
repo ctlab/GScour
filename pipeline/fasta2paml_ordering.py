@@ -5,15 +5,16 @@ import argparse
 import sys
 import traceback
 
+import pandas as pd
 from Bio import SeqIO
 import re
 import shutil
 
 NOT_EQUAL_LENGTH = list()
-BROKEN_SPECIES = list()
+BROKEN_SPECIES = dict()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
-BROKEN_FILES = list()
+BROKEN_FILES = dict()
 LOG_FILE = "fasta2paml_ordering.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
@@ -128,13 +129,19 @@ def check_lengths(lengths, species_folder, file_number, species, group):
         NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_number))
     elif not group <= len(lengths) <= species:
         global BROKEN_SPECIES
-        BROKEN_SPECIES.append('{}/{}'.format(species_folder, file_number))
+        # BROKEN_SPECIES.append('{}/{}'.format(species_folder, file_number))
+        if not BROKEN_SPECIES.get(species_folder):
+            BROKEN_SPECIES[species_folder] = list()
+        BROKEN_SPECIES[species_folder].append(file_number)
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
         NOT_MULTIPLE_OF_THREE.append('{}/{}'.format(species_folder, file_number))
     else:
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
-        BROKEN_FILES.append('{}/{}'.format(species_folder, file_number))
+        # BROKEN_FILES.append('{}/{}'.format(species_folder, file_number))
+        if not BROKEN_FILES.get(species_folder):
+            BROKEN_FILES[species_folder] = list()
+        BROKEN_FILES[species_folder].append(file_number)
 
 
 def write_target_phy_file(line_edited, target_file):
@@ -173,16 +180,25 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
-def replace_broken_files(directory_out):
+def replace_broken_files_and_write_table(directory_out):
     broken_length_folder = os.path.join(directory_out, "broken_length_files")
+    broken_files_table = os.path.join(directory_out, "broken_files.xlsx")
     not_needed_species_folder = os.path.join(directory_out, "not_needed_species")
     if BROKEN_FILES:
-        for folder in BROKEN_FILES:
-            shutil.move(os.path.join(directory_out, folder), os.path.join(broken_length_folder, folder))
+        for folder, files in BROKEN_FILES.items():
+            for f in files:
+                shutil.move(os.path.join(directory_out, folder, f), os.path.join(broken_length_folder, folder, f))
     if BROKEN_SPECIES:
-        for folder in BROKEN_SPECIES:
-            shutil.move(os.path.join(directory_out, folder), os.path.join(not_needed_species_folder, folder))
+        for folder, files in BROKEN_SPECIES:
+            for f in files:
+                shutil.move(os.path.join(directory_out, folder, f), os.path.join(not_needed_species_folder, folder, f))
             # os.remove(os.path.join(directory_out, folder)) # TODO: shutil not delete source, just leave empty
+    df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_SPECIES.items()})
+    writer = pd.ExcelWriter(broken_files_table, engine='xlsxwriter')
+    df.to_excel(writer, sheet_name='BROKEN_SPECIES')
+    df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_FILES.items()})
+    df.to_excel(writer, sheet_name='BROKEN_FILES')
+    writer.save()
 
 
 def main(folder_in, folder_order, folder_out, species, group):
@@ -212,11 +228,11 @@ if __name__ == '__main__':
         os.makedirs(out_dir)
     try:
         main(args.i, args.order, out_dir, int(args.species), int(args.group))
-        logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
+        logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), repr(BROKEN_FILES)))
         if BROKEN_FILES or BROKEN_SPECIES:
-            replace_broken_files(out_dir)
+            replace_broken_files_and_write_table(out_dir)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
-        logging.warning("BROKEN_SPECIES number {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
+        logging.warning("BROKEN_SPECIES files {}:{}".format(len(BROKEN_SPECIES), repr(BROKEN_SPECIES)))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
     except BaseException as e:

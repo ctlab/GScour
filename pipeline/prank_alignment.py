@@ -64,13 +64,13 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
 def launch_prank(input_tuple, folder_out, tree, format_out):
     global counter
     global exception_number
-    input_dir, species_folder, infile = input_tuple
-    infile_path = os.path.join(input_dir, species_folder, infile)
-    outfile_path_without_extension = os.path.join(folder_out, re.search(r'(\d+)\.', infile).group(1))
+    input_dir, species_folder, infile_name = input_tuple
+    infile_path = os.path.join(input_dir, species_folder, infile_name)
+    outfile_path_without_extension = os.path.join(folder_out, re.search(r'(\d+)\.', infile_name).group(1))
     final_file_path = get_final_file_path(outfile_path_without_extension, format_out)
     try:
         global PROCESSED_FILES
-        file_number = re.search(r'(\d+)\.', infile).group(1)
+        file_number = re.search(r'(\d+)\.', infile_name).group(1)
         launch_command = get_launch_command(infile_path, final_file_path, outfile_path_without_extension, tree,
                                             format_out)
         if not os.system(launch_command):
@@ -79,9 +79,10 @@ def launch_prank(input_tuple, folder_out, tree, format_out):
                 PROCESSED_FILES.append(file_number)
                 with counter.get_lock():
                     counter.value += 1  # TODO: wrong number
+
                     # logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value)) # TODO: multiprocessing
     except BaseException as err:
-        logging.exception("Infile {}, - Unexpected error: {}".format(infile, err))
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name, err))
         exception_number += 1
         logging.info("exception number = {}".format(exception_number))
 

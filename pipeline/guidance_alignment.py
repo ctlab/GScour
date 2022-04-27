@@ -38,16 +38,17 @@ def launch_guidance(input_tuple, folder_out, number_of_threads, executable_path)
     global counter
     global PROCESSED_FILES
     global exception_number
-    input_dir, species_folder_name, infile_name = input_tuple
-    infile_path = os.path.join(input_dir, species_folder_name, infile_name)
-    file_number = re.search(r'(\d+)\.', infile_name).group(1)
-    personal_dir_full_out = os.path.join(folder_out, species_folder_name, file_number)
-    if not os.path.isdir(personal_dir_full_out):
-        os.makedirs(personal_dir_full_out)
-    if not os.path.isdir(os.path.join(folder_out, "cleansed", species_folder_name)):
-        os.makedirs(os.path.join(folder_out, "cleansed", species_folder_name))
-    cleansed_file_path = os.path.join(folder_out, "cleansed", species_folder_name, "{}.{}".format(file_number, 'fna'))
-    """
+    try:
+        input_dir, species_folder_name, infile_name = input_tuple
+        infile_path = os.path.join(input_dir, species_folder_name, infile_name)
+        file_number = re.search(r'(\d+)\.', infile_name).group(1)
+        personal_dir_full_out = os.path.join(folder_out, species_folder_name, file_number)
+        if not os.path.isdir(personal_dir_full_out):
+            os.makedirs(personal_dir_full_out)
+        if not os.path.isdir(os.path.join(folder_out, "cleansed", species_folder_name)):
+            os.makedirs(os.path.join(folder_out, "cleansed", species_folder_name))
+        cleansed_file_path = os.path.join(folder_out, "cleansed", species_folder_name, "{}.{}".format(file_number, 'fna'))
+        """
     Required parameters:
     --seqFile: Input sequence file in FASTA format
     --msaProgram: Which MSA program to use
@@ -56,32 +57,35 @@ def launch_guidance(input_tuple, folder_out, number_of_threads, executable_path)
      [please provide full (and not relative) path]
     --bootstraps: Number of bootstrap iterations (only for GUIDANCE). Default=100
     --prank: path to prank executable. Default=prank
-    """
-    msaProgram = 'PRANK'
-    launch = 'perl {} --seqFile {} --msaProgram {} ' \
-             '--seqType nuc ' \
-             '--proc_num {} --outDir {} --bootstraps 30 --outOrder as_input'.format(executable_path, infile_path,
-                                                                                    msaProgram,
-                                                                                    number_of_threads,
-                                                                                    personal_dir_full_out)
-    print("launch", launch)
-    """
-    final result will be recorded in file MSA.{msaProgram_name}.Without_low_SP_Col.With_Names
-    """
+        """
+        msaProgram = 'PRANK'
+        launch = 'perl {} --seqFile {} --msaProgram {} ' \
+                 '--seqType nuc ' \
+                 '--proc_num {} --outDir {} --bootstraps 30 --outOrder as_input'.format(executable_path, infile_path,
+                                                                                        msaProgram,
+                                                                                        number_of_threads,
+                                                                                        personal_dir_full_out)
+        """
+        final result will be recorded in file MSA.{msaProgram_name}.Without_low_SP_Col.With_Names
+        """
 
-    os.system(launch)
-    logging.info("Guidance completed task for file {}".format(file_number))
-    if file_number not in PROCESSED_FILES:
-        PROCESSED_FILES.append(file_number)  # TODO: to shared variables
-        with counter.get_lock():
-            counter.value += 1
-            logging.info("Counter (PROCESSED_FILES) = {}\nList of PROCESSED_FILES: {}".
-                         format(counter.value, PROCESSED_FILES))
-    resulting_file_name = 'MSA.{}.Without_low_SP_Col.With_Names'.format(msaProgram)
-    resulting_file_path = find_file(resulting_file_name, personal_dir_full_out)
-    if resulting_file_path:
-        shutil.copy(resulting_file_path, cleansed_file_path)
-        logging.info("File {} recorded".format(cleansed_file_path))
+        os.system(launch)
+        logging.info("Guidance completed task for file {}".format(file_number))
+        if file_number not in PROCESSED_FILES:
+            PROCESSED_FILES.append(file_number)  # TODO: to shared variables
+            with counter.get_lock():
+                counter.value += 1
+                logging.info("Counter (PROCESSED_FILES) = {}\nList of PROCESSED_FILES: {}".
+                             format(counter.value, PROCESSED_FILES))
+        resulting_file_name = 'MSA.{}.Without_low_SP_Col.With_Names'.format(msaProgram)
+        resulting_file_path = find_file(resulting_file_name, personal_dir_full_out)
+        if resulting_file_path:
+            shutil.copy(resulting_file_path, cleansed_file_path)
+            logging.info("File {} recorded".format(cleansed_file_path))
+    except BaseException as err:
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name, err))
+        exception_number += 1
+        logging.info("exception number = {}".format(exception_number))
 
 
 if __name__ == '__main__':
