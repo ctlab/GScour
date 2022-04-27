@@ -62,7 +62,6 @@ def get_infile_and_order(folder_in, folder_order):
     """ parse directory with files out of Gblocks
         'fas-gb' can be change just to .fas"""
     for species_folder in os.scandir(folder_in):
-        print("get_infile_and_order {}{}".format(folder_in, species_folder))
         if os.path.isdir(species_folder) and species_folder.name.isdigit():
             order_string = get_order(folder_order, species_folder.name)
             if not order_string:
@@ -184,20 +183,21 @@ def replace_broken_files_and_write_table(directory_out):
     broken_length_folder = os.path.join(directory_out, "broken_length_files")
     broken_files_table = os.path.join(directory_out, "broken_files.xlsx")
     not_needed_species_folder = os.path.join(directory_out, "not_needed_species")
+    writer = pd.ExcelWriter(broken_files_table, engine='xlsxwriter')
     if BROKEN_FILES:
+        df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_FILES.items()})
+        df.to_excel(writer, sheet_name='BROKEN_FILES')
         for folder, files in BROKEN_FILES.items():
             for f in files:
                 shutil.move(os.path.join(directory_out, folder, f), os.path.join(broken_length_folder, folder, f))
     if BROKEN_SPECIES:
-        for folder, files in BROKEN_SPECIES:
+        df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_SPECIES.items()})
+        df.to_excel(writer, sheet_name='BROKEN_SPECIES')
+        for folder, files in BROKEN_SPECIES.items():
             for f in files:
                 shutil.move(os.path.join(directory_out, folder, f), os.path.join(not_needed_species_folder, folder, f))
             # os.remove(os.path.join(directory_out, folder)) # TODO: shutil not delete source, just leave empty
-    df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_SPECIES.items()})
-    writer = pd.ExcelWriter(broken_files_table, engine='xlsxwriter')
-    df.to_excel(writer, sheet_name='BROKEN_SPECIES')
-    df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_FILES.items()})
-    df.to_excel(writer, sheet_name='BROKEN_FILES')
+
     writer.save()
 
 

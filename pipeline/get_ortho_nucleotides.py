@@ -489,7 +489,7 @@ def conv_string(val):
 
 def replace_broken_files_and_write_table(dir_out):
     broken_species_folder = os.path.join(dir_out, "broken_species_files")
-    broken_species_file = os.path.join(dir_out, "broken_species.tsv")
+    broken_species_file = os.path.join(dir_out, "broken_species.tsv")  # TODO change for .xlsx
     os.makedirs(broken_species_folder)
     for file_number in BROKEN_SPECIES.keys():
         os.replace(os.path.join(dir_out, file_number + ".fna"),
