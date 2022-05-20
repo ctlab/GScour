@@ -5,7 +5,7 @@ import re
 import os
 import logging
 """
-this script checks logs for absent items from .xlsx table
+this script checks logs from 'get_ortho_nucleotides' for absent items from .xlsx table
 with one column - gene names
 """
 

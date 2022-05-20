@@ -7,6 +7,7 @@ broken_file_path = 'path'
 pattern = re.compile('ERROR : Infile (\d+)')
 broken_files = list()
 
+
 with open(path_to_log, 'r') as f:
     for line in f:
         if re.search(pattern, line):

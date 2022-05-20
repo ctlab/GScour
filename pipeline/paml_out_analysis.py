@@ -20,6 +20,7 @@ pattern_proportion = re.compile(r"proportion\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\
 pattern_background = re.compile(r"background\sw\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)")  # group(2) = 1
 pattern_foreground = re.compile(r"foreground\sw\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)")  # group(3) = 2a
 common_pos_gene_dict = dict()
+broken_files = list()
 
 
 def get_statistics(infile):
@@ -99,7 +100,7 @@ def get_gene_name_protein_id(item_folder_name, seq_log_folder, target_species, c
 
 def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, target_species, species_folder_sheet,
                 required_p_value):
-    broken_paml_outs_item = list()
+    broken_paml_outs_item = ""
     ok_paml_outs_item = list()
     no_significance_item = 0
     positive_sites_number_item = 0
@@ -168,7 +169,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
         else:
             child_logger.warning("Item {} lack of params: np0 {}, ln0 {}, np1 {}, ln1 {}, pos_sites {}".format(
                 item_id, np0, ln0, np1, ln1, pos_sites))
-            broken_paml_outs_item.append(item_folder_name)
+            broken_paml_outs_item = item_folder_name
     return broken_paml_outs_item, ok_paml_outs_item, no_significance_item, positive_sites_number_item, gene_protein_dict
 
 
@@ -194,6 +195,7 @@ def choose_the_lowest_p_value(joint_dict, sub_dict):
 
 def main(in_folder, ortho_logs, target_species, required_p_value):
     global common_pos_gene_dict
+    global broken_files
     for species_folder in os.scandir(in_folder):
         species_folder_sheet = {
             'NCBI protein_id': [], 'Gene name': [], '0, proportion': [],
@@ -203,7 +205,7 @@ def main(in_folder, ortho_logs, target_species, required_p_value):
             '2b, proportion': [], '2b, Dn/Ds foreground': [], '2b, Dn/Ds background': [],
             'P-value': []
             }
-        broken_paml_outs = list()
+        broken_paml_outs = set()
         ok_paml_outs = list()
         no_significance = 0
         positive_sites_number = 0
@@ -223,7 +225,7 @@ def main(in_folder, ortho_logs, target_species, required_p_value):
                     gene_protein_dict = count_sites(in_folder, species_folder, item, child_logger,
                                                     ortho_logs, target_species, species_folder_sheet, required_p_value)
 
-                    broken_paml_outs += broken_paml_outs_item
+                    broken_paml_outs.add(broken_paml_outs_item)
                     ok_paml_outs += ok_paml_outs_item
                     no_significance += no_significance_item
                     positive_sites_number += positive_sites_number_item
@@ -234,8 +236,10 @@ def main(in_folder, ortho_logs, target_species, required_p_value):
                                                                              genes_under_positive))
                     # genes_under_positive.update(gene_protein_dict)
 
-            child_logger.warning("Species folder {}: broken_paml_outs : {} : {}".
-                                 format(species_folder.name, len(broken_paml_outs), broken_paml_outs))
+            if broken_paml_outs:
+                child_logger.warning("Species folder {}: broken_paml_outs : {} : {}".
+                                     format(species_folder.name, len(broken_paml_outs), broken_paml_outs))
+                broken_files.append(broken_paml_outs)
             child_logger.info("Species folder {}: ok_paml_outs : {} : {}".
                               format(species_folder.name, len(ok_paml_outs), ok_paml_outs))
             child_logger.info("Species folder {}: number of no significance files {}".format(species_folder.name,
@@ -292,6 +296,9 @@ if __name__ == '__main__':
         df = pd.DataFrame(summary_sheet, columns=['Gene name', 'NCBI protein_id', 'p-value', 'Species group'])
         df.sort_values('p-value')
         df.to_excel(writer, sheet_name='summary')
+        broken_files_list = list(set.intersection(*broken_files))
+        df_broken = pd.DataFrame({"broken files": broken_files_list})
+        df_broken.to_excel(writer, sheet_name='broken files')
         writer.save()
     except BaseException as e:
         print("Unexpected error: {}".format(e))

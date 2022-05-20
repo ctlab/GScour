@@ -14,7 +14,7 @@ NOT_EQUAL_LENGTH = list()
 BROKEN_SPECIES = dict()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
-BROKEN_FILES = dict()
+BROKEN_LENGTH_FILES = dict()
 LOG_FILE = "fasta2paml_ordering.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
@@ -138,9 +138,9 @@ def check_lengths(lengths, species_folder, file_number, species, group):
     else:
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
         # BROKEN_FILES.append('{}/{}'.format(species_folder, file_number))
-        if not BROKEN_FILES.get(species_folder):
-            BROKEN_FILES[species_folder] = list()
-        BROKEN_FILES[species_folder].append(file_number)
+        if not BROKEN_LENGTH_FILES.get(species_folder):
+            BROKEN_LENGTH_FILES[species_folder] = list()
+        BROKEN_LENGTH_FILES[species_folder].append(file_number)
 
 
 def write_target_phy_file(line_edited, target_file):
@@ -182,21 +182,23 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
 def replace_broken_files_and_write_table(directory_out):
     broken_length_folder = os.path.join(directory_out, "broken_length_files")
     broken_files_table = os.path.join(directory_out, "broken_files.xlsx")
-    not_needed_species_folder = os.path.join(directory_out, "not_needed_species")
+    broken_species_folder = os.path.join(directory_out, "broken_species_files")
     writer = pd.ExcelWriter(broken_files_table, engine='xlsxwriter')
-    if BROKEN_FILES:
-        df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_FILES.items()})
+    if BROKEN_LENGTH_FILES:
+        df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_LENGTH_FILES.items()})
         df.to_excel(writer, sheet_name='BROKEN_FILES')
-        for folder, files in BROKEN_FILES.items():
+        logging.info("BROKEN_LENGTH_FILES list is written to {}".format(broken_files_table))
+        for folder, files in BROKEN_LENGTH_FILES.items():
             for f in files:
                 shutil.move(os.path.join(directory_out, folder, f), os.path.join(broken_length_folder, folder, f))
     if BROKEN_SPECIES:
         df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_SPECIES.items()})
         df.to_excel(writer, sheet_name='BROKEN_SPECIES')
+        logging.info("BROKEN_SPECIES list is written to {}".format(broken_files_table))
         for folder, files in BROKEN_SPECIES.items():
             for f in files:
-                shutil.move(os.path.join(directory_out, folder, f), os.path.join(not_needed_species_folder, folder, f))
-            # os.remove(os.path.join(directory_out, folder)) # TODO: shutil not delete source, just leave empty
+                shutil.move(os.path.join(directory_out, folder, f), os.path.join(broken_species_folder, folder, f))
+            # os.remove(os.path.join(directory_out, folder)) # TODO: shutil does not delete source, just leave empty
 
     writer.save()
 
@@ -228,8 +230,8 @@ if __name__ == '__main__':
         os.makedirs(out_dir)
     try:
         main(args.i, args.order, out_dir, int(args.species), int(args.group))
-        logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), repr(BROKEN_FILES)))
-        if BROKEN_FILES or BROKEN_SPECIES:
+        logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_LENGTH_FILES), repr(BROKEN_LENGTH_FILES)))
+        if BROKEN_LENGTH_FILES or BROKEN_SPECIES:
             replace_broken_files_and_write_table(out_dir)
         logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
         logging.warning("BROKEN_SPECIES files {}:{}".format(len(BROKEN_SPECIES), repr(BROKEN_SPECIES)))
