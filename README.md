@@ -23,12 +23,17 @@ Output directory (with *--o* or *--out* option) will be created automatically an
 Errors can be found by keyword 'WARNING' in logs.<br />
 Broken files are collected either automatically or manually by running script `'pipeline/gather_broken_files.py'`.<br />
 If there are any questions, errors, suggestions feel free to contact me via email
-lnfyodorova@gmail.com.
+ln.alina.fedorova@gmail.com.
 ### 1. One-to-one orthologs
 Obtain one-to-one ortholog clusters for whole-genome sequences.
 #### 1.1 Find orthologs proteins
+##### 1.1.0 Preparation
 - It is necessary for futher analysis to name the species in numbers (1,2,3,...) and to name all associated files in numbers  
 (1.faa, 2.faa..., 1.gbff, 2.gbff...)
+- Extract from gff file protein-coding genes and CDS types obtained by methods for RefSeq **if needed**:<br />
+`python utilities/form_refseq_gff.py --i /abspath/gff_folder`
+- Form a table of genes that will be analyzed from .gff files: <br />
+`python utilities/form_gene_table_from_gff.py --i /abspath/gff_(corrected)_folder`
 ##### 1.1.1 Proteinortho
  - launch_proteinortho <br />
 For example, launch_proteinortho.sh or launch_proteinortho_synteny.sh.
