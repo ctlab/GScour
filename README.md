@@ -23,12 +23,17 @@ Output directory (with *--o* or *--out* option) will be created automatically an
 Errors can be found by keyword 'WARNING' in logs.<br />
 Broken files are collected either automatically or manually by running script `'pipeline/gather_broken_files.py'`.<br />
 If there are any questions, errors, suggestions feel free to contact me via email
-lnfyodorova@gmail.com.
+ln.alina.fedorova@gmail.com.
 ### 1. One-to-one orthologs
 Obtain one-to-one ortholog clusters for whole-genome sequences.
 #### 1.1 Find orthologs proteins
+##### 1.1.0 Preparation
 - It is necessary for futher analysis to name the species in numbers (1,2,3,...) and to name all associated files in numbers  
 (1.faa, 2.faa..., 1.gbff, 2.gbff...)
+- Extract from gff file protein-coding genes and CDS types obtained by methods for RefSeq **if needed**:<br />
+`python utilities/form_refseq_gff.py --i /abspath/gff_folder`
+- Form a table of genes that will be analyzed from .gff files: <br />
+`python utilities/form_gene_table_from_gff.py --i /abspath/gff_(corrected)_folder`
 ##### 1.1.1 Proteinortho
  - launch_proteinortho <br />
 For example, launch_proteinortho.sh or launch_proteinortho_synteny.sh.
@@ -87,7 +92,7 @@ Option *--tree* isn't adapted to work with groups, therefore it should be used i
 https://github.com/ctlab/GScour/blob/5f1a4463ee29b0f4ef9f80cefc8d74c73e324868/pipeline/prank_alignment.py#L45
 or lines 48, 51, 56.<br />
 - `python pipeline/prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`
-- Change `'path_to_log'` and `'broken_file_path'` variables in `'pipeline/gather_broken_files.py'` and run.
+- Substitute `'path_to_log'` and `'broken_file_path'` variables in `'pipeline/gather_broken_files.py'` and run.
 #### 3.2. GUIDANCE, masking of inconsistent residues
 **NOTE: this step can take a lot of computation time.**
 If you use MAFFT or CLUSTAL (not PRANK) as a subproces of GUIDANCE you should correct `--msaProgram` option
@@ -96,17 +101,12 @@ https://github.com/ctlab/GScour/blob/4748195803e635284e77007375e2b699db922cbb/pi
 - `python pipeline/guidance_alignment.py --i /abspath/tothefolder/with_nucseqs/ --o /abspath/tothe/guidance_out/` <br />
 `--exec /abdpath/guidance.v2.02/www/Guidance/guidance.pl --threads 22`<br />
 The resulting files (alignments .fas only, without auxiliary files) are stored in cleansed folder `/abspath/tothe/guidance_out/cleansed/`.
-- Change `'path_to_log'` and `'broken_file_path'` variables in `'pipeline/gather_broken_files.py'` and run.
-#### 3.3 Sort by groups
-For example:<br />
-`python utilities/sort_by_groups.py --i /abspath/tothe/nuc_out_prank/`<br />
-Format of input file can be adjusted here <br />
-https://github.com/ctlab/GScour/blob/a20f24a45a2a6163cbbb4834c726395d59438933/utilities/sort_by_groups.py#L48
-#### 3.4 Gblocks, select conserved blocks of sequence
+- Substitute `'path_to_log'` and `'broken_file_path'` variables in `'pipeline/gather_broken_files.py'` and run.
+#### 3.3 Gblocks, select conserved blocks of sequence
 Use parameter *--auto* for automatic selection of gblocks parameters based on number of sequences for each group or adjust parameters to your needs in the params_string:  
 https://github.com/ctlab/GScour/blob/7bd285734a26c521a844d08b8e4adcfa22804744/pipeline/gblocks_alignment.py#L35 <br />
 - `python pipeline/gblocks_alignment.py --i /abspath/tothe/nuc_out_prank/ --auto y --exec /abspath/Gblocks_0.91b/Gblocks --threads 2`
-- Change `'path_to_log'` and `'broken_file_path'` variables in `'pipeline/gather_broken_files.py'` and run.
+- Substitute `'path_to_log'` and `'broken_file_path'` variables in `'pipeline/gather_broken_files.py'` and run.
 
 ### 4. Evolutionary analysis
 #### 4.1 Provide trees
