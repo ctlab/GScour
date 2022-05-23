@@ -1,13 +1,18 @@
 import argparse
 import pandas as pd
 
+"""
+script co compare data from previous research with current data, all tables must have column 'Gene name'
+"""
+research_sheet_names = ['Datasheet S6', 'Datasheet S5a']
+
 
 def main(data_sheet_path, adjust_sheet_path, out_sheet_path):
     adjust_sheet = pd.io.excel.read_excel(adjust_sheet_path, sheet_name=None, engine='openpyxl')
     data_sheet = pd.io.excel.read_excel(data_sheet_path, sheet_name=None, engine='openpyxl')
     writer = pd.ExcelWriter(out_sheet_path, engine='openpyxl')
     for name_data, sheet_data in data_sheet.items():
-        if name_data == 'Datasheet S6' or name_data == 'Datasheet S5a':
+        if name_data in research_sheet_names:
             full_out_table = pd.DataFrame()
             for name_adjust, sheet_adjust in adjust_sheet.items():
                 merged = pd.merge(sheet_data, sheet_adjust, how='inner', on=['Gene name'],
@@ -27,10 +32,11 @@ def main(data_sheet_path, adjust_sheet_path, out_sheet_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', help='Path to the data.xlsx file', nargs='?', required=True)
-    parser.add_argument('--adjust', help='Path to the common_sheet_adjust.xlsx'
-                                         '-result of \'adjust_pvalue.py\'', nargs='?', required=True)
-    parser.add_argument('--out', help='Path to the output.xlsx file', nargs='?', required=True)
+    parser.add_argument('--data', help='The path to the data .xlsx to be compared with', nargs='?', required=True)
+    parser.add_argument('--i', help='Path to the .xlsx file with sheets with column \'Gene name\'',
+                        nargs='?', required=True)
+    parser.add_argument('--out', help='Path to the output .xlsx file with intersection of data', nargs='?',
+                        required=True)
     args = parser.parse_args()
     try:
         main(args.data, args.adjust, args.out)
