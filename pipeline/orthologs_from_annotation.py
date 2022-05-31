@@ -6,7 +6,7 @@ from BCBio import GFF
 import pandas as pd
 from Bio import SeqIO
 
-""" script to find orthologs among annotation .gff or .gbff files for some set of species """
+""" script to find orthologs (intersection of gene names) among annotation .gff or .gbff files"""
 
 annotation_path_folder = '/path/to/gff_files'
 result_xlsx_file_path = "/path/to/orthologs.xlsx"

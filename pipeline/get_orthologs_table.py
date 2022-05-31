@@ -53,8 +53,8 @@ if __name__ == "__main__":
                                           'orthologs. For example \'3, 4, 5\'', nargs='?', required=True)
     parser.add_argument('--required', help='One required, number of target species in relation to which the analysis'
                                            ' is made', nargs='?', required=True)  # TODO: multi required species?
-    parser.add_argument('--gbff', help='Path to the .gbff annotation file, if gene names are required in final '
-                                       'orthologs table', nargs='?')
+    parser.add_argument('--gbff', help='Path to the .gbff annotation file to extract gene names', nargs='?',
+                        required=True)
     args = parser.parse_args()
     try:
         main(args.ortho, args.species, args.required, args.gbff)

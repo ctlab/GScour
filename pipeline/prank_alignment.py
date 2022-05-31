@@ -4,10 +4,12 @@ import argparse
 import multiprocessing
 import os
 import logging
-import re
+import pandas as pd
 
-
-PROCESSED_FILES = list()
+CORRECT_FILES = list()
+ERROR_FILES = list()
+CORRECT_FILES_TO_WRITE = set()
+ERROR_FILES_TO_WRITE = set()
 exception_number = 0
 counter = None
 LOG_FILE = "prank_alignment.log"
@@ -64,27 +66,49 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
 def launch_prank(input_tuple, folder_out, tree, format_out):
     global counter
     global exception_number
-    input_dir, species_folder, infile_name = input_tuple
-    infile_path = os.path.join(input_dir, species_folder, infile_name)
-    outfile_path_without_extension = os.path.join(folder_out, re.search(r'(\d+)\.', infile_name).group(1))
+    input_dir, species_folder, infile_name_extended = input_tuple
+    infile_path = os.path.join(input_dir, species_folder, infile_name_extended)
+    file_gene_name = infile_name_extended.split('.')[0]
+    outfile_path_without_extension = os.path.join(folder_out, file_gene_name)
     final_file_path = get_final_file_path(outfile_path_without_extension, format_out)
     try:
-        global PROCESSED_FILES
-        file_number = re.search(r'(\d+)\.', infile_name).group(1)
+        global CORRECT_FILES
+        global ERROR_FILES
+        # file_gene_name = re.search(r'(\d+)\.', infile_name_extended).group(1)
         launch_command = get_launch_command(infile_path, final_file_path, outfile_path_without_extension, tree,
                                             format_out)
         if not os.system(launch_command):
-            # logging.info("prank completed task for file {}".format(file_number))
-            if file_number not in PROCESSED_FILES:
-                PROCESSED_FILES.append(file_number)
+            # logging.info("prank completed task for file {}".format(file_gene_name))
+            if file_gene_name not in CORRECT_FILES:
+                CORRECT_FILES.append(file_gene_name)
                 with counter.get_lock():
                     counter.value += 1  # TODO: wrong number
 
                     # logging.info("Counter (ALIGNED_FILES) = {}".format(counter.value)) # TODO: multiprocessing
     except BaseException as err:
-        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name, err))
+        ERROR_FILES.append(file_gene_name)
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name_extended, err))
         exception_number += 1
         logging.info("exception number = {}".format(exception_number))
+    return CORRECT_FILES, ERROR_FILES
+
+
+def gather_correct(correct):
+    logging.info("res {} {}".format(type(correct), correct))
+    for tup in correct:
+        for corr in tup:
+            for i in corr:
+                CORRECT_FILES_TO_WRITE.add(i)
+    logging.info("CORRECT_FILES_TO_WRITE {} {}".format(len(CORRECT_FILES_TO_WRITE), CORRECT_FILES_TO_WRITE))
+
+
+def gather_errors(exception):
+    logging.info("exception {} {}".format(type(exception), exception))
+    for tup in exception:
+        for e in tup:
+            for i in e:
+                ERROR_FILES_TO_WRITE.add(i)
+    logging.info("ERROR_FILES_TO_WRITE {} {}".format(len(ERROR_FILES_TO_WRITE), ERROR_FILES_TO_WRITE))
 
 
 if __name__ == '__main__':
@@ -123,10 +147,20 @@ if __name__ == '__main__':
                      "".format(in_dir, out_dir, args.tree, output_format, threads))
 
         i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir], len_inputs * [args.tree],
-                                                 len_inputs * [output_format]))
+                                                 len_inputs * [output_format]), callback=gather_correct,
+                               error_callback=gather_errors)
         i.wait()
         i.get()
+        # corrects, errors = returned_tuple
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
         raise e
+    # resulting_file = os.path.join(out_dir, 'prank_summary.xlsx')
+    # logging.info("res file {}".format(resulting_file))
+    # writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
+    # df_corr = pd.DataFrame({'Gene name': CORRECT_FILES})
+    # df_corr.to_excel(writer, sheet_name='correct files', index=False)
+    # df_err = pd.DataFrame({'Gene name': ERROR_FILES})
+    # df_corr.to_excel(writer, sheet_name='error files', index=False)
+    # writer.save()
     logging.info("The work has been completed")

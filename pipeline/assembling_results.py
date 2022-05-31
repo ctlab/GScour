@@ -41,8 +41,8 @@ def main(input_folder):
     # common_summary['Species group'] = common_summary['Species group'].astype(str)
     # common_summary = common_summary.groupby('Gene name').agg({'Species group': ', '.join}).reset_index()
     writer = pd.ExcelWriter(os.path.join(input_folder, '{}.xlsx'.format("assembled_results")), engine='openpyxl')
-    common_summary_aggregation.to_excel(writer, sheet_name='assembled_aggregation')
-    common_summary_min.to_excel(writer, sheet_name='min p-val')
+    common_summary_aggregation.to_excel(writer, sheet_name='from all groups')
+    common_summary_min.to_excel(writer, sheet_name='chosen min p-val')
 
     writer.save()
 

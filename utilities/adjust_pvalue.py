@@ -21,9 +21,10 @@ def main(sheet_path, out_path):
     writer = pd.ExcelWriter(out_path, engine='openpyxl')
     for name, sheet in common_sheet.items():
         sheet.sort_values(by="P-value", ignore_index=True, inplace=True)
-        sheet['Bonferroni'] = 0.05 / sheet["P-value"].shape[0]
+        number_of_samples = sheet["P-value"].shape[0]  # can be replaced by number_of_branches
+        sheet['Bonferroni'] = 0.05 / number_of_samples
         sheet['Significance_Bonf'] = sheet.apply(lambda row: get_bonferroni_significance(row), axis=1)
-        sheet['FDR'] = (sheet["P-value"].index + 1) * 0.05 / sheet["P-value"].shape[0]
+        sheet['FDR'] = (sheet["P-value"].index + 1) * 0.05 / number_of_samples
         sheet['Significance_FDR'] = sheet.apply(lambda row: get_FDR_significance(row), axis=1)
         sheet.to_excel(writer, sheet_name=name)
     writer.save()
