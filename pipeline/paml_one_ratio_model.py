@@ -2,9 +2,6 @@
 import argparse
 import multiprocessing
 import subprocess
-import sys
-import traceback
-import subprocess
 from Bio.Phylo.PAML import codeml
 import logging
 import os
