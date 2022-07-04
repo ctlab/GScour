@@ -90,7 +90,7 @@ Produce codon-based nucleotide sequence alignments for all the one-to-one orthol
 #### 3.1 PRANK multiple alignment
 PRANK may be used separetly or as a subprocess of GUIDANCE.
 Option *--tree* isn't adapted to work with groups, therefore it should be used if there is only one group (i.e args in `get_orthologs_table.py` *group==species*) or run separately for each group. <br />
-`python pipeline/prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --threads 32`<br />
+`python pipeline/prank_alignment.py --i /abspath/tothe/nuc_out_folder --o /abspath/tothe/nuc_out_prank/ --a t --threads 32`<br />
 Summary file will be written in *'nuc_out_prank/prank_summary.xlsx'*
 #### 3.2. GUIDANCE, masking of inconsistent residues
 **NOTE: this step can take a lot of computation time.**
