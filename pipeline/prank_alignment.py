@@ -5,8 +5,8 @@ import multiprocessing
 import os
 import logging
 import re
-import pandas as pd
 
+import pandas as pd
 
 CORRECT_FILES_TO_WRITE = set()
 ERROR_FILES_TO_WRITE = set()
@@ -42,25 +42,30 @@ def get_final_file_full_name(outfile_path_without_extension, format_out):
     return final_file_full_name
 
 
-def get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out):
+def get_launch_command(infile, final_file_path, outfile_path_without_extension, tree, format_out, aligning):
     log_file = os.path.join("{}.{}".format(os.path.abspath(outfile_path_without_extension), 'log'))
     if os.path.isfile(final_file_path):
         raise Exception('final_file_path {} already exists'.format(final_file_path))
+    if aligning == 'c':
+        aligning = 'codon'
+    elif aligning == 't':
+        aligning = 'translate'
     if tree:  # -translate (standard code); codon alignment with the option -codon (in -codon case
         # be careful about not multiple of three sequences)
-        launch = 'prank -d={0} -o={1} -t={2} -once -translate -f={3} > {4}'.format(infile,
-                                                                                   outfile_path_without_extension,
-                                                                                   tree, format_out, log_file)
+        launch = 'prank -d={0} -o={1} -t={2} -once -{3} -f={4} > {5}'.format(infile,
+                                                                             outfile_path_without_extension,
+                                                                             tree, aligning, format_out, log_file)
 
     else:
-        launch = 'prank -d={0} -o={1} -showtree -translate -f={2} > {3}'.format(infile,
-                                                                                outfile_path_without_extension,
-                                                                                format_out,
-                                                                                log_file)
+        launch = 'prank -d={0} -o={1} -showtree -{2} -f={3} > {4}'.format(infile,
+                                                                          outfile_path_without_extension,
+                                                                          aligning,
+                                                                          format_out,
+                                                                          log_file)
     return launch
 
 
-def launch_prank(input_tuple, folder_out, tree, format_out):
+def launch_prank(input_tuple, folder_out, tree, format_out, aligning):
     input_dir, species_folder, infile_name_extended = input_tuple
     infile_path = os.path.join(input_dir, species_folder, infile_name_extended)
     file_gene_name = infile_name_extended.split('.')[0]
@@ -72,7 +77,7 @@ def launch_prank(input_tuple, folder_out, tree, format_out):
         global ERROR_FILES
         launch_command = get_launch_command(infile_path, final_file_name,
                                             outfile_path_without_extension, tree,
-                                            format_out)
+                                            format_out, aligning)
         if not os.system(launch_command):
             if file_gene_name not in CORRECT_FILES:
                 CORRECT_FILES.append(file_gene_name)
@@ -146,15 +151,17 @@ if __name__ == '__main__':
     parser.add_argument('--o', help='Path to the folder with output files of prank, if it does not exist, it will be'
                                     ' created automatically', nargs='?', required=True)
     parser.add_argument('--tree', help='Path to the tree, exclude if there is no tree', nargs='?', default="")
-    parser.add_argument('--f', help='Output format: ["fasta" (default option for the pipeline, exclude option --f if '
-                                    'left by default),'
-                                    '"phylipi", "phylips", "paml", "nexus"]', nargs='?', default="fasta")
+    parser.add_argument('--f', help='Output format', nargs='?',
+                        choices=["fasta", "phylipi", "phylips", "paml", "nexus"], default="fasta")
+    parser.add_argument('--a', help='Aligning option: \'c\' for codon, \'t\' for translate, ',
+                        choices=['t', 'c'], default="t")
     parser.add_argument('--threads', help='Number of threads', nargs='?', required=True)
     args = parser.parse_args()
     threads = int(args.threads)
     in_dir = args.i
     out_dir = args.o
     output_format = args.f
+    align = args.a
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
     try:
@@ -165,15 +172,15 @@ if __name__ == '__main__':
         pool = multiprocessing.Pool(processes=threads, initializer=init_counter, initargs=(counter,))
         input_tuples = list(parse_initial_dir_create_out_dir(in_dir, out_dir))
         len_inputs = len(input_tuples)
-        if output_format not in ["fasta", "phylipi", "phylips", "paml", "nexus"]:
-            raise SyntaxError("Not valid output format, check option --f, -h for help")
+        logging.info("files for analysis {}".format(len_inputs))
         logging.info("Path to the folder with input files for prank: {}\n"
                      "Path to the folder with output files of prank: {}\n"
-                     "tree: {}\noutput format: {}\nthreads: {}"
-                     "".format(in_dir, out_dir, args.tree, output_format, threads))
+                     "tree: {}\noutput format: {}\nAligning option: {}\nthreads: {}"
+                     "".format(in_dir, out_dir, args.tree, output_format, align, threads))
 
         i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir], len_inputs * [args.tree],
-                                                 len_inputs * [output_format]), callback=gather_correct,
+                                                 len_inputs * [output_format], len_inputs * [align]),
+                               callback=gather_correct,
                                error_callback=gather_errors)
         i.wait()
         i.get()
