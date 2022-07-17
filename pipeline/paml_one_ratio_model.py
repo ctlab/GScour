@@ -2,6 +2,8 @@
 import argparse
 import multiprocessing
 import subprocess
+
+import pandas as pd
 from Bio.Phylo.PAML import codeml
 import logging
 import os
@@ -16,6 +18,8 @@ The ω ratio is a measure of natural selection acting on the protein. Simplistic
 """
 BROKEN_FILES = list()
 PROCESSED_FILES = list()
+CORRECT_FILES_TO_WRITE = set()
+ERROR_FILES_TO_WRITE = set()
 WRITE_CTL_FILE = 0
 LOG_FILE = "paml_one_ratio_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -37,9 +41,9 @@ def get_input_items(folder_in, trees_folder):
             tree_path = os.path.join(trees_folder, tree_name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
-                    for infile in os.listdir(item):
-                        if infile.split('.')[-1] == 'phy' and infile.split('.')[0].isnumeric():
-                            yield folder_in, species_folder.name, item.name, infile, tree_path
+                    for infile in os.scandir(item):
+                        if infile.name.split('.')[-1] == 'phy': # and infile.name.split('.')[0].isnumeric():
+                            yield folder_in, species_folder.name, item.name, infile.name, tree_path
 
 
 def init_indicators(args_counter):
@@ -87,20 +91,21 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
     return file_out_path
 
 
-def run_codeml(input_tuple, exec_path, overwrite_flag):
+def run_codeml(input_tuple, time_out, exec_path, overwrite_flag):
     global PROCESSED_FILES
     global counter
     global BROKEN_FILES
-    folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
+    folder_in, species_folder, item_folder, infile_name, phylogeny_tree_path = input_tuple
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
-    try:
-        file_number = (re.search(r"(\d+).phy", infile)).group(1)
-    except AttributeError as e:
-        logging.info("Please check file .phy {}: cause an error {}".format(item_folder_path, e.args))
-        return
+    file_gene_name = infile_name.split('.')[0]
+    # try:
+    #     file_number = (re.search(r"(\d+).phy", infile_name)).group(1)
+    # except AttributeError as e:
+    #     logging.info("Please check file .phy {}: cause an error {}".format(item_folder_path, e.args))
+    #     return
     os.chdir(item_folder_path)
-    logging.info("Working with {}/{}".format(species_folder, file_number))
-    infile_path = os.path.join(item_folder_path, infile)
+    logging.info("Working with {}/{}".format(species_folder, file_gene_name))
+    infile_path = os.path.join(item_folder_path, infile_name)
     file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
 
     if not overwrite_flag:
@@ -112,36 +117,74 @@ def run_codeml(input_tuple, exec_path, overwrite_flag):
 
     p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
-        return_code = p.wait(timeout=120)  # Timeout in seconds
+        return_code = p.wait(timeout=time_out)  # Timeout in seconds
         stdout, stderr = p.communicate()
         logging.info("Return code={} for file number {}/{}, stderr: {}".format(return_code, species_folder,
-                                                                               file_number, stderr))
+                                                                               file_gene_name, stderr))
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
                 if "Time used" in o_f.readlines()[-1]:
                     with counter.get_lock():
                         counter.value += 1
                     logging.info("The work has been done for file {}/{}\nCounter of processed files = {}".
-                                 format(species_folder, file_number, counter.value))
-                    if file_number not in PROCESSED_FILES:
-                        PROCESSED_FILES.append(file_number)  # TODO: list - to shared variable
-                        logging.info("OK file {}/{}".format(species_folder, file_number))
+                                 format(species_folder, file_gene_name, counter.value))
+                    if file_gene_name not in PROCESSED_FILES:
+                        PROCESSED_FILES.append(file_gene_name)  # TODO: list - to shared variable
+                        logging.info("OK file {}/{}".format(species_folder, file_gene_name))
                 else:
-                    logging.warning("The work has not been finished for file {}/{}".format(species_folder, file_number))
-                    if file_number not in BROKEN_FILES:
-                        BROKEN_FILES.append(file_number)
+                    logging.warning("The work has not been finished for file {}/{}".format(species_folder, file_gene_name))
+                    if file_gene_name not in BROKEN_FILES:
+                        BROKEN_FILES.append(file_gene_name)
                         # logging.warning("BAD file {}".format(file_number))
                         # logging.info("BROKEN_FILES list of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
     except subprocess.TimeoutExpired as err:
         p.kill()
         file_id = "{}/{}".format(species_folder, item_folder)
-        logging.warning("Killed {}, {}\nException_counter={}".format(file_id, err.args, counter.value))
-        if file_id not in BROKEN_FILES:  # TODO: list - to shared variable
-            BROKEN_FILES.append(file_id)
+        logging.warning("Killed {}, {}".format(file_id, err.args))
+        if file_gene_name not in BROKEN_FILES:  # TODO: list - to shared variable
+            BROKEN_FILES.append(file_gene_name)
             # logging.info("BROKEN_FILES of length {}: {}".format(len(BROKEN_FILES), BROKEN_FILES))
+    logging.info("PROCESSED_FILES {}, BROKEN_FILES {}".format(PROCESSED_FILES, BROKEN_FILES))
+    return PROCESSED_FILES, BROKEN_FILES
 
 
-def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):
+def gather_correct(correct):
+    global CORRECT_FILES_TO_WRITE
+    for tup in correct:
+        if not tup[0]:
+            logging.warning("No correct files, check paml log file")
+        for correct_item in tup[0]:
+            CORRECT_FILES_TO_WRITE.add(correct_item)
+    logging.info("CORRECT_FILES_TO_WRITE {} {}".format(len(CORRECT_FILES_TO_WRITE), CORRECT_FILES_TO_WRITE))
+
+
+def gather_errors(exception):
+    global ERROR_FILES_TO_WRITE
+    try:
+        for tup in exception:
+            for error_item in tup[1]:
+                ERROR_FILES_TO_WRITE.add(error_item)
+        logging.info("ERROR_FILES_TO_WRITE {}".format(len(ERROR_FILES_TO_WRITE)))
+    except TypeError as te:
+        logging.exception("exception {}\n{}".format(exception, te))
+
+
+def write_correct_error_files(output_dir):
+    global CORRECT_FILES_TO_WRITE
+    global ERROR_FILES_TO_WRITE
+    logging.info("CORRECT_FILES_TO_WRITE {}".format(len(CORRECT_FILES_TO_WRITE)))
+    logging.info("ERROR_FILES_TO_WRITE {}".format(len(ERROR_FILES_TO_WRITE)))
+    resulting_file = os.path.join(output_dir, 'paml_one_ratio_model_summary.xlsx')
+    writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
+    df_corr = pd.DataFrame({'Gene name': list(CORRECT_FILES_TO_WRITE)})
+    df_corr.to_excel(writer, sheet_name='correct files', index=False)
+    df_err = pd.DataFrame({'Gene name': list(ERROR_FILES_TO_WRITE)})
+    df_err.to_excel(writer, sheet_name='exception files', index=False)
+    logging.info("Summary has been written to {}".format(resulting_file))
+    writer.save()
+
+
+def main(folder_in, exec_path, trees_folder, time_out, threads_number, overwrite_flag):
     inputs = list(get_input_items(folder_in, trees_folder))  # list of tuples
     len_inputs = len(inputs)
     logging.info("Number of files should be analyzed = {}".format(len_inputs))
@@ -151,7 +194,11 @@ def main(folder_in, exec_path, trees_folder, threads_number, overwrite_flag):
     counter = multiprocessing.Value('i', 0)
     pool = multiprocessing.Pool(processes=threads_number, initializer=init_indicators,
                                 initargs=(counter,))
-    i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [exec_path], len_inputs * [overwrite_flag]))
+    i = pool.starmap_async(run_codeml, zip(inputs, len_inputs * [time_out], len_inputs * [exec_path], len_inputs * [
+        overwrite_flag]),
+                           callback=gather_correct,
+                           error_callback=gather_errors
+                           )
     i.wait()
     i.get()
 
@@ -162,22 +209,25 @@ if __name__ == '__main__':
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?', required=True)
     parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
+    parser.add_argument('--t', help='Timeout in seconds to get paml finish', nargs='?', default=120)
     parser.add_argument('--threads', help='Number of threads to use', nargs='?', required=True)
     parser.add_argument('--rework', help='"y" if overwrite existing files, default "n"', nargs='?', default='n')
     args = parser.parse_args()
     in_folder = args.i
     executable_path = args.e
     tree_folder = args.tree
+    timeout = int(args.t)
     threads = int(args.threads)
     if args.rework == 'y':
         rework = True
     else:
         rework = False
-    logging.info("Path to the folder with input files for paml: {}\nExecutable path: {}\nTree folder: {}\n"
-                 "Threads to use = {}, rework = {}".
-                 format(in_folder, executable_path, tree_folder, threads, rework))
+    logging.info("Options in use:\n--e {} --i {} --tree {} --t {} --threads {} --rework {}".
+                 format(executable_path, in_folder, tree_folder, timeout, threads, rework))
     try:
-        main(in_folder, executable_path, tree_folder, threads, rework)
+        main(in_folder, executable_path, tree_folder, timeout, threads, rework)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
+        raise e
+    write_correct_error_files(in_folder)
     logging.info("The work has been completed")

@@ -13,7 +13,6 @@ import shutil
 NOT_EQUAL_LENGTH = list()
 BROKEN_SPECIES = dict()
 NOT_MULTIPLE_OF_THREE = list()
-EDITED_MULT_OF_THREE = list()
 BROKEN_LENGTH_FILES = dict()
 LOG_FILE = "fasta2paml_ordering.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -67,25 +66,26 @@ def get_infile_and_order(folder_in, folder_order):
             if not order_string:
                 logging.warning("Please check .order file for {}{}".format(folder_in, species_folder.name))
                 return
-            for infile in os.listdir(species_folder):
-                if infile.split('.')[-1] == 'fas-gb':
-                    yield species_folder.name, infile, order_string
+            for infile in os.scandir(species_folder):
+                if infile.name.split('.')[-1] == 'fas-gb':
+                    yield species_folder.name, infile.name, order_string
 
 
 def parse_phylip_dir(input_folder):
     """ parse directory with .phylip files"""
     for personal_folder in os.scandir(input_folder):
         if os.path.isdir(personal_folder):
-            for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'phylip':
-                    yield personal_folder.name, infile
+            for infile in os.scandir(personal_folder):
+                if infile.name.split('.')[-1] == 'phylip':
+                    yield personal_folder.name, infile.name
 
 
-def fasta2phylip(personal_folder, infile, order_string, folder_in, folder_out):
+def fasta2phylip(personal_folder, infile_name, order_string, folder_in, folder_out):
     """ converting fasta to philip-sequential format"""
-    file_number = re.search(r'(\d+)\.', infile).group(1)
-    infile_path = os.path.join(folder_in, personal_folder, infile)
-    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_number, "phylip"))
+    # file_number = re.search(r'(\d+)\.', infile).group(1)
+    file_gene_name = infile_name.split('.')[0]
+    infile_path = os.path.join(folder_in, personal_folder, infile_name)
+    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_gene_name, "phylip"))
     if not os.path.isdir(os.path.join(folder_out, personal_folder)):
         os.makedirs(os.path.join(folder_out, personal_folder))
     try:
@@ -102,7 +102,7 @@ def fasta2phylip(personal_folder, infile, order_string, folder_in, folder_out):
                 SeqIO.write(ordering_alignments, output_file, "phylip-sequential")
         logging.info('phylip-sequential format file {} has been recorded'.format(outfile_path))
     except BaseException as e:
-        logging.exception("Infile {}, - Unexpected error: {}".format(infile, e))
+        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name, e))
 
 
 def chunks(s, n):
@@ -115,7 +115,7 @@ def chunks(s, n):
             yield s[start:start + n]  # +"\n"
 
 
-def check_lengths(lengths, species_folder, file_number, species, group):
+def check_lengths(lengths, species_folder, file_name, species, group):
     """ check: - the lengths of all sequences in one file are of the same length
                - number of sequences in one file more or equal then group number, less or equal then species number
                - length of sequence is multiple of three
@@ -125,22 +125,22 @@ def check_lengths(lengths, species_folder, file_number, species, group):
         logging.info("Check length OK: all seq lengths are equal, multiple of 3")
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
-        NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_number))
+        NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_name))
     elif not group <= len(lengths) <= species:
         global BROKEN_SPECIES
         # BROKEN_SPECIES.append('{}/{}'.format(species_folder, file_number))
         if not BROKEN_SPECIES.get(species_folder):
             BROKEN_SPECIES[species_folder] = list()
-        BROKEN_SPECIES[species_folder].append(file_number)
+        BROKEN_SPECIES[species_folder].append(file_name)
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
-        NOT_MULTIPLE_OF_THREE.append('{}/{}'.format(species_folder, file_number))
+        NOT_MULTIPLE_OF_THREE.append('{}/{}'.format(species_folder, file_name))
     else:
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
         # BROKEN_FILES.append('{}/{}'.format(species_folder, file_number))
         if not BROKEN_LENGTH_FILES.get(species_folder):
             BROKEN_LENGTH_FILES[species_folder] = list()
-        BROKEN_LENGTH_FILES[species_folder].append(file_number)
+        BROKEN_LENGTH_FILES[species_folder].append(file_name)
 
 
 def write_target_phy_file(line_edited, target_file):
@@ -150,11 +150,14 @@ def write_target_phy_file(line_edited, target_file):
 
 def phylip2paml(folder_out, species_folder, source_file_name, species, group):
     """ converting philip-sequential to specific philip format for paml """
-    file_number = re.search(r'(\d+)\.', source_file_name).group(1)
-    target_file_path = os.path.join(folder_out, species_folder, file_number, '{}.{}'.format(file_number, "phy"))
+    # file_number = re.search(r'(\d+)\.', source_file_name).group(1)
+    file_gene_name = source_file_name.split('.')[0]
+    target_file_path = os.path.join(folder_out, species_folder, file_gene_name, '{}.{}'.format(file_gene_name,
+                                                                                               "phy"))  # sort for
+    # additional folders for paml
     source_file_path = os.path.join(folder_out, species_folder, source_file_name)
-    if not os.path.isdir(os.path.join(folder_out, species_folder, file_number)):
-        os.makedirs(os.path.join(folder_out, species_folder, file_number))
+    if not os.path.isdir(os.path.join(folder_out, species_folder, file_gene_name)):
+        os.makedirs(os.path.join(folder_out, species_folder, file_gene_name))
     lengths = list()
     with open(target_file_path, 'w') as target_file:
         with open(source_file_path, 'r') as source_file_path:
@@ -175,32 +178,24 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
                     lengths.append(len(line_edited[:-1]))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
-    check_lengths(lengths, species_folder, file_number, species, group)
+    check_lengths(lengths, species_folder, file_gene_name, species, group)
     logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
 
 
 def replace_broken_files_and_write_table(directory_out):
     broken_length_folder = os.path.join(directory_out, "broken_length_files")
-    broken_files_table = os.path.join(directory_out, "broken_files.xlsx")
     broken_species_folder = os.path.join(directory_out, "broken_species_files")
-    writer = pd.ExcelWriter(broken_files_table, engine='xlsxwriter')
     if BROKEN_LENGTH_FILES:
-        df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_LENGTH_FILES.items()})
-        df.to_excel(writer, sheet_name='BROKEN_FILES')
-        logging.info("BROKEN_LENGTH_FILES list is written to {}".format(broken_files_table))
         for folder, files in BROKEN_LENGTH_FILES.items():
             for f in files:
                 shutil.move(os.path.join(directory_out, folder, f), os.path.join(broken_length_folder, folder, f))
+        logging.warning("BROKEN_LENGTH_FILES files moves to to {}".format(broken_length_folder))
     if BROKEN_SPECIES:
-        df = pd.DataFrame({key: pd.Series(value) for key, value in BROKEN_SPECIES.items()})
-        df.to_excel(writer, sheet_name='BROKEN_SPECIES')
-        logging.info("BROKEN_SPECIES list is written to {}".format(broken_files_table))
         for folder, files in BROKEN_SPECIES.items():
             for f in files:
                 shutil.move(os.path.join(directory_out, folder, f), os.path.join(broken_species_folder, folder, f))
             # os.remove(os.path.join(directory_out, folder)) # TODO: shutil does not delete source, just leave empty
-
-    writer.save()
+        logging.warning("BROKEN_SPECIES files moves to to {}".format(broken_species_folder))
 
 
 def main(folder_in, folder_order, folder_out, species, group):
@@ -230,13 +225,24 @@ if __name__ == '__main__':
         os.makedirs(out_dir)
     try:
         main(args.i, args.order, out_dir, int(args.species), int(args.group))
-        logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_LENGTH_FILES), repr(BROKEN_LENGTH_FILES)))
+        logging.warning("BROKEN_FILES {}".format(len(BROKEN_LENGTH_FILES)))
         if BROKEN_LENGTH_FILES or BROKEN_SPECIES:
             replace_broken_files_and_write_table(out_dir)
-        logging.warning("NOT_EQUAL_LENGTH {}:{}".format(len(NOT_EQUAL_LENGTH), NOT_EQUAL_LENGTH))
-        logging.warning("BROKEN_SPECIES files {}:{}".format(len(BROKEN_SPECIES), repr(BROKEN_SPECIES)))
-        logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
-        logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
+        logging.warning("NOT_EQUAL_LENGTH {}".format(len(NOT_EQUAL_LENGTH)))
+        logging.warning("BROKEN_SPECIES groups {}".format(len(BROKEN_SPECIES)))
+        logging.warning("NOT_MULTIPLE_OF_THREE {}".format(len(NOT_MULTIPLE_OF_THREE)))
+        resulting_file = os.path.join(out_dir, 'fasta2paml_ordering_summary.xlsx')
+        writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
+        df = pd.DataFrame({'Gene name': NOT_EQUAL_LENGTH})
+        df.to_excel(writer, sheet_name='NOT_EQUAL_LENGTH', index=False)
+        df = pd.DataFrame({'Gene name': NOT_MULTIPLE_OF_THREE})
+        df.to_excel(writer, sheet_name='NOT_MULTIPLE_OF_THREE', index=False)
+        df = pd.DataFrame({'Gene name': BROKEN_LENGTH_FILES})
+        df.to_excel(writer, sheet_name='BROKEN_FILES', index=False)
+        df = pd.DataFrame.from_dict(BROKEN_SPECIES)
+        df.to_excel(writer, sheet_name='BROKEN_SPECIES', index=False)
+        writer.save()
+        logging.info("Summary has been written to {}".format(resulting_file))
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
     logging.info("The work has been completed")

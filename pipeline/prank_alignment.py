@@ -135,12 +135,12 @@ def write_correct_error_files(output_dir):
     logging.info("CORRECT_FILES_TO_WRITE {} {}".format(len(CORRECT_FILES_TO_WRITE), CORRECT_FILES_TO_WRITE))
     logging.info("ERROR_FILES_TO_WRITE {} {}".format(len(ERROR_FILES_TO_WRITE), ERROR_FILES_TO_WRITE))
     resulting_file = os.path.join(output_dir, 'prank_summary.xlsx')
-    logging.info("res file {}".format(resulting_file))
     writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
     df_corr = pd.DataFrame({'Gene name': list(CORRECT_FILES_TO_WRITE)})
     df_corr.to_excel(writer, sheet_name='correct files', index=False)
     df_err = pd.DataFrame({'Gene name': list(ERROR_FILES_TO_WRITE)})
     df_err.to_excel(writer, sheet_name='exception files', index=False)
+    logging.info("Summary has been written to {}".format(resulting_file))
     writer.save()
 
 
