@@ -49,7 +49,7 @@ This requires defining variables in `pipeline/orthologs_from_annotation.py` scri
 - result_file_path (path to the result .xlsx file that will be written)<br />
 ##### 1.1.3 Combine the previous ways
 Merge or concatenate results, write paths and options into script and run
-`python utilities/merge_dfs.py`
+`python pipeline/concatenate_orthologs.py`
 ### 2. Sequences
 #### 2.1. Get nucleotide sequences
 ##### 2.1.1 Extract sequences in accordance with orthologs result file
