@@ -2,12 +2,9 @@ import pandas as pd
 
 """small script ro merge or concat dataframes, see pandas docs for details"""
 
-# path1 = '/path/formed_acfhp.poff.tsv'
-# path2 = '/path/orthologs_from_annotation.xlsx'
-# result_file_path = '/abspath/final_table_concat_poff_and_annotation.tsv'
-path1 = '/home/alina_grf/obtain/acfhp/formed_acfhp.poff.tsv'
-path2 = '/home/alina_grf/obtain/acfhp/orthologs_from_annotation.xlsx'
-result_file_path = '/home/alina_grf/obtain/acfhp/test.tsv'
+path1 = 'formed_acfhp.poff.tsv'
+path2 = 'orthologs_from_annotation.xlsx'
+result_file_path = 'final_orthologs_table_concatenation.tsv'
 
 df1 = pd.read_csv(path1, sep='\t')
 df2 = pd.read_excel(path2, engine='openpyxl')

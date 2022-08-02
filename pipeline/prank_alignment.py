@@ -5,13 +5,12 @@ import multiprocessing
 import os
 import logging
 import re
-
+import functools, multiprocessing, inspect
+import sys
 import pandas as pd
 
 CORRECT_FILES_TO_WRITE = set()
 ERROR_FILES_TO_WRITE = set()
-CORRECT_FILES = list()
-ERROR_FILES = list()
 LOG_FILE = "prank_alignment.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
@@ -65,6 +64,24 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
     return launch
 
 
+def trace_unhandled_exceptions(func):
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except:
+            frames = inspect.trace()
+            argvalues = inspect.getargvalues(frames[0][0])
+            file_name = argvalues.locals['args'][0][2]
+            gene_name = file_name.split('.')[0]
+            logging.exception("gene {}".format(gene_name))
+            logging.exception("exception {} in file {}/{}".format(sys.exc_info()[0],
+                                                                  argvalues.locals['args'][0][1],
+                                                                  gene_name))
+    return wrapped_func
+
+
+@trace_unhandled_exceptions
 def launch_prank(input_tuple, folder_out, tree, format_out, aligning):
     input_dir, species_folder, infile_name_extended = input_tuple
     infile_path = os.path.join(input_dir, species_folder, infile_name_extended)
@@ -72,41 +89,26 @@ def launch_prank(input_tuple, folder_out, tree, format_out, aligning):
     outfile_folder = os.path.join(folder_out, species_folder)
     outfile_path_without_extension = os.path.join(outfile_folder, file_gene_name)
     final_file_name = get_final_file_full_name(outfile_path_without_extension, format_out)
-    try:
-        global CORRECT_FILES
-        global ERROR_FILES
-        launch_command = get_launch_command(infile_path, final_file_name,
-                                            outfile_path_without_extension, tree,
-                                            format_out, aligning)
-        if not os.system(launch_command):
-            if file_gene_name not in CORRECT_FILES:
-                CORRECT_FILES.append(file_gene_name)
 
-    except BaseException as err:
-        ERROR_FILES.append(file_gene_name)
-        logging.exception("Infile {}, - Unexpected error: {}".format(infile_name_extended, err))
-    return CORRECT_FILES, ERROR_FILES
+    launch_command = get_launch_command(infile_path, final_file_name,
+                                        outfile_path_without_extension, tree,
+                                        format_out, aligning)
+    os.system(launch_command)
 
 
-def gather_correct(correct):
-    global CORRECT_FILES_TO_WRITE
-    for tup in correct:
-        if not tup[0]:
-            logging.warning("No correct files, check prank log file")
-        for correct_item in tup[0]:
-            CORRECT_FILES_TO_WRITE.add(correct_item)
-    logging.info("CORRECT_FILES_TO_WRITE {} {}".format(len(CORRECT_FILES_TO_WRITE), CORRECT_FILES_TO_WRITE))
-
-
-def gather_errors(exception):
+def get_errors_from_log_file():
+    print("get_errors_from_log_file")
     global ERROR_FILES_TO_WRITE
-    for tup in exception:
-        for error_item in tup[1]:
-            ERROR_FILES_TO_WRITE.add(error_item)
-    logging.info("ERROR_FILES_TO_WRITE {} {}".format(len(ERROR_FILES_TO_WRITE), ERROR_FILES_TO_WRITE))
+    with open(LOG_FILE, 'r') as lf:
+        for line in lf:
+            if 'ERROR : gene' in line:
+                before_keyword, keyword, after_keyword = line.partition('ERROR : gene ')
+                gene_name = after_keyword.replace('\n', '')
+                ERROR_FILES_TO_WRITE.add(gene_name)
+                print("add error", gene_name)
 
 
-def write_correct_error_files(output_dir):
+def get_correct_errors_from_prank_log_file(output_dir):
     global CORRECT_FILES_TO_WRITE
     global ERROR_FILES_TO_WRITE
     for species_folder in os.scandir(output_dir):
@@ -119,19 +121,26 @@ def write_correct_error_files(output_dir):
                             result_line = f_log.readlines()[-2]
                             logging.info("result_line {}".format(result_line))
                             if re.search("Analysis done", result_line):
-                                logging.info("Log parsing: analysis done for file".format(infile))
+                                logging.info("OK for file".format(infile))
                                 CORRECT_FILES_TO_WRITE.add(file_gene_name)
                             else:
                                 ERROR_FILES_TO_WRITE.add(file_gene_name)
                                 if file_gene_name in CORRECT_FILES_TO_WRITE:
                                     CORRECT_FILES_TO_WRITE.remove(file_gene_name)
-                                logging.error("Log parsing: the work hasn't been complete for file {}: {}".format(
+                                logging.error("FAIL for file {}: {}".format(
                                     file_gene_name, result_line))
                     else:
                         ERROR_FILES_TO_WRITE.add(file_gene_name)
                         if file_gene_name in CORRECT_FILES_TO_WRITE:
                             CORRECT_FILES_TO_WRITE.remove(file_gene_name)
                         logging.error("Wrong log file for {}".format(file_gene_name))
+
+
+def write_correct_error_files(output_dir):
+    get_errors_from_log_file()
+    global CORRECT_FILES_TO_WRITE
+    global ERROR_FILES_TO_WRITE
+    get_correct_errors_from_prank_log_file(output_dir)
     logging.info("CORRECT_FILES_TO_WRITE {} {}".format(len(CORRECT_FILES_TO_WRITE), CORRECT_FILES_TO_WRITE))
     logging.info("ERROR_FILES_TO_WRITE {} {}".format(len(ERROR_FILES_TO_WRITE), ERROR_FILES_TO_WRITE))
     resulting_file = os.path.join(output_dir, 'prank_summary.xlsx')
@@ -179,9 +188,7 @@ if __name__ == '__main__':
                      "".format(in_dir, out_dir, args.tree, output_format, align, threads))
 
         i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir], len_inputs * [args.tree],
-                                                 len_inputs * [output_format], len_inputs * [align]),
-                               callback=gather_correct,
-                               error_callback=gather_errors)
+                                                 len_inputs * [output_format], len_inputs * [align]))
         i.wait()
         i.get()
     except BaseException as e:
