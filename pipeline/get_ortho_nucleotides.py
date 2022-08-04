@@ -9,10 +9,10 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import numpy as np
 
-CORRECT_FILES = dict()  # store the number of writings (1 writing = 1 seq = 1 species):
+CORRECT_FILES_TO_WRITE = dict()  # store the number of writings (1 writing = 1 seq = 1 species):
 # for species=5 and group=5 there should be PROCESSED_FILES[file_name] = ['1,2,3,4,5', 5] (without BROKEN lists)
 BROKEN_SPECIES = list()
-CORRECT_RECORD = list()
+CORRECT_FILES_TO_FURTHER_ANALYSIS = list()
 BROKEN_ACCORDANCE = dict()  # broken accordance with protein length (nuc = protein length * 3)
 BROKEN_MULTIPLE_THREE = dict()
 BROKEN_STOP_CODON = dict()
@@ -242,8 +242,10 @@ def anti_repeat_check(protein_id, seq_record, anti_repeat_store):
     return False
 
 
-def anti_repeat_check_with_comparing(seq_store, protein_id, nucleotide_seq, file_out_name, start,
-                                     accordance, stop, multiple, gene, nucleotide_seq_length, species_numerating):
+def anti_repeat_check_and_get_the_better_seq(seq_store, protein_id, nucleotide_seq, file_out_name, start,
+                                             accordance, stop, multiple, gene, nucleotide_seq_length,
+                                             species_numerating):
+    logging.info('store anti {}'.format(seq_store))
     if not seq_store.get(protein_id):
         seq_store[protein_id] = {
             "seq": nucleotide_seq, "start": start, "accordance": accordance,
@@ -253,7 +255,8 @@ def anti_repeat_check_with_comparing(seq_store, protein_id, nucleotide_seq, file
         return nucleotide_seq
     else:
         previous_seq = seq_store.get(protein_id).get("seq")
-        if previous_seq == nucleotide_seq:
+        # logging.info('comparison {} {}'.format(type(nucleotide_seq), str(nucleotide_seq)))
+        if str(previous_seq) == str(nucleotide_seq):
             logging.warning("Anti-repeat check: repeating file {} protein_id {} nucleotide_seqs are equal".format(
                 file_out_name, protein_id))
             return nucleotide_seq
@@ -286,15 +289,15 @@ def anti_repeat_check_with_comparing(seq_store, protein_id, nucleotide_seq, file
 
 
 def write_fasta_file(dir_out, file_out_name, seq_record):
-    global CORRECT_FILES
+    global CORRECT_FILES_TO_WRITE
     with open(os.path.join(dir_out, file_out_name + ".fna"), "a") as f:
         SeqIO.write(seq_record, f, "fasta")
         logging.info("Sequence corresponding to the species number {} has been added to the file {}".format(
             seq_record.id, file_out_name))
-        if not CORRECT_FILES.get(file_out_name):
-            CORRECT_FILES[file_out_name] = ["", 0]
-        CORRECT_FILES[file_out_name][0] += '{},'.format(seq_record.id)
-        CORRECT_FILES[file_out_name][1] += 1
+        if not CORRECT_FILES_TO_WRITE.get(file_out_name):
+            CORRECT_FILES_TO_WRITE[file_out_name] = ["", 0]
+        CORRECT_FILES_TO_WRITE[file_out_name][0] += '{},'.format(seq_record.id)
+        CORRECT_FILES_TO_WRITE[file_out_name][1] += 1
 
 
 def write_log_file(log_file, protein_id, seq_length, file_out_name, species_numerating):
@@ -337,11 +340,11 @@ def get_seq_from_gbff(gb_file, ortho_protein_ids, ortho_gene_names):
                     protein_translation = feature.qualifiers.get("translation")[0]  # str
                     protein_translation_length = len(protein_translation)  # int
                     nucleotide_seq = feature.location.extract(record.seq)
-                        # index_count = np.where(ortho_protein_ids == protein_id)[0][0]
-                        # file_out_number = str(index_count + 1)
+                    # index_count = np.where(ortho_protein_ids == protein_id)[0][0]
+                    # file_out_number = str(index_count + 1)
                     file_out_name = gene_name
                     nucleotide_seq_length = len(nucleotide_seq)
-                        # gene = feature.qualifiers.get('gene')[0]
+                    # gene = feature.qualifiers.get('gene')[0]
                     logging.info("get_seq_from_gbff: protein_id {} gene {}".format(protein_id, gene_name))
                     yield (protein_id, protein_translation, protein_translation_length, nucleotide_seq,
                            file_out_name, nucleotide_seq_length, gene_name, feature, record.id)
@@ -363,34 +366,87 @@ def get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numeratin
     return seq_record
 
 
-def get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, ortho_gene_names, species_numerating, dir_out,
-                           seq_store):
+def analyse_cds_and_write_result(cds_from_genomic_file, ortho_protein_ids, ortho_gene_names, species_numerating, dir_out,
+                                 seq_store):
     global ABSENT_IN_CDS
-    if os.path.isfile(cds_from_genomic_file):
-        logging.info("Starting to get sequences from cds_from_genomic {}".format(cds_from_genomic_file))
-        for protein_id, gene_name in zip(ortho_protein_ids, ortho_gene_names):
-            if protein_id == '*' or not protein_id or not isinstance(protein_id, str):
-                continue
-            seq_record = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
-            file_out_name = gene_name
-            if not seq_record:  # no seq_record when this species is not in the group
-                if not ABSENT_IN_CDS.get(species_numerating):
-                    ABSENT_IN_CDS[species_numerating] = list()
-                ABSENT_IN_CDS.get(species_numerating).append(protein_id)
-                logging.info("protein_id {} is absent in {}".format(protein_id, cds_from_genomic_file))
-                continue
-            else:
-                seq_length = len(seq_record.seq)
-            # if not seq_record.description:  # gene_name
-            #     logging.warning("empty gene_name from cds_from_genomic")
-            if anti_repeat_check(protein_id, seq_record, seq_store):
-                write_fasta_file(dir_out, file_out_name, seq_record)
-                log_file = os.path.join(dir_out, file_out_name + ".log")
-                write_log_file(log_file, protein_id, seq_length, file_out_name, species_numerating)
-        logging.info("all sequences for species {} recorded".format(species_numerating))
-        return True
-    logging.info("No such cds_from_genomic {}".format(cds_from_genomic_file))
-    return False
+    absent_prot = list()
+    absent_gene = list()
+    for protein_id, gene_name in zip(ortho_protein_ids, ortho_gene_names):
+        if protein_id == '*' or not protein_id or not isinstance(protein_id, str):
+            logging.warning('FAIL to extract by protein_id {} of type {}'.format(protein_id, type(protein_id)))
+            continue
+        seq_record = get_seq_record_from_cds(cds_from_genomic_file, protein_id, species_numerating)
+        file_out_name = gene_name
+        if not seq_record:  # no seq_record when this species is not in the group
+            absent_prot.append(protein_id)
+            absent_gene.append(gene_name)
+            if not ABSENT_IN_CDS.get(species_numerating):
+                ABSENT_IN_CDS[species_numerating] = list()
+            ABSENT_IN_CDS.get(species_numerating).append(protein_id)
+            logging.info("protein_id {} is absent in {}".format(protein_id, cds_from_genomic_file))
+            continue
+        else:
+            seq_length = len(seq_record.seq)
+        # if not seq_record.description:  # gene_name
+        #     logging.warning("empty gene_name from cds_from_genomic")
+        if anti_repeat_check(protein_id, seq_record, seq_store):
+            write_fasta_file(dir_out, file_out_name, seq_record)
+            log_file = os.path.join(dir_out, file_out_name + ".log")
+            write_log_file(log_file, protein_id, seq_length, file_out_name, species_numerating)
+    if absent_prot and absent_gene:
+        prot_for_futher_extract = np.array(absent_prot)
+        gene_for_futher_extract = np.array(absent_gene)
+        return prot_for_futher_extract, gene_for_futher_extract
+    return
+
+
+def analyse_gbff_and_write_result(gb_file, ortho_protein_ids, ortho_gene_names, genome_fna_path, species_numerating,
+                                  dir_out, seq_store):
+    for (protein_id, protein_translation, protein_translation_length, nucleotide_seq,
+         file_out_name, nucleotide_seq_length, gene, feature, record_id) in \
+            get_seq_from_gbff(gb_file, ortho_protein_ids, ortho_gene_names):
+        """ start checking """
+        check_start = check_start_codon(nucleotide_seq, file_out_name, protein_id)
+        check_accordance = check_accordance_with_protein_length(nucleotide_seq_length - 3,
+                                                                protein_translation_length,
+                                                                protein_id, file_out_name)
+        check_stop = check_stop_codon(nucleotide_seq, file_out_name, protein_id)
+        check_multiple = check_multiple_of_three(nucleotide_seq, file_out_name, protein_id)
+        if check_common_accordance(check_multiple, check_start, check_stop, check_accordance):
+            delete_from_broken(file_out_name, protein_id)  # common: if check_multiple, check_accordance-ok, then OK
+        elif genome_fna_path:  # extract from genome .fna
+            extracted_seq, check_trans_result = check_translate(nucleotide_seq, protein_translation,
+                                                                genome_fna_path, feature, record_id,
+                                                                species_numerating,
+                                                                check_multiple, check_start, check_stop,
+                                                                check_accordance,
+                                                                protein_translation_length)
+            if not check_trans_result and extracted_seq != nucleotide_seq:
+                logging.info("starting checks for manually extracted sequence")
+                check_start = check_start_codon(extracted_seq, file_out_name, protein_id)
+                check_accordance = check_accordance_with_protein_length(len(extracted_seq) - 3,
+                                                                        protein_translation_length,
+                                                                        protein_id, file_out_name)
+                check_stop = check_stop_codon(extracted_seq, file_out_name, protein_id)
+                check_multiple = check_multiple_of_three(extracted_seq, file_out_name, protein_id)
+                if check_common_accordance(check_multiple, check_start, check_stop, check_accordance):
+                    delete_from_broken(file_out_name, protein_id)
+                    nucleotide_seq = extracted_seq
+                """ else: if the attempt to extract right seq from genome .fna has failed - extracted_seq - return to
+                   nucleotide_seq from .gbff """
+        # check duplicates
+        nucleotide_seq = anti_repeat_check_and_get_the_better_seq(seq_store, protein_id, nucleotide_seq, file_out_name,
+                                                                  check_start, check_accordance, check_stop,
+                                                                  check_multiple,
+                                                                  gene, nucleotide_seq_length, species_numerating)
+
+        logging.info("Extraction and analysis complete: detected gene {} corresponding protein_id {} with "
+                     "protein_length {} "
+                     "nucleotide seq of length {}\n"
+                     "seq:\n{}\n".format(gene, protein_id, protein_translation_length,
+                                         nucleotide_seq_length, nucleotide_seq))
+        write_fasta_and_log(seq_store, protein_id, dir_out)
+        seq_store = dict()
 
 
 def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_ids, ortho_gene_names, dir_out,
@@ -417,55 +473,24 @@ def get_and_write_nucleotide_seq(gb_file, cds_from_genomic_file, ortho_protein_i
     global BROKEN_MULTIPLE_THREE
     global BROKEN_ACCORDANCE
     seq_store = dict()
-    """ trying to get nucleotide sequence from cds_from_genomic.fna """
-    if get_from_cds_and_write(cds_from_genomic_file, ortho_protein_ids, ortho_gene_names, species_numerating,
-                              dir_out, seq_store):
-        return
-    """ trying to find sequence by protein_id in .gbff """
-    for (protein_id, protein_translation, protein_translation_length, nucleotide_seq,
-         file_out_name, nucleotide_seq_length, gene, feature, record_id) in \
-            get_seq_from_gbff(gb_file, ortho_protein_ids, ortho_gene_names):
-        """ start checking """
-        check_start = check_start_codon(nucleotide_seq, file_out_name, protein_id)
-        check_accordance = check_accordance_with_protein_length(nucleotide_seq_length - 3,
-                                                                protein_translation_length,
-                                                                protein_id, file_out_name)
-        check_stop = check_stop_codon(nucleotide_seq, file_out_name, protein_id)
-        check_multiple = check_multiple_of_three(nucleotide_seq, file_out_name, protein_id)
-        if check_common_accordance(check_multiple, check_start, check_stop, check_accordance):
-            delete_from_broken(file_out_name, protein_id)  # common: if check_multiple, check_accordance-ok, then OK
-        else:  # extract from genome .fna
-            extracted_seq, check_trans_result = check_translate(nucleotide_seq, protein_translation,
-                                                                genome_fna_path, feature, record_id,
-                                                                species_numerating,
-                                                                check_multiple, check_start, check_stop,
-                                                                check_accordance,
-                                                                protein_translation_length)
-            if not check_trans_result and extracted_seq != nucleotide_seq:
-                logging.info("starting checks for manually extracted sequence")
-                check_start = check_start_codon(extracted_seq, file_out_name, protein_id)
-                check_accordance = check_accordance_with_protein_length(len(extracted_seq) - 3,
-                                                                        protein_translation_length,
-                                                                        protein_id, file_out_name)
-                check_stop = check_stop_codon(extracted_seq, file_out_name, protein_id)
-                check_multiple = check_multiple_of_three(extracted_seq, file_out_name, protein_id)
-                if check_common_accordance(check_multiple, check_start, check_stop, check_accordance):
-                    delete_from_broken(file_out_name, protein_id)
-                    nucleotide_seq = extracted_seq
-                """ else: if the attempt to extract right seq from genome .fna has failed - extracted_seq - return to
-                   nucleotide_seq from .gbff """
-        # check duplicates
-        nucleotide_seq = anti_repeat_check_with_comparing(seq_store, protein_id, nucleotide_seq, file_out_name,
-                                                          check_start, check_accordance, check_stop, check_multiple,
-                                                          gene, nucleotide_seq_length, species_numerating)
-
-        logging.info("Extraction and analysis complete: detected gene {} corresponding protein_id {} with "
-                     "protein_length {} "
-                     "nucleotide seq of length {}\n"
-                     "seq:\n{}\n".format(gene, protein_id, protein_translation_length,
-                                         nucleotide_seq_length, nucleotide_seq))
-        write_fasta_and_log(seq_store, protein_id, dir_out)
-        seq_store = dict()
+    " trying to get nucleotide sequence from cds_from_genomic.fna "
+    if os.path.isfile(cds_from_genomic_file):
+        logging.info("Starting to get sequences from cds_from_genomic {}".format(cds_from_genomic_file))
+        result_from_cds = analyse_cds_and_write_result(cds_from_genomic_file, ortho_protein_ids, ortho_gene_names,
+                                                       species_numerating,
+                                                       dir_out, seq_store)
+        if result_from_cds:
+            prot_for_futher_extract, gene_for_futher_extract = result_from_cds
+            logging.info("starting further extract from gbff for absent in cds {}".format(prot_for_futher_extract))
+            analyse_gbff_and_write_result(gb_file, prot_for_futher_extract, gene_for_futher_extract, genome_fna_path,
+                                          species_numerating,
+                                          dir_out, seq_store)
+        else:
+            return
+    else:
+        " trying to find sequence by protein_id in .gbff "
+        analyse_gbff_and_write_result(gb_file, ortho_protein_ids, ortho_gene_names, genome_fna_path, species_numerating,
+                                      dir_out, seq_store)
 
 
 def conv_int(val):
@@ -513,11 +538,11 @@ def main(orthodata_filepath, annotation_gbff, cds_from_genomic, fna_filepath, sp
         NUMBER_OF_NEED_TO_BE_WRITTEN = 0
         # species_numerating = str(column_number + 1)
         if column_name.isalnum():
-            column_number = int(column_name)
             annotation_gbff_path = os.path.join(annotation_gbff, "{}.{}".format(column_name, 'gbff'))
             cds_from_genomic_path = os.path.join(cds_from_genomic, "{}.{}".format(column_name, 'fna'))
             logging.info('Working with species number {}'.format(column_name))
-            """ define broken_list as a global var for re-extracting (post-processing) seqs from list ['item1', 'item2'..],
+            """ define broken_list as a global var for re-extracting (post-processing) seqs from list ['item1', 
+            'item2'..],
             e.g ['3557', '5781', '1503'] """
             # if BROKEN_LIST:
             #     broken_list_int_convert = list()
@@ -547,7 +572,8 @@ if __name__ == '__main__':
                                       'features annotated on the assembly', nargs='?')
     # parser.add_argument('--csv', help='Path to the folder with annotation .csv files from '
     #                                  'www.ncbi.nlm.nih.gov/genome/', nargs='?')
-    parser.add_argument('--genome', help='Path to the folder with .fna files', nargs='?')
+    parser.add_argument('--genome', help='Path to the folder with .fna files for additional checks', nargs='?',
+                        default='')
     parser.add_argument('--species', help='Number of species', nargs='?', required=True)
     parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     parser.add_argument('--out', help='Path to the folder for result write out, if it does not exist,'
@@ -560,19 +586,14 @@ if __name__ == '__main__':
         if not os.path.isdir(directory_out):
             os.makedirs(directory_out)
         main(args.ortho, args.gbff, args.cds, args.genome, int(args.species), directory_out)
-        written_files_number = len(CORRECT_FILES)
-        delta = NUMBER_OF_NEED_TO_BE_WRITTEN - written_files_number
-        if delta == 0:
-            logging.info("All files are written")
 
-        for file, species_info in CORRECT_FILES.items():
-            print("processed", file, species_info, group)
+        for file, species_info in CORRECT_FILES_TO_WRITE.items():
             if species_info[1] != group:
                 if file not in BROKEN_SPECIES:
                     BROKEN_SPECIES.append(file)  # gene name
             else:
                 "sort by folders-groups"
-                CORRECT_RECORD.append(file)
+                CORRECT_FILES_TO_FURTHER_ANALYSIS.append(file)
                 list_of_species = list(species_info[0].split(','))
                 list_of_species.sort()
                 group_folder_name = "".join(list_of_species)
@@ -582,18 +603,16 @@ if __name__ == '__main__':
                 os.replace(os.path.join(directory_out, file + ".fna"), os.path.join(group_folder_path, file + ".fna"))
         # resulting_file = os.path.join(args.out, "get_ortho_nuc_result.xlsx")
         writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
-        df_corr = pd.DataFrame({'Gene name': CORRECT_RECORD})
+        df_corr = pd.DataFrame({'Gene name': CORRECT_FILES_TO_FURTHER_ANALYSIS})
         df_corr.to_excel(writer, sheet_name='correct records', index=False)
 
         if BROKEN_SPECIES:
             broken_species_folder = os.path.join(args.out, "broken_species_files")
             os.makedirs(broken_species_folder)
             replace_broken_files_and_write_table(args.out, broken_species_folder, writer)
-            residue = written_files_number - len(BROKEN_SPECIES)
-            logging.info("NUMBER_OF_NEED_TO_BE_WRITTEN = {},  WRITTEN_FILES = {}, where {} in BROKEN_SPECIES list"
-                         .format(NUMBER_OF_NEED_TO_BE_WRITTEN, written_files_number, len(BROKEN_SPECIES)))
-            logging.info("removed broken species files into folder 'broken_species_files' in cwd,"
-                         "please check out folder for .fna files number: {}".format(residue))
+            logging.info("CORRECT_FILES_TO_FURTHER_ANALYSIS: {},  BROKEN_SPECIES: = {}"
+                         .format(len(CORRECT_FILES_TO_FURTHER_ANALYSIS), len(BROKEN_SPECIES)))
+            logging.info("removed BROKEN_SPECIES files into folder 'broken_species_files' in cwd")
         writer.save()
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
@@ -604,7 +623,7 @@ if __name__ == '__main__':
     logging.warning("BROKEN_START_CODON {} : {}".format(len(BROKEN_START_CODON), BROKEN_START_CODON))
     logging.warning("BROKEN_ACCORDANCE {} : {}".format(len(BROKEN_ACCORDANCE), BROKEN_ACCORDANCE))
     logging.warning("BROKEN_MULTIPLE_THREE {} : {}".format(len(BROKEN_MULTIPLE_THREE), BROKEN_MULTIPLE_THREE))
-    logging.info("Correctly recorded files {}\n".format(len(CORRECT_RECORD)))
+    logging.info("Correctly recorded files {}\n".format(len(CORRECT_FILES_TO_FURTHER_ANALYSIS)))
     logging.info("The work has been completed\nthe summary is in {}\nNucleotide sequences are in {}\n"
                  "".format(resulting_file, args.out))
     if BROKEN_SPECIES:
