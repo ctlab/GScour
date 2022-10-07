@@ -35,7 +35,7 @@ def get_statistics(infile):
             if re.search(ln_np_pattern, line):
                 np = int(re.search(ln_np_pattern, line).group(1))
                 ln = float(re.search(ln_np_pattern, line).group(2))
-                print("got ln={}, np={}".format(ln, np))
+                print("     got ln={}, np={}".format(ln, np))
             if re.search(pattern_proportion, line):
                 proportion_0 = re.search(pattern_proportion, line).group(1)
                 proportion_1 = re.search(pattern_proportion, line).group(2)
@@ -68,34 +68,36 @@ def calc_p_value(np0, ln0, np1, ln1):
     delta_ll_twice = 2 * (float(ln1) - (float(ln0)))  # twice the difference (ll from positive vs ll from neutral model)
     n = np1 - np0  # degree of freedom - difference in the number of parameters
     p_val = 1 - stats.chi2.cdf(delta_ll_twice, n)  # or stats.chisqprob(delta_ll_twice, n)
-    print("n=", n, "chi2=", stats.chi2.cdf(delta_ll_twice, n), "p_val=", p_val)
+    print("    n=", n, "chi2=", stats.chi2.cdf(delta_ll_twice, n), "p_val=", p_val)
     return p_val
 
 
 def get_gene_name_protein_id(item_folder_name, seq_log_folder, target_species, child_logger):
-    """ get gene name and protein_id which corresponds to the required_species """
-    pattern, gene_name, protein_id = "", "", ""
+    """ get gene name and seq_id which corresponds to the required_species """
+    pattern, gene_name, seq_id = "", "", ""
     for infile in os.scandir(seq_log_folder):
-        file_number = infile.name.split('.')[0]
-        if file_number == item_folder_name and infile.name.endswith("log"):
+        file_name = infile.name.split('.')[0]
+        if file_name == item_folder_name and infile.name.endswith("log"):
             child_logger.info("open log file {}".format(os.path.join(seq_log_folder, infile.name)))
             with open(os.path.join(seq_log_folder, infile.name), "r") as f:
                 for line in f:
-                    if re.search(r"-\s[{}]+$".format(target_species), line):
-                        pattern = re.compile(r"^([a-zA-Z0-9]+)\s-\s([a-zA-Z0-9_\.]+)")
+                    if re.search(r"\s[{}]$".format(target_species), line):
+                        pattern = re.compile(r"^([a-zA-Z0-9]+)\s([a-zA-Z0-9_\.]+)")
                         try:
                             gene_name = (re.search(pattern, line)).group(1)
-                            protein_id = (re.search(pattern, line)).group(2)
+                            seq_id = (re.search(pattern, line)).group(2)
                         except AttributeError:
                             if not gene_name:
                                 child_logger.error("Can't parse gene name from log")
-                                gene_name = "gene-{}".format(file_number)
-                            if not gene_name:
-                                child_logger.error("Can't parse protein id from log")
-                                gene_name = "protein_id-{}".format(file_number)
+                                gene_name = "gene-{}".format(file_name)
+                            if not seq_id:
+                                child_logger.error("Can't parse seq id from log")
+                                seq_id = "id-{}".format(file_name)
     if not pattern:
         child_logger.info("log pattern not found to get gene names")
-    return gene_name, protein_id
+        gene_name = "gene-{}".format(file_name)
+        seq_id = "id-{}".format(file_name)
+    return gene_name, seq_id
 
 
 def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, target_species, species_folder_sheet,
@@ -126,7 +128,7 @@ def count_sites(in_folder, species_folder, item, child_logger, ortho_logs, targe
         if all([np0, np1, ln0, ln1]):
             p_val = calc_p_value(np0, ln0, np1, ln1)
             print("p-value={}".format(p_val))
-            species_folder_sheet['NCBI protein_id'].append(protein_id)
+            species_folder_sheet['NCBI id'].append(protein_id)
             species_folder_sheet['Gene name'].append(gene_name)
             species_folder_sheet['0, proportion'].append(proportion_0)
             species_folder_sheet['0, Dn/Ds foreground'].append(foreground_0)
@@ -198,7 +200,7 @@ def main(in_folder, ortho_logs, target_species, required_p_value):
     global broken_files
     for species_folder in os.scandir(in_folder):
         species_folder_sheet = {
-            'NCBI protein_id': [], 'Gene name': [], '0, proportion': [],
+            'NCBI id': [], 'Gene name': [], '0, proportion': [],
             '0, Dn/Ds foreground': [], '0, Dn/Ds background': [],
             '1, proportion': [], '1, Dn/Ds foreground': [], '1, Dn/Ds background': [],
             '2a, proportion': [], '2a, Dn/Ds foreground': [], '2a, Dn/Ds background': [],
@@ -231,7 +233,7 @@ def main(in_folder, ortho_logs, target_species, required_p_value):
                     positive_sites_number += positive_sites_number_item
 
                     choose_the_lowest_p_value(genes_under_positive, gene_protein_dict)
-                    print("genes_under_positive for {} of len {}, {}".format(species_folder.name,
+                    print("     genes_under_positive for {} of len {}, {}".format(species_folder.name,
                                                                              len(genes_under_positive),
                                                                              genes_under_positive))
                     # genes_under_positive.update(gene_protein_dict)
@@ -271,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for paml',
                         nargs='?', required=True)
     parser.add_argument('--log', help='Path to the log folder of "get_ortho_nucleotides.py"', nargs='?', required=True)
-    parser.add_argument('--required', help='Number of required (single target) species for analysis', nargs='?',
+    parser.add_argument('--required', help='The number of required (single target) species for analysis', nargs='?',
                         required=True)
     parser.add_argument('--p', help='p-value level', nargs='?', required=True)
     args = parser.parse_args()
@@ -287,7 +289,6 @@ if __name__ == '__main__':
         writer = pd.ExcelWriter(common_sheet_path, engine='xlsxwriter')
         main(in_dir, log_folder, required_species, p_value_required)
         values = list(common_pos_gene_dict.values())
-        print("Results are recorded in {}".format(common_sheet_path))
         summary_sheet = {
             'Gene name': list(common_pos_gene_dict.keys()), 'NCBI protein_id':
                 [i[0] for i in values], 'p-value': [i[1] for i in values], 'Species group': [i[2] for i in values]
@@ -300,9 +301,9 @@ if __name__ == '__main__':
         df_broken = pd.DataFrame({"broken files": broken_files_list})
         df_broken.to_excel(writer, sheet_name='broken files')
         writer.save()
+        print("Results recorded to {}".format(common_sheet_path))
     except BaseException as e:
         print("Unexpected error: {}".format(e))
         raise e
-    print("Common dict of genes under positive of length ", len(common_pos_gene_dict), ":\n",
-          repr(common_pos_gene_dict))
+    print("Common dict of genes under positive of length ", len(common_pos_gene_dict))
     print("The work has been completed")

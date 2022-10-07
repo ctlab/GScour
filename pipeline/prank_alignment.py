@@ -15,11 +15,11 @@ LOG_FILE = "prank_alignment.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
-def parse_initial_dir_create_out_dir(input_dir, output_dir):
+def parse_initial_dir_create_out_dir(input_dir, extension, output_dir):
     for species_folder in os.scandir(input_dir):
         if os.path.isdir(species_folder):
             for infile in os.scandir(species_folder):
-                if infile.name.split('.')[-1] == 'fna':
+                if infile.name.split('.')[-1] == extension:
                     if not os.path.isdir(os.path.join(output_dir, species_folder.name)):
                         os.makedirs(os.path.join(output_dir, species_folder.name))
                     yield input_dir, species_folder.name, infile.name
@@ -45,7 +45,7 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
         aligning = 'translate'
     if tree:  # -translate (standard code); codon alignment with the option -codon (in -codon case
         # be careful about not multiple of three sequences)
-        launch = 'prank -d={0} -o={1} -t={2} -once -{3} -f={4} > {5}'.format(infile,
+        launch = 'prank -d={0} -o={1} -t={2} -{3} -f={4} > {5}'.format(infile,
                                                                              outfile_path_without_extension,
                                                                              tree, aligning, format_out, log_file)
 
@@ -171,8 +171,10 @@ def write_correct_and_error_files(output_dir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='The full path to the folder contains folders with input files (.fna) for prank',
+    parser.add_argument('--i', help='The full path to the folder contains folders with input files for prank',
                         nargs='?', required=True)
+    parser.add_argument('--e', help='Input FASTA file extension [fasta, fna, ffn, faa, frn, fa]', nargs='?',
+                        default='fna')
     parser.add_argument('--o', help='Path to the folder with output files of prank, if it does not exist, it will be'
                                     ' created automatically', nargs='?', required=True)
     parser.add_argument('--tree', help='Path to the tree, exclude if there is no tree', nargs='?', default="")
@@ -184,6 +186,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     threads = int(args.threads)
     in_dir = args.i
+    ext = args.e
     out_dir = args.o
     output_format = args.f
     align = args.a
@@ -195,15 +198,16 @@ if __name__ == '__main__':
         logger = multiprocessing.get_logger()
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads)
-        input_tuples = list(parse_initial_dir_create_out_dir(in_dir, out_dir))
+        input_tuples = list(parse_initial_dir_create_out_dir(in_dir, ext, out_dir))
         len_inputs = len(input_tuples)
         logging.info("files for analysis {}".format(len_inputs))
-        logging.info("Path to the folder with input files for prank: {}\n"
-                     "Path to the folder with output files of prank: {}\n"
+        logging.info("Options in use:\n Path to the folder with input files for prank: {}\n"
+                     "FASTA format for input files: {}\nPath to the folder with output files of prank: {}\n"
                      "tree: {}\noutput format: {}\nAligning option: {}\nthreads: {}"
-                     "".format(in_dir, out_dir, args.tree, output_format, align, threads))
+                     "".format(in_dir, ext, out_dir, args.tree, output_format, align, threads))
 
-        i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir], len_inputs * [args.tree],
+        i = pool.starmap_async(launch_prank, zip(input_tuples, len_inputs * [out_dir],
+                                                 len_inputs * [args.tree],
                                                  len_inputs * [output_format], len_inputs * [align]))
         i.wait()
         i.get()

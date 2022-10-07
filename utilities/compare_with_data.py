@@ -14,7 +14,9 @@ def main(data_sheet_path, res_pipe_sheet_path, out_sheet_path):
     for name_data, sheet_data in data_sheet.items():
         if name_data in research_sheet_names:
             full_out_table = pd.DataFrame()
+            print(name_data, sheet_data['Gene name'])
             for name_adjust, sheet_adjust in res_pipe_sheet.items():
+                print(name_adjust, sheet_adjust['Gene name'])
                 merged = pd.merge(sheet_data, sheet_adjust, how='inner', on=['Gene name'],
                                   suffixes=("_article", "_new"), indicator=True)
                 d = {
@@ -30,7 +32,8 @@ def main(data_sheet_path, res_pipe_sheet_path, out_sheet_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', help='The path to the data .xlsx to be compared with', nargs='?', required=True)
+    parser.add_argument('--data', help='The path to third-party data .xlsx to be compared with', nargs='?',
+                        required=True)
     parser.add_argument('--i', help='Path to the .xlsx file with sheets with column \'Gene name\'',
                         nargs='?', required=True)
     parser.add_argument('--out', help='Path to the output .xlsx file with intersection of data', nargs='?',

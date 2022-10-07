@@ -17,7 +17,6 @@ The ω ratio is a measure of natural selection acting on the protein. Simplistic
 """
 CORRECT_FILES_TO_WRITE = set()
 ERROR_FILES_TO_WRITE = set()
-WRITE_CTL_FILE = 0
 LOG_FILE = "paml_one_ratio_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
@@ -129,34 +128,23 @@ def run_codeml(input_tuple, time_out, exec_path, overwrite_flag):
                 raise codeml.CodemlError
 
 
-def get_errors_from_log_file():
-    print("get_errors_from_log_file")
+def get_correct_and_errors_from_log_file():
     global ERROR_FILES_TO_WRITE
+    global CORRECT_FILES_TO_WRITE
     with open(LOG_FILE, 'r') as lf:
         for line in lf:
             if 'ERROR : gene' in line:
                 before_keyword, keyword, after_keyword = line.partition('ERROR : gene ')
                 gene_name = after_keyword.replace('\n', '')
                 ERROR_FILES_TO_WRITE.add(gene_name)
-                print("add error", gene_name)
-
-
-def get_corrects_from_log_file():
-    print("get_corrects_from_log_file")
-    global CORRECT_FILES_TO_WRITE
-    with open(LOG_FILE, 'r') as lf:
-        for line in lf:
-            print('line', line)
-            if 'INFO : OK gene' in line:
+            elif 'INFO : OK gene' in line:
                 before_keyword, keyword, after_keyword = line.partition('INFO : OK gene ')
                 gene_name = after_keyword.replace('\n', '')
                 CORRECT_FILES_TO_WRITE.add(gene_name)
-                print("add correct", gene_name)
 
 
-def write_correct_error_files(output_dir):
-    get_errors_from_log_file()
-    get_corrects_from_log_file()
+def write_correct_and_error_files(output_dir):
+    get_correct_and_errors_from_log_file()
     global CORRECT_FILES_TO_WRITE
     global ERROR_FILES_TO_WRITE
     logging.info("CORRECT_FILES_TO_WRITE {}, {}".format(len(CORRECT_FILES_TO_WRITE), CORRECT_FILES_TO_WRITE))
@@ -211,5 +199,5 @@ if __name__ == '__main__':
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
         raise e
-    write_correct_error_files(in_folder)
+    write_correct_and_error_files(in_folder)
     logging.info("The work has been completed")

@@ -1,21 +1,15 @@
 #!/usr/bin/env python
 import argparse
-import multiprocessing
-import re
 import subprocess
-from subprocess import SubprocessError, TimeoutExpired
+import functools, multiprocessing, inspect
+import sys
+import pandas as pd
 from Bio.Phylo.PAML import codeml
 import os
 import logging
 
-BROCKEN_FILES_NULL = list()
-BROCKEN_FILES_ALTER = list()
-excep_null_counter = None
-excep_alter_counter = None
-PROCESSED_FILES_NULL = list()
-PROCESSED_FILES_ALTER = list()
-processed_null_counter = None
-processed_alter_counter = None
+CORRECT_FILES_TO_WRITE = set()
+ERROR_FILES_TO_WRITE = set()
 
 LOG_FILE = "paml_branch_site_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
@@ -56,25 +50,33 @@ def get_input_items(folder_in, trees_folder):
     """ parse root folder with files for paml
     parse tree_folder to get appropriate tree """
     for species_folder in os.scandir(folder_in):
-        if os.path.isdir(species_folder) and species_folder.name.isdigit():
+        if os.path.isdir(species_folder):  # and species_folder.name.isdigit():
             logging.info("working with species folder {}".format(species_folder.name))
             tree_name = get_tree_path(trees_folder, species_folder.name)
             tree_path = os.path.join(trees_folder, tree_name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
                     for infile in os.listdir(item):
-                        if infile.split('.')[-1] == 'phy' and not re.search('[a-zA-Z]', infile.split('.')[0]):
+                        if infile.split('.')[-1] == 'phy':
                             yield folder_in, species_folder.name, item.name, infile, tree_path
 
 
-def init_indicators(null_args, alter_args, excep_null, excep_alt):
-    """store the counter for later use"""
-    global processed_null_counter, processed_alter_counter
-    global excep_null_counter, excep_alter_counter
-    processed_null_counter = null_args
-    processed_alter_counter = alter_args
-    excep_null_counter = excep_null
-    excep_alter_counter = excep_alt
+def trace_unhandled_exceptions(func):
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except:
+            frames = inspect.trace()
+            argvalues = inspect.getargvalues(frames[0][0])
+            gene_name = argvalues.locals['args'][0][2]
+            logging.exception("FAIL gene {}".format(gene_name))
+            logging.exception("exception {} in file {}/{}/{}".format(sys.exc_info()[0],
+                                                                     argvalues.locals['args'][0][1],
+                                                                     gene_name,
+                                                                     argvalues.locals['args'][0][3]))
+
+    return wrapped_func
 
 
 def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
@@ -99,7 +101,7 @@ def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
     cml.set_options(fix_kappa=0)
     cml.set_options(kappa=2)
     cml.set_options(fix_omega=0)
-    cml.set_options(omega=2)
+    cml.set_options(omega=16)
     cml.set_options(getSE=0)
     cml.set_options(RateAncestor=0)
     cml.set_options(Small_Diff=.45e-6)
@@ -141,33 +143,19 @@ def set_null_hypothesis(infile, phylo_tree, personal_dir):
     return cml, file_out_path
 
 
+@trace_unhandled_exceptions
 def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
-    folder_in, species_folder, item_folder, infile, phylogeny_tree_path = input_tuple
+    folder_in, species_folder, item_folder, infile_name, phylogeny_tree_path = input_tuple
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
-    infile_path = os.path.join(item_folder_path, infile)
-    try:
-        file_number = (re.search(r"(\d+).phy", infile)).group(1)
-    except AttributeError as err:
-        logging.info("There is no .phy for {}:\n{}".format(infile_path, err.args))
-        return
+    file_gene_name = item_folder
     os.chdir(item_folder_path)
-    logging.info("Working with {}/{}".format(species_folder, file_number))
+    file_id = "{}/{}".format(species_folder, file_gene_name)
+    logging.info("Working with {}".format(file_id))
+    infile_path = os.path.join(item_folder_path, infile_name)
 
     if hypothesis_type == "null":
-        global BROCKEN_FILES_NULL, PROCESSED_FILES_NULL
-        global excep_null_counter, processed_null_counter
-        broken_files = BROCKEN_FILES_NULL
-        processed_files = PROCESSED_FILES_NULL
-        excep_counter = excep_null_counter
-        processed_counter = processed_null_counter
         cml, file_out_path = set_null_hypothesis(infile_path, phylogeny_tree_path, item_folder_path)
     elif hypothesis_type == "alter":
-        global BROCKEN_FILES_ALTER, PROCESSED_FILES_ALTER
-        global excep_alter_counter, processed_alter_counter
-        broken_files = BROCKEN_FILES_ALTER
-        processed_files = PROCESSED_FILES_ALTER
-        excep_counter = excep_alter_counter
-        processed_counter = processed_alter_counter
         cml, file_out_path = set_alternative_hypothesis(infile_path, phylogeny_tree_path, item_folder_path)
     else:
         logging.warning("Check the type of hypothesis: null, alter")
@@ -182,38 +170,74 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
     try:
         p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         # return_code = p.wait(timeout=time_out)  # Timeout in seconds
-        stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
-        logging.info("OK paml for file {}/{}, stderr: {}".format(species_folder, file_number, stderr))
+        p.communicate(input=b'\n', timeout=time_out)
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
                 if "Time used" in o_f.readlines()[-1]:
-                    with processed_counter.get_lock():
-                        processed_counter.value += 1
-                    logging.info("The work has been done for file {}/{}\nCounter of processed files = {}".
-                                 format(species_folder, file_number, processed_counter.value))
-                    if file_number not in processed_files:
-                        processed_files.append(file_number)  # TODO: list - to shared variable
-                        # logging.info(
-                        #     "PROCESSED_FILES list of length {}: {}".format(len(processed_files), processed_files))
-                else:
-                    logging.warning("The work has not been finished for file {}/{}".format(species_folder, file_number))
-                    if file_number not in broken_files:
-                        broken_files.append(file_number)
-                        # logging.info("BROKEN_FILES list of length {}: {}".format(len(broken_files), broken_files))
+                    logging.info("OK gene {}".format(file_gene_name))
+                    logging.info("OK paml for file {}".
+                                 format(file_id))
 
-    except subprocess.SubprocessError as err:
-        logging.warning("SubprocessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
-    except subprocess.CalledProcessError as err:
-        logging.warning("CalledProcessError:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".format(err, err.stderr, err.args))
-    except subprocess.TimeoutExpired as err:
-        p.kill()
-        with excep_counter.get_lock():
-            excep_counter.value += 1
-        file_id = "{}/{}".format(species_folder, item_folder)
-        logging.warning("Killed {} hypothesis_type {}, err.args: {}\nException_counter={}".
-                        format(file_id, hypothesis_type, err.args, excep_counter.value))
-        if file_id not in broken_files:  # TODO: list - to shared variable
-            broken_files.append(file_id)
+                else:
+                    logging.error("FAIL gene {}".format(file_gene_name))
+                    logging.error("FAIL paml for file {}".format(file_id))
+
+    except subprocess.SubprocessError:
+        # logging.warning("FAIL gene {}".format(file_gene_name))
+        logging.warning("SubprocessError for {} hypothesis_type {}, RESUMING...".format(file_id, hypothesis_type))
+        # ":\n{
+        # }\nerr.args:\n{
+        # }\nerr.stderr:\n{}".
+        # format(file_id, hypothesis_type, err, err.stderr, err.args))
+    # except subprocess.CalledProcessError as err:
+    #     logging.exception("FAIL gene {}".format(file_gene_name))
+    #     logging.exception("CalledProcessError for {} hypothesis_type {}:\n{}\nerr.args:\n{}\nerr.stderr:\n{}".
+    #                       format(file_id, hypothesis_type, err, err.stderr, err.args))
+    # except subprocess.TimeoutExpired as err:
+    #     p.kill()
+    #     logging.exception("FAIL gene {}".format(file_gene_name))
+    #     logging.exception("Killed {} hypothesis_type {}, err.args: {}".
+    #                       format(file_id, hypothesis_type, err.args))
+
+
+def get_correct_from_log_file():
+    global CORRECT_FILES_TO_WRITE
+    with open(LOG_FILE, 'r') as lf:
+        for line in lf:
+            if 'OK gene ' in line:
+                before_keyword, keyword, after_keyword = line.partition('OK gene ')
+                gene_name = after_keyword.replace('\n', '')
+                CORRECT_FILES_TO_WRITE.add(gene_name)
+
+
+def get_errors_from_log_file():
+    global ERROR_FILES_TO_WRITE
+    global CORRECT_FILES_TO_WRITE
+    with open(LOG_FILE, 'r') as lf:
+        for line in lf:
+            if 'FAIL gene ' in line:
+                before_keyword, keyword, after_keyword = line.partition('FAIL gene ')
+                gene_name = after_keyword.replace('\n', '')
+                ERROR_FILES_TO_WRITE.add(gene_name)
+                if gene_name in CORRECT_FILES_TO_WRITE:
+                    CORRECT_FILES_TO_WRITE.remove(gene_name)
+
+
+def write_correct_and_error_files(output_dir):
+    get_correct_from_log_file()
+    get_errors_from_log_file()
+    global CORRECT_FILES_TO_WRITE
+    global ERROR_FILES_TO_WRITE
+    logging.info("CORRECT_FILES_TO_WRITE {}".format(len(CORRECT_FILES_TO_WRITE)))
+    logging.info("ERROR_FILES_TO_WRITE {}".format(len(ERROR_FILES_TO_WRITE)))
+    resulting_file = os.path.join(output_dir, 'paml_branch_site_model_summary.xlsx')
+    writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
+    df_corr = pd.DataFrame({'Gene name': list(CORRECT_FILES_TO_WRITE)})
+    df_corr.to_excel(writer, sheet_name='correct files', index=False)
+    df_err = pd.DataFrame({'Gene name': list(ERROR_FILES_TO_WRITE)})
+    df_err.to_excel(writer, sheet_name='exception files', index=False)
+    logging.info("Summary has been written to {}".format(resulting_file))
+    writer.save()
 
 
 def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag, time_out):
@@ -223,26 +247,17 @@ def main(folder_in, trees_folder, exec_path, number_of_threads, overwrite_flag, 
     logger = multiprocessing.get_logger()
     logger.setLevel(logging.INFO)
 
-    null_processed_counter = multiprocessing.Value('i', 0)
-    alter_processed_counter = multiprocessing.Value('i', 0)
-    null_exception_counter = multiprocessing.Value('i', 0)
-    alter_exception_counter = multiprocessing.Value('i', 0)
-    # PROCESSED_FILES = multiprocessing.Array('i', range(5900))
-    # PROCESSED_FILES = multiprocessing.Array(c_wchar_p, 6000)
-    # manager = multiprocessing.Manager()
-    # pr = manager.list()
-    pool = multiprocessing.Pool(processes=number_of_threads, initializer=init_indicators,
-                                initargs=(null_processed_counter, alter_processed_counter, null_exception_counter,
-                                          alter_exception_counter,))
+    pool = multiprocessing.Pool(processes=number_of_threads)
     i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
                                          len_inputs * ["null"], len_inputs * [overwrite_flag], len_inputs * [time_out]))
     i.wait()
     i.get()
     i = pool.starmap_async(run_paml, zip(inputs, len_inputs * [exec_path],
-                                         len_inputs * ["alter"], len_inputs * [overwrite_flag], len_inputs * [time_out]))
+                                         len_inputs * ["alter"], len_inputs * [overwrite_flag],
+                                         len_inputs * [time_out]))
     i.wait()
     i.get()
-    logging.info("Number of files should be analyzed: {}".format(len_inputs))
+    logging.info("Number of files for analysis: {}".format(len_inputs))
 
 
 if __name__ == '__main__':
@@ -271,11 +286,6 @@ if __name__ == '__main__':
         main(in_folder, tree_folder, executable_path, threads, rework, timeout)
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
-        # logging.info("Unexpected error: {}, \ntraceback: P{}".format(e.args, traceback.print_tb(e.__traceback__)))
-        # if BROCKEN_FILES_NULL:
-        #     logging.warning("BROCKEN_FILES_NULL: {}".format(BROCKEN_FILES_NULL))
-        # if BROCKEN_FILES_ALTER:
-        #     logging.warning("BROCKEN_FILES_ALTER: {}".format(BROCKEN_FILES_ALTER))
-    # logging.info("Counter of processed files {}".format(counter.value))
-    # logging.info("Number of exceptions: {}".format(EXCEPTION_NUMBER))
+        raise e
+    write_correct_and_error_files(in_folder)
     logging.info("The work has been completed")

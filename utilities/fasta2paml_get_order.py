@@ -32,7 +32,12 @@ $ ls */
 12/:            23/:           12345/:
 1.fasta         4055.fasta     2031.fasta 
                 3010.fasta     2.fasta
-
+$ cd trees/
+$ ls */
+12.tree
+23.tree
+12345.tree
+                
 $ cd order_dir
 $ ls */
 12.order    23.order    12345.order
@@ -71,10 +76,11 @@ def get_infile_and_order(folder_in, folder_order, logger):
     order_string = get_order(folder_order, folder_in)  # e.g 1,2,3,5,6
     print("order string", order_string)
     if not order_string:
-        logger.warning("Please check .order file for {}{}".format(folder_in.name))
+        logger.warning("Please check .order file for {}".format(folder_in.name))
         return
     for infile in os.scandir(folder_in):
         if infile.name.split('.')[-1] == 'fas-gb':
+            print('return fas-gb', infile.name)
             yield infile.name, order_string.split(',')
 
 
@@ -88,12 +94,13 @@ def get_phylip_file(in_folder, folder_name):
                     return infile
 
 
-def fasta2phylip(personal_folder, infile, order_list, folder_in, folder_out, logger):
+def fasta2phylip(personal_folder, infile, orders, folder_in, folder_out, logger):
     """ converting fasta to philip-sequential format"""
     logger.info("start converting fasta2phylip")
-    file_number = re.search(r'(\d+)\.', infile).group(1)
+    # file_number = re.search(r'(\d+)\.', infile).group(1) # TODO: make it possible to name files with letters
+    file_name = infile.split('.')[0]
     infile_path = os.path.join(folder_in, personal_folder, infile)
-    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_number, "phylip"))
+    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_name, "phylip"))
     print("outfile_path", outfile_path)
     if not os.path.isdir(os.path.join(folder_out, personal_folder)):
         os.makedirs(os.path.join(folder_out, personal_folder))
@@ -103,7 +110,7 @@ def fasta2phylip(personal_folder, infile, order_list, folder_in, folder_out, log
                 alignments = SeqIO.parse(input_file, "fasta")
                 ordering_alignments = list()
                 alignments = list(alignments)
-                for name_of_seq in order_list:
+                for name_of_seq in orders:
                     for align in alignments:
                         if align.name == name_of_seq:
                             ordering_alignments.append(align)
@@ -124,26 +131,28 @@ def chunks(s, n):
             yield s[start:start + n]  # +"\n"
 
 
-def check_lengths(lengths, species_folder, file_number, species, group, logger):
+def check_lengths(lengths, species_folder, file_name, species, group, logger):
     """ check: - the lengths of all sequences in one file are of the same length
                - number of sequences in one file more or equal then group number, less or equal then species number
                - length of sequence is multiple of three
         replace completely broken files to BROKEN_FOLDER
     """
     if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
-        logger.info("all seq lengths are equal, confirm of number of species")
+        logging.info("all seq lengths are equal and are the multiple of 3")
+        global CORRECT_FILES
+        CORRECT_FILES.append(file_name)
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
-        NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_number))
+        NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_name))
     elif not group <= len(lengths) <= species:
         global BROKEN_SPECIES
-        BROKEN_SPECIES.append('{}/{}'.format(species_folder, file_number))
+        BROKEN_SPECIES.append('{}/{}'.format(species_folder, file_name))
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
-        NOT_MULTIPLE_OF_THREE.append('{}/{}'.format(species_folder, file_number))
+        NOT_MULTIPLE_OF_THREE.append('{}/{}'.format(species_folder, file_name))
     else:
         logger.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
-        BROKEN_FILES.append('{}/{}'.format(species_folder, file_number))
+        BROKEN_FILES.append('{}/{}'.format(species_folder, file_name))
 
 
 def write_target_phy_file(line_edited, target_file):
@@ -156,11 +165,12 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group, lo
     logging.info("start converting phylip2paml")
     print("source_file_path:", folder_out, species_folder, source_file_name)
     source_file_path = source_file_name # os.path.join(folder_out, species_folder, source_file_name)
-    file_number = re.search(r'(\d+)\.', source_file_name).group(1)
-    target_file_path = os.path.join(folder_out, species_folder, file_number, '{}.{}'.format(file_number, "phy"))
+    file_name = (source_file_path.split('/')[-1]).split('.')[0]
+    # file_number = re.search(r'(\d+)\.', source_file_name).group(1)
+    target_file_path = os.path.join(folder_out, species_folder, file_name, '{}.{}'.format(file_name, "phy"))
     print("target_file_path", target_file_path)
-    if not os.path.isdir(os.path.join(folder_out, species_folder, file_number)):
-        os.makedirs(os.path.join(folder_out, species_folder, file_number))
+    if not os.path.isdir(os.path.join(folder_out, species_folder, file_name)):
+        os.makedirs(os.path.join(folder_out, species_folder, file_name))
     lengths = list()
     with open(target_file_path, 'w') as target_file:
         with open(source_file_path, 'r') as source_file_path:
@@ -181,7 +191,7 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group, lo
                     lengths.append(len(line_edited[:-1]))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
-    check_lengths(lengths, species_folder, file_number, species, group, logger)
+    check_lengths(lengths, species_folder, file_name, species, group, logger)
     logger.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
     return target_file_path
 
@@ -222,9 +232,9 @@ def get_input_items(folder_in, trees_folder, folder_name, logger):
             tree_path = os.path.join(trees_folder, tree_name)
             for item in os.scandir(species_folder):
                 if os.path.isdir(item):
-                    for infile in os.listdir(item):
-                        if infile.split('.')[-1] == 'phy' and infile.split('.')[0].isnumeric():
-                            return item.name, infile, tree_path
+                    for infile in os.scandir(item):
+                        if infile.name.split('.')[-1] == 'phy': # and infile.split('.')[0].isnumeric():
+                            return item.name, infile.name, tree_path
 
 
 def set_one_ratio_model(infile, phylo_tree, personal_dir):
@@ -268,13 +278,14 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
 
 def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_path, exec_path, time_out, logger):
     item_folder_path = os.path.join(folder_in, species_folder, item_folder)
-    try:
-        file_number = (re.search(r"(\d+).phy", infile)).group(1)
-    except AttributeError as err:
-        logger.info("Please check file .phy {}: cause an error {}".format(item_folder_path, err.args))
-        return
+    file_name = infile.split('.')[0]
+    # try:
+    #     file_number = (re.search(r"(\d+).phy", infile)).group(1)
+    # except AttributeError as err:
+    #     logger.info("Please check file .phy {}: cause an error {}".format(item_folder_path, err.args))
+    #     return
     os.chdir(item_folder_path)
-    logger.info("Codeml: working with {}".format(file_number))
+    logger.info("Codeml: working with {}".format(file_name))
     infile_path = os.path.join(item_folder_path, infile)
     set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
     try:
@@ -282,7 +293,7 @@ def run_codeml(folder_in, species_folder, item_folder, infile, phylogeny_tree_pa
         # return_code = p.wait(timeout=time_out)  # Timeout in seconds
         stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
         # p.communicate(input='\n')
-        logger.info("OK paml for file number {}, stderr: {}".format(file_number, stderr))
+        logger.info("OK paml for file number {}, stderr: {}".format(file_name, stderr))
         # infile_path_copy = os.path.join(item_folder_path, "{}_{}.{}".format(infile.split('.')[0], 'copy',
         #                                                                     infile.split('.')[1]))
         # shutil.copyfile(infile_path, infile_path_copy)
@@ -315,51 +326,57 @@ def wright_order_file(folder_in, species_folder, order_list, logger):
 
 def main(folder_in, folder_order, folder_trees, exec_path, time_out, folder_out, species, group, logger):
     for species_folder in os.scandir(folder_in):
-        if os.path.isdir(species_folder) and species_folder.name.isdigit():
+        if os.path.isdir(species_folder): # and species_folder.name.isdigit():
             guess = False
             for infile_fasta, order_list in get_infile_and_order(species_folder, folder_order, logger):
                 if guess:
                     break
-                list_of_orders = list(permutations(order_list))
+                print("order_list", order_list)
+                # list_of_orders = list(permutations(order_list))
+                # print("list_of_orders", list_of_orders)
                 while not guess:
-                    phylip_file = fasta2phylip(species_folder, infile_fasta, order_list, folder_in, folder_out, logger)
-                    # phylip_file = get_phylip_file(folder_out, species_folder)
-                    infile_phy = phylip2paml(folder_out, species_folder.name, phylip_file, species, group, logger)
-                    seq_philip_file = os.path.join(folder_out, species_folder.name, phylip_file)
-                    os.remove(seq_philip_file)
-                    logger.info("remove {}".format(seq_philip_file))
-                    if not get_input_items(folder_out, folder_trees, species_folder.name, logger):
-                        break
-                    item_folder, infile_phy, tree_path = get_input_items(folder_out, folder_trees, species_folder.name,
-                                                                         logger)
-                    logger.info("run codeml")
-                    if not run_codeml(folder_out, species_folder.name, item_folder, infile_phy, tree_path, exec_path,
-                                      time_out,
-                                      logger):
-                        logger.info('FAIL!Wrong order for species folder {}={}'.format(species_folder.name, order_list))
-                        try:
-                            list_of_orders.pop(0)
-                            order_list = list_of_orders[0]
-                        except IndexError:
-                            logger.warning("list of orders is {} empty, try to check codeml manually".format(list_of_orders))
+                    for order in permutations(order_list):
+                        phylip_file = fasta2phylip(species_folder, infile_fasta, order, folder_in, folder_out, logger)
+                        # phylip_file = get_phylip_file(folder_out, species_folder)
+                        infile_phy = phylip2paml(folder_out, species_folder.name, phylip_file, species, group, logger)
+                        seq_philip_file = os.path.join(folder_out, species_folder.name, phylip_file)
+                        os.remove(seq_philip_file)
+                        logger.info("remove {}".format(seq_philip_file))
+                        if not get_input_items(folder_out, folder_trees, species_folder.name, logger):
+                            break
+                        item_folder, infile_phy, tree_path = get_input_items(folder_out, folder_trees, species_folder.name,
+                                                                             logger)
+                        logger.info("run codeml")
+                        if not run_codeml(folder_out, species_folder.name, item_folder, infile_phy, tree_path, exec_path,
+                                          time_out,
+                                          logger):
+                            logger.info('FAIL!Wrong order {} for species folder {}'.format(order, species_folder.name))
+                            continue
+                            # try:
+                            #     list_of_orders.pop(0)
+                            #     order_list = list_of_orders[0]
+                            # except IndexError:
+                            #     logger.warning("list of orders is {} empty, try to check codeml manually".format(list_of_orders))
+                            #     guess = True
+                        else:
                             guess = True
-                    else:
-                        guess = True
-                        logger.info('GUESS!Right order for species folder {}={}'.format(species_folder.name,
-                                                                                        order_list))
-                        wright_order_file(folder_order, species_folder.name, order_list, logger)
-                        input_dir = os.path.join(folder_in, species_folder)
-                        shutil.rmtree(input_dir)
-                        logging.info("Input dir {} with fasta file deleted".format(input_dir))
+                            logger.info('GUESS!Right order for species folder {}={}'.format(species_folder.name,
+                                                                                            order_list))
+                            wright_order_file(folder_order, species_folder.name, order_list, logger)
+                            input_dir = os.path.join(folder_in, species_folder)
+                            shutil.rmtree(input_dir)
+                            logging.info("Input dir {} with fasta file deleted".format(input_dir))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='Path to the input folder with fasta files sorted by separated folders', nargs='?',
                         required=True)
-    parser.add_argument('--order', help='Path to the folder with .order files for each folder in input', nargs='?',
+    parser.add_argument('--order', help='Path to the folder with .order files for each folder in input, this folder '
+                                        'can be initially empty', nargs='?',
                         required=True)
-    parser.add_argument('--tree', help='Path to the folder with trees for paml', nargs='?', required=True)
+    parser.add_argument('--tree', help='Path to the folder with trees for paml, file of tree must be named as species '
+                                       'folder', nargs='?', required=True)
     parser.add_argument('--e', help='Path to the codeml executable', nargs='?', default='codeml')
     parser.add_argument('--timeout', help='Timeout for codeml in seconds, default=120', nargs='?', default='120')
     parser.add_argument('--o', help='Path to the folder with result philip files, can be created automatically',
@@ -385,6 +402,7 @@ if __name__ == '__main__':
         child_logger.warning("BROKEN_SPECIES number {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
         child_logger.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         child_logger.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
+        child_logger.info("CORRECT_FILES {}:{}".format(len(CORRECT_FILES), CORRECT_FILES))
     except BaseException as e:
         child_logger.exception("Unexpected error: {}".format(e))
         raise e

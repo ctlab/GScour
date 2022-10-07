@@ -10,6 +10,7 @@ BROKEN_SPECIES = list()
 NOT_MULTIPLE_OF_THREE = list()
 EDITED_MULT_OF_THREE = list()
 BROKEN_FILES = list()
+CORRECT_FILES = list()
 BROKEN_FOLDER = "broken_length_f2p"
 BROKEN_SPECIES_FOLDER = "broken_species_f2p"
 LOG_FILE = "fasta2paml.log"
@@ -39,30 +40,31 @@ $ ls */
 """
 
 
-def parse_dir_out_gblocks(in_dir):
+def parse_dir_out_gblocks(directory, extens):
     """ parse directory with files out of Gblocks
         .fas-gb can be change just to .fas """
-    for personal_folder in os.scandir(in_dir):
+    for personal_folder in os.scandir(directory):
         if os.path.isdir(personal_folder):
-            for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'fas-gb' or infile.split('.')[-1] == 'fas':
-                    yield personal_folder.name, infile
+            for infile in os.scandir(personal_folder):
+                if infile.name.split('.')[-1] == extens:
+                    yield personal_folder.name, infile.name
 
 
 def parse_phylip_dir(in_dir):
     """ parse directory with .phylip files"""
     for personal_folder in os.scandir(in_dir):
         if os.path.isdir(personal_folder):
-            for infile in os.listdir(personal_folder):
-                if infile.split('.')[-1] == 'phylip':
-                    yield personal_folder.name, infile
+            for infile in os.scandir(personal_folder):
+                if infile.name.split('.')[-1] == 'phylip':
+                    yield personal_folder.name, infile.name
 
 
 def fasta2phylip(personal_folder, infile, folder_in, folder_out):
     """ converting fasta to philip-sequential format"""
-    file_number = re.search(r'(\d+)\.', infile).group(1)
+    # file_number = re.search(r'(\d+)\.', infile).group(1)
+    file_name = infile.split('.')[0]
     infile_path = os.path.join(folder_in, personal_folder, infile)
-    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_number, "phylip"))
+    outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_name, "phylip"))
     if not os.path.isdir(os.path.join(folder_out, personal_folder)):
         os.makedirs(os.path.join(folder_out, personal_folder))
     try:
@@ -84,26 +86,28 @@ def chunks(s, n):
             yield s[start:start + n]+"\n"
 
 
-def check_lengths(lengths, file_number, species, group):
+def check_lengths(lengths, file_name, species, group):
     """ check: - the lengths of all sequences in one file of the same length
                - number of sequences in one file more or equal then group, less or equal then species
                - length of sequence  a multiple of three
         replace completely broken files to BROKEN_FOLDER
     """
     if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
-        logging.info("all seq lengths are equal, confirm of number of species")
+        logging.info("all seq lengths are equal and are the multiple of 3")
+        global CORRECT_FILES
+        CORRECT_FILES.append(file_name)
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
-        NOT_EQUAL_LENGTH.append(file_number)
+        NOT_EQUAL_LENGTH.append(file_name)
     elif not group <= len(lengths) <= species:
         global BROKEN_SPECIES
-        BROKEN_SPECIES.append(file_number)
+        BROKEN_SPECIES.append(file_name)
     elif lengths[0] % 3 != 0:
         global NOT_MULTIPLE_OF_THREE
-        NOT_MULTIPLE_OF_THREE.append(file_number)
+        NOT_MULTIPLE_OF_THREE.append(file_name)
     else:
         logging.warning("seq lengths are not equal or wrong number of species: {}".format(str(len(lengths))))
-        BROKEN_FILES.append(file_number)
+        BROKEN_FILES.append(file_name)
 
 
 def write_target_phy_file(line_edited, target_file):
@@ -113,11 +117,11 @@ def write_target_phy_file(line_edited, target_file):
 
 def phylip2paml(folder_out, species_folder, source_file_name, species, group):
     """ converting philip-sequential to specific philip format for paml """
-    file_number = re.search(r'(\d+)\.', source_file_name).group(1)
-    target_file_path = os.path.join(folder_out, species_folder, file_number, '{}.{}'.format(file_number, "phy"))
+    file_name = source_file_name.split('.')[-1]
+    target_file_path = os.path.join(folder_out, species_folder, file_name, '{}.{}'.format(file_name, "phy"))
     source_file_path = os.path.join(folder_out, species_folder, source_file_name)
-    if not os.path.isdir(os.path.join(folder_out, species_folder, file_number)):
-        os.makedirs(os.path.join(folder_out, species_folder, file_number))
+    if not os.path.isdir(os.path.join(folder_out, species_folder, file_name)):
+        os.makedirs(os.path.join(folder_out, species_folder, file_name))
     lengths = list()
     with open(target_file_path, 'w') as target_file:
         with open(source_file_path, 'r') as source_file_path:
@@ -137,8 +141,8 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
                     lengths.append(len(line_edited.rstrip()))  # length except \n character
                     write_target_phy_file(line_edited, target_file)
 
-    check_lengths(lengths, file_number, species, group)
-    logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
+    check_lengths(lengths, file_name, species, group)
+    logging.info('changing for paml .phy format file {} has been recorded'.format(target_file_path))
 
 
 def replace_broken_files(directory_out):
@@ -154,8 +158,8 @@ def replace_broken_files(directory_out):
             os.replace(os.path.join(directory_out, folder), os.path.join(BROKEN_SPECIES_FOLDER, folder))
 
 
-def main(folder_in, folder_out, species, group):
-    for personal_folder, infile in parse_dir_out_gblocks(folder_in):
+def main(folder_in, extension, folder_out, species, group):
+    for personal_folder, infile in parse_dir_out_gblocks(folder_in, extension):
         fasta2phylip(personal_folder, infile, folder_in, folder_out)
     for species_folder, phylip_file in parse_phylip_dir(folder_out):
         phylip2paml(folder_out, species_folder, phylip_file, species, group)
@@ -167,16 +171,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='Path to the folder with fasta files sorted by separated folders', nargs='?',
                         required=True)
+    parser.add_argument('--e', help='Extension of initial FASTA files', nargs='?',
+                        default='fas-gb')
     parser.add_argument('--o', help='Path to the folder with result philip files, if it does not exist, it will be'
                                     ' created automatically', nargs='?', required=True)
     parser.add_argument('--species', help='Number of species', nargs='?', required=True)
     parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     args = parser.parse_args()
+    in_dir = args.i
     out_dir = args.o
+    ext = args.e
+    logging.info("options in use: input folder {}, extension of FASTA {}, output folder {}, number of species {}, "
+                 "number of groups {}".format(in_dir, ext, out_dir, args.species, args.group))
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
     try:
-        main(args.i, out_dir, int(args.species), int(args.group))
+        main(in_dir, ext, out_dir, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}:{}".format(len(BROKEN_FILES), BROKEN_FILES))
         if BROKEN_FILES or BROKEN_SPECIES:
             replace_broken_files(out_dir)
@@ -184,6 +194,7 @@ if __name__ == '__main__':
         logging.warning("BROKEN_SPECIES {}:{}".format(len(BROKEN_SPECIES), BROKEN_SPECIES))
         logging.warning("NOT_MULTIPLE_OF_THREE {}:{}".format(len(NOT_MULTIPLE_OF_THREE), NOT_MULTIPLE_OF_THREE))
         logging.warning("EDITED_MULT_OF_THREE {}:{}".format(len(EDITED_MULT_OF_THREE), EDITED_MULT_OF_THREE))
+        logging.info("CORRECT_FILES {}:{}".format(len(CORRECT_FILES), CORRECT_FILES))
     except BaseException as e:
         logging.exception("Unexpected error: {}".format(e))
     logging.info("The work has been completed")

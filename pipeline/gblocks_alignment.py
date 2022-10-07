@@ -16,11 +16,11 @@ LOG_FILE = "gblocks_alignment.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 
-def parse_dir(input_dir):
+def parse_dir(input_dir, extension):
     for species_folder in os.scandir(input_dir):
         if os.path.isdir(species_folder):
             for infile in os.scandir(species_folder):
-                if infile.name.split('.')[-1] == 'fas':
+                if infile.name.split('.')[-1] == extension:
                     yield input_dir, species_folder.name, infile.name
 
 
@@ -32,14 +32,12 @@ def trace_unhandled_exceptions(func):
         except:
             frames = inspect.trace()
             argvalues = inspect.getargvalues(frames[0][0])
-            logging.exception("argvalues.locals['args'] {}".format(argvalues.locals['args']))
             file_name = argvalues.locals['args'][0][2]
             gene_name = file_name.split('.')[0]
             logging.exception("gene {}".format(gene_name))
             logging.exception("{} exception in file {}/{}".format(sys.exc_info()[0],
                                                                   argvalues.locals['args'][0][1],
                                                                   gene_name))
-
     return wrapped_func
 
 
@@ -102,6 +100,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='The full path to the folder contains folders with input files for Gblocks'
                                     'FASTA formats are accepted', nargs='?', required=True)
+    parser.add_argument('--e', help='Input FASTA file extension [fasta, fna, ffn, faa, frn, fa, fas]', nargs='?',
+                        default='fas')
     parser.add_argument('--exec', help='Path to the Gblocks executable', nargs='?', required=True)
     parser.add_argument('--auto', help='\'y\' or \'n\': automatic selection of basic parameters according to group size',
                         nargs='?', required=True)
@@ -116,8 +116,9 @@ if __name__ == '__main__':
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(processes=threads)
         in_dir = args.i
+        ext = args.e
         executable_path = args.exec
-        input_tuples = list(parse_dir(in_dir))
+        input_tuples = list(parse_dir(in_dir, ext))
         len_inputs = len(input_tuples)
         logger.info("Path to the folder with input files for Gblocks: {}\nExecutable path: {}".
                     format(in_dir, executable_path))

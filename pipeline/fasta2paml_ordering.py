@@ -2,9 +2,8 @@
 import logging
 import os
 import argparse
-import sys
-import traceback
-
+from Bio import AlignIO
+# import Bio.AlignIO.PhylipIO
 import pandas as pd
 from Bio import SeqIO
 import re
@@ -14,6 +13,7 @@ NOT_EQUAL_LENGTH = list()
 BROKEN_SPECIES = dict()
 NOT_MULTIPLE_OF_THREE = list()
 BROKEN_LENGTH_FILES = dict()
+CORRECT_FILES = list()
 LOG_FILE = "fasta2paml_ordering.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 """
@@ -57,17 +57,17 @@ def get_order(folder_in, species_folder):
                 return order_string.rstrip()
 
 
-def get_infile_and_order(folder_in, folder_order):
+def get_infile_and_order(folder_in, extension, folder_order):
     """ parse directory with files out of Gblocks
         'fas-gb' can be change just to .fas"""
     for species_folder in os.scandir(folder_in):
-        if os.path.isdir(species_folder) and species_folder.name.isdigit():
+        if os.path.isdir(species_folder): # and species_folder.name.isdigit():
             order_string = get_order(folder_order, species_folder.name)
             if not order_string:
                 logging.warning("Please check .order file for {}{}".format(folder_in, species_folder.name))
                 return
             for infile in os.scandir(species_folder):
-                if infile.name.split('.')[-1] == 'fas-gb':
+                if infile.name.split('.')[-1] == extension:
                     yield species_folder.name, infile.name, order_string
 
 
@@ -86,6 +86,8 @@ def fasta2phylip(personal_folder, infile_name, order_string, folder_in, folder_o
     file_gene_name = infile_name.split('.')[0]
     infile_path = os.path.join(folder_in, personal_folder, infile_name)
     outfile_path = os.path.join(folder_out, personal_folder, "{}.{}".format(file_gene_name, "phylip"))
+    # outfile_path_reserv = os.path.join(folder_out, personal_folder, "{}_{}.{}".format(file_gene_name, 'res',
+    # "phylip"))
     if not os.path.isdir(os.path.join(folder_out, personal_folder)):
         os.makedirs(os.path.join(folder_out, personal_folder))
     try:
@@ -97,9 +99,20 @@ def fasta2phylip(personal_folder, infile_name, order_string, folder_in, folder_o
                 for name_of_seq in order_string.split(','):
                     for align in alignments:
                         if align.name == name_of_seq:
+                            print(align.name)
+                            print(align)
                             ordering_alignments.append(align)
                             break
+                # for al in ordering_alignments:
+                #     AlignIO.PhylipIO.SequentialPhylipWriter.write_alignment(al, output_file)
+                # print("writing\n", ordering_alignments[:10])
                 SeqIO.write(ordering_alignments, output_file, "phylip-sequential")
+                # with open(outfile_path, 'a') as f:
+                #     f.write(' 29 444\n')
+                #     for al in ordering_alignments:
+                #         print(al.id, al.seq)
+                #         f.write('{}\n'.format(al.id))
+                #         f.write('{}\n'.format(al.seq))
         logging.info('phylip-sequential format file {} has been recorded'.format(outfile_path))
     except BaseException as e:
         logging.exception("Infile {}, - Unexpected error: {}".format(infile_name, e))
@@ -122,7 +135,9 @@ def check_lengths(lengths, species_folder, file_name, species, group):
         replace completely broken files to BROKEN_FOLDER
     """
     if all(x == lengths[0] for x in lengths) and group <= len(lengths) <= species and lengths[0] % 3 == 0:
-        logging.info("Check length OK: all seq lengths are equal, multiple of 3")
+        logging.info("all seq lengths are equal and are the multiple of 3")
+        global CORRECT_FILES
+        CORRECT_FILES.append(file_name)
     elif not all(x == lengths[0] for x in lengths):
         global NOT_EQUAL_LENGTH
         NOT_EQUAL_LENGTH.append('{}/{}'.format(species_folder, file_name))
@@ -143,7 +158,7 @@ def check_lengths(lengths, species_folder, file_name, species, group):
         BROKEN_LENGTH_FILES[species_folder].append(file_name)
 
 
-def write_target_phy_file(line_edited, target_file):
+def write_target_seq(line_edited, target_file):
     for chunk in chunks(line_edited, 60):
         target_file.write(chunk)
 
@@ -164,22 +179,24 @@ def phylip2paml(folder_out, species_folder, source_file_name, species, group):
             for line in source_file_path:
                 if re.search(r"\d\s(\d+)", line):
                     target_file.write(line)
-                elif re.search(r"\d+\s{9}", line):
-                    """                
-                    - insert two spaces and \n instead of 9 after name of sequence
-                    - split string on lines by 60 character per line
-                    """
-                    name_of_seq_9spaces = (re.search(r"(\d+)\s{9}", line)).group()
-                    name_of_seq = (re.search(r"(\d+)", line)).group()
-                    target_file.write(name_of_seq + '\n')
+                else:
+                    number_of_spaces = line.count(' ')
+                    if re.search(r'\d+\s{%d}' % number_of_spaces, line):
+                        """                
+                        - insert two spaces and \n instead of 9 after name of sequence
+                        - split string on lines by 60 character per line
+                        """
+                        name_of_seq_spaces = (re.search(r'(\d+)\s{%d}' % number_of_spaces, line)).group()
+                        name_of_seq = (re.search(r"(\d+)", line)).group()
+                        target_file.write(name_of_seq + '\n')
 
-                    line_edited = re.sub(name_of_seq_9spaces, "", line)
-                    # lengths.append(len(line_edited.rstrip()))  # length except \n character
-                    lengths.append(len(line_edited[:-1]))  # length except \n character
-                    write_target_phy_file(line_edited, target_file)
+                        line_edited = re.sub(name_of_seq_spaces, "", line)
+                        # lengths.append(len(line_edited.rstrip()))  # length except \n character
+                        lengths.append(len(line_edited[:-1]))  # length except \n character
+                        write_target_seq(line_edited, target_file)
 
     check_lengths(lengths, species_folder, file_gene_name, species, group)
-    logging.info('changing for paml and SWAMP .phy format file {} has been recorded'.format(target_file_path))
+    logging.info('changing for PAML .phy format file {} has been recorded'.format(target_file_path))
 
 
 def replace_broken_files_and_write_table(directory_out):
@@ -198,39 +215,43 @@ def replace_broken_files_and_write_table(directory_out):
         logging.warning("BROKEN_SPECIES files moves to to {}".format(broken_species_folder))
 
 
-def main(folder_in, folder_order, folder_out, species, group):
-    for input_tuple in get_infile_and_order(folder_in, folder_order):
+def main(folder_in, ext, folder_order, folder_out, species, group):
+    for input_tuple in get_infile_and_order(folder_in, ext, folder_order):
         if input_tuple:
             species_folder, infile, order_string = input_tuple
             fasta2phylip(species_folder, infile, order_string, folder_in, folder_out)
     for species_folder, phylip_file in parse_phylip_dir(folder_out):
         phylip2paml(folder_out, species_folder, phylip_file, species, group)
         seq_philip_file = os.path.join(folder_out, species_folder, phylip_file)
-        os.remove(seq_philip_file)
+        # os.remove(seq_philip_file)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--i', help='Path to the input folder with fasta files sorted by separated folders', nargs='?',
                         required=True)
-    parser.add_argument('--order', help='Path to the folder with .order files for each folder in input', nargs='?',
-                        required=True)
+    parser.add_argument('--e', help='Extension of input FASTA files', nargs='?', default='fas-gb')
+    parser.add_argument('--order', help='Path to the folder with .order files for each folder in input (with the '
+                                        'same name)', nargs='?', required=True)
     parser.add_argument('--o', help='Path to the output folder with result philip files, if it does not exist,'
                                     ' it will be created automatically', nargs='?', required=True)
     parser.add_argument('--species', help='Number of species', nargs='?', required=True)
     parser.add_argument('--group', help='Minimal size of species group', nargs='?', required=True)
     args = parser.parse_args()
     out_dir = args.o
+    logging.info('parameters in use: --i {}, --e {}, --order {}, --o {}, --species {}, --group {}'.
+                 format(args.i, args.e, args.order, out_dir, args.species, args.group))
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
     try:
-        main(args.i, args.order, out_dir, int(args.species), int(args.group))
+        main(args.i, args.e, args.order, out_dir, int(args.species), int(args.group))
         logging.warning("BROKEN_FILES {}".format(len(BROKEN_LENGTH_FILES)))
         if BROKEN_LENGTH_FILES or BROKEN_SPECIES:
             replace_broken_files_and_write_table(out_dir)
         logging.warning("NOT_EQUAL_LENGTH {}".format(len(NOT_EQUAL_LENGTH)))
         logging.warning("BROKEN_SPECIES groups {}".format(len(BROKEN_SPECIES)))
         logging.warning("NOT_MULTIPLE_OF_THREE {}".format(len(NOT_MULTIPLE_OF_THREE)))
+        logging.info("CORRECT_FILES {}:{}".format(len(CORRECT_FILES), CORRECT_FILES))
         resulting_file = os.path.join(out_dir, 'fasta2paml_ordering_summary.xlsx')
         writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
         df = pd.DataFrame({'Gene name': NOT_EQUAL_LENGTH})
