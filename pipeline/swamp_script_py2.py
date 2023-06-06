@@ -93,7 +93,7 @@ if __name__ == '__main__':
     parser.add_argument('--e', help='Path to the SWAMP executable', nargs='?', required=True)
     parser.add_argument('--i', help='Provide the full path to an INFOLDER that contain multiple species subfolders',
                         nargs='?', required=True)
-    parser.add_argument('--b', help='Path to the folder with BRANCHNAMESFILEs', nargs='?', required=True)
+    parser.add_argument('--b', help='Path to the folder with BRANCHNAMESFILEs (branchcodes)', nargs='?', required=True)
     parser.add_argument('--t', help='THRESHOLD', nargs='?', default="", required=True)
     parser.add_argument('--w', help='WINDOWSIZE', nargs='?', required=True)
     args = parser.parse_args()

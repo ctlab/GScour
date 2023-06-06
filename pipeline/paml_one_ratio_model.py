@@ -77,7 +77,7 @@ def set_one_ratio_model(infile, phylo_tree, personal_dir):
     cml.set_options(cleandata=0)
     cml.set_options(method=0)
     cml.write_ctl_file()
-    return file_out_path
+    return file_out_path, cml
 
 
 def trace_unhandled_exceptions(func):
@@ -105,7 +105,7 @@ def run_codeml(input_tuple, time_out, exec_path, overwrite_flag):
     os.chdir(item_folder_path)
     logging.info("Working with {}/{}".format(species_folder, file_gene_name))
     infile_path = os.path.join(item_folder_path, infile_name)
-    file_out_path = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
+    file_out_path, cml = set_one_ratio_model(infile_path, phylogeny_tree_path, item_folder_path)
 
     if not overwrite_flag:
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
@@ -115,9 +115,9 @@ def run_codeml(input_tuple, time_out, exec_path, overwrite_flag):
                     return
 
     p = subprocess.Popen(exec_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    p.wait(timeout=time_out)  # Timeout in seconds
-    # stdout, stderr = p.communicate()
+    # cml.run()
+    # read_parsed = cml.read
+    stdout, stderr = p.communicate(input=b'\n', timeout=time_out)
     if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
         with open(file_out_path, 'r') as o_f:
             if "Time used" in o_f.readlines()[-1]:

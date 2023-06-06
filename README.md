@@ -171,7 +171,7 @@ Sliding window approach SWAMP to mask regions of the alignment with excessive am
 - Launch SWAMP:
   - `'swamp_script.py'` for python3 environment, `'swamp_script_py2.py'` for python2 envoronment;
   -  use modified version of SWAMP executable `GScour/SWAMP_ordered.py` to conserve right order.<br />
-`python pipeline/swamp_script_py2.py -e /GScour/SWAMP_ordered.py -i /abspath/tothe/nuc_out_prank/`<br />` -b /abspath/tothe/branchcodes/ -t 2 -w 20`<br />
+`python pipeline/swamp_script_py2.py --e /GScour/SWAMP_ordered.py --i /abspath/tothe/nuc_out_prank/`<br />` --b /abspath/tothe/branchcodes/ --t 2 --w 20`<br />
 See stdout and `'swamp_log.log'`. <br />
 Use global variable `'target_dict'` in swamp_script.py if running on individual files is needed:<br />
 `target_dict[species_folder] = [item_folder1, item_folder2...]`

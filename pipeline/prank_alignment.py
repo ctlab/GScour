@@ -45,7 +45,7 @@ def get_launch_command(infile, final_file_path, outfile_path_without_extension, 
         aligning = 'translate'
     if tree:  # -translate (standard code); codon alignment with the option -codon (in -codon case
         # be careful about not multiple of three sequences)
-        launch = 'prank -d={0} -o={1} -t={2} -{3} -f={4} > {5}'.format(infile,
+        launch = 'prank -d={0} -o={1} -t={2} -{3} -f={4} -F -once > {5}'.format(infile,
                                                                              outfile_path_without_extension,
                                                                              tree, aligning, format_out, log_file)
 
@@ -89,6 +89,7 @@ def launch_prank(input_tuple, folder_out, tree, format_out, aligning):
     launch_command = get_launch_command(infile_path, final_file_name,
                                         outfile_path_without_extension, tree,
                                         format_out, aligning)
+    print('launch_command: ', launch_command)
     os.system(launch_command)
 
 
@@ -137,7 +138,6 @@ def get_correct_errors_from_prank_log_file(output_dir):
                         # ERROR_FILES_FULL_PATH.add(os.path.join(output_dir, species_folder.name, file_gene_name))
                         if file_gene_name in CORRECT_FILES_TO_WRITE:
                             CORRECT_FILES_TO_WRITE.remove(file_gene_name)
-                        logging.error("Wrong log file for {}".format(file_gene_name))
                     if file_gene_name in CORRECT_FILES_TO_WRITE and file_gene_name in ERROR_FILES_TO_WRITE:
                         CORRECT_FILES_TO_WRITE.remove(file_gene_name)
 
@@ -159,19 +159,9 @@ def write_correct_and_error_files(output_dir):
     writer.save()
 
 
-# def move_error_files(folder_out): global ERROR_FILES_FULL_PATH logging.info("ERROR_FILES_FULL_PATH {}".format(
-# ERROR_FILES_FULL_PATH)) folder_for_errors = os.path.join(folder_out, 'prank_errors') for gene_name_file_path in
-# ERROR_FILES_FULL_PATH: nuc_file = gene_name_file_path + ".best.nuc.fas" if os.path.isfile(nuc_file): os.replace(
-# os.path.join(nuc_file), os.path.join(folder_for_errors, nuc_file)) pep_file = gene_name_file_path + ".best.pep.fas"
-# if os.path.isfile(pep_file): os.replace(os.path.join(folder_out, pep_file), os.path.join(folder_for_errors,
-# pep_file)) log_file = gene_name_file_path + ".log" if os.path.isfile(log_file): os.replace(os.path.join(folder_out,
-# log_file), os.path.join(folder_for_errors, log_file)) logging.info("nuc {} pep {} log {}".format(nuc_file,
-# pep_file, log_file)) # TODO trancfer outfilepath to decorator
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--i', help='The full path to the folder contains folders with input files for prank',
+    parser.add_argument('--i', help='The full path to the folder contains species folders with input files for prank',
                         nargs='?', required=True)
     parser.add_argument('--e', help='Input FASTA file extension [fasta, fna, ffn, faa, frn, fa]', nargs='?',
                         default='fna')

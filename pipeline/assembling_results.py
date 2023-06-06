@@ -2,6 +2,8 @@
 import argparse
 import logging
 import os
+import re
+
 import pandas as pd
 
 """ gathering results from common_sheets, remove duplications"""
@@ -27,6 +29,15 @@ def main(input_folder):
     common_summary = pd.concat(summary_sheets)
     common_summary.drop_duplicates(subset=['Gene name', 'p-value', 'NCBI protein_id', 'Species group'], inplace=True,
                                    ignore_index=True)
+
+    for gene_name in common_summary['Gene name']:
+        try:
+            pure_gene_name = re.search(r'([a-zA-Z0-9]+)_', gene_name).group(1)
+            common_summary['Gene name'].replace(to_replace=gene_name, value=pure_gene_name, inplace=True)
+            print(common_summary['Gene name'])
+        except:
+            print('error with ', gene_name)
+            continue
     """
     there are variants:
     common_summary.drop_duplicates(subset=['Gene name', 'Species group'], inplace=True,

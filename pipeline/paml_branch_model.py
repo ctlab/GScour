@@ -11,25 +11,22 @@ import logging
 CORRECT_FILES_TO_WRITE = set()
 ERROR_FILES_TO_WRITE = set()
 
-LOG_FILE = "paml_branch_site_model.log"
+LOG_FILE = "paml_branch_model.log"
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO, filename=LOG_FILE)
 
 """There are two hypothesis:
-H0 (The null model for Branch-site model A): 
-    Model A1: model = 2, NSsites = 2, fix_omega = 1, omega = 1
+H0 (The null model for Branch model A): 
+    Model A1: model = 2, NSsites = 0, fix_omega = 1, omega = 1
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 1   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
-H1 (Alternative model, Model A: model = 2, NSsites = 2, fix_omega = 0 ): 
+H1 (Alternative model, Model A: model = 2, NSsites = 0, fix_omega = 0 ): 
     fix_kappa = 0   * 1: kappa fixed, 0: kappa to be estimated
     kappa = 2   * initial or fixed kappa
     fix_omega = 0   * 1: omega or omega_1 fixed, 0: estimate
     omega = 1   * initial or fixed omega, for codons or codon-based AAs
-    
-From readme of paml example lysozymeLarge.ctl:
-Alternative hypothesis (branch site model A, with w2 estimated):
-model = 2    NSsites = 2   fix_omega = 0   omega = 1.5 (or any value > 1)
+
 
 As the branch-site model is
 known to cause computational difficulties for the numer-
@@ -75,6 +72,7 @@ def trace_unhandled_exceptions(func):
                                                                      argvalues.locals['args'][0][1],
                                                                      gene_name,
                                                                      argvalues.locals['args'][0][3]))
+
     return wrapped_func
 
 
@@ -93,7 +91,7 @@ def set_alternative_hypothesis(infile, phylo_tree, personal_dir):
     cml.set_options(CodonFreq=2)
     cml.set_options(clock=0)
     cml.set_options(model=2)
-    cml.set_options(NSsites=[2])
+    cml.set_options(NSsites=[0])
     cml.set_options(icode=0)
     cml.set_options(clock=0)
     cml.set_options(Mgene=0)
@@ -124,8 +122,9 @@ def set_null_hypothesis(infile, phylo_tree, personal_dir):
     cml.set_options(seqtype=1)
     cml.set_options(CodonFreq=2)
     cml.set_options(clock=0)
+    cml.set_options(aaDist=0)
     cml.set_options(model=2)
-    cml.set_options(NSsites=[2])
+    cml.set_options(NSsites=[0])
     cml.set_options(icode=0)
     cml.set_options(clock=0)
     cml.set_options(Mgene=0)
@@ -151,6 +150,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
     file_id = "{}/{}".format(species_folder, file_gene_name)
     logging.info("Working with {}".format(file_id))
     infile_path = os.path.join(item_folder_path, infile_name)
+
     if hypothesis_type == "null":
         cml, file_out_path = set_null_hypothesis(infile_path, phylogeny_tree_path, item_folder_path)
     elif hypothesis_type == "alter":
@@ -158,6 +158,7 @@ def run_paml(input_tuple, exec_path, hypothesis_type, overwrite_flag, time_out):
     else:
         logging.warning("Check the type of hypothesis: null, alter")
         return
+
     if not overwrite_flag:
         if os.path.isfile(file_out_path) and os.path.getsize(file_out_path) > 0:
             with open(file_out_path, 'r') as o_f:
@@ -212,7 +213,7 @@ def write_correct_and_error_files(output_dir):
     global ERROR_FILES_TO_WRITE
     logging.info("CORRECT_FILES_TO_WRITE {}".format(len(CORRECT_FILES_TO_WRITE)))
     logging.info("ERROR_FILES_TO_WRITE {}".format(len(ERROR_FILES_TO_WRITE)))
-    resulting_file = os.path.join(output_dir, 'paml_branch_site_model_summary.xlsx')
+    resulting_file = os.path.join(output_dir, 'paml_branch_model_summary.xlsx')
     writer = pd.ExcelWriter(resulting_file, engine='openpyxl')
     df_corr = pd.DataFrame({'Gene name': list(CORRECT_FILES_TO_WRITE)})
     df_corr.to_excel(writer, sheet_name='correct files', index=False)
